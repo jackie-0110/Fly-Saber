@@ -1,4 +1,4 @@
-.PHONY: setup data subgraph maps train-bc train-ppo serve frontend test lint fmt
+.PHONY: setup data subgraph export-web maps train-bc train-ppo serve frontend test lint fmt
 
 setup:
 	uv sync
@@ -9,6 +9,9 @@ data:
 
 subgraph:
 	uv run python scripts/build_subgraph.py
+
+export-web:
+	uv run python scripts/export_web.py
 
 maps:
 	uv run python scripts/fetch_maps.py
