@@ -5,6 +5,8 @@ Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 Any recurrent policy trains here: the connectome brain, the MLP baseline, or a
 test stub. The env is driven by the expert's actions while the policy is scored
 against them, so every update sees fresh episodes and no dataset is stored.
+With DAgger, the policy's own actions drive some envs, so it also sees the states
+its mistakes lead to, still labeled by the expert.
 """
 
 import dataclasses
@@ -13,7 +15,7 @@ import math
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import jax
 import jax.numpy as jnp
@@ -35,6 +37,22 @@ HEADS_PER_SABER = (IDLE_CELL + 1, NO_CUT + 1)
 
 
 @dataclasses.dataclass(frozen=True)
+class Stage:
+    """One curriculum stage (spec 7.2): what the env scores, which maps, how fast."""
+
+    fraction: float
+    """Share of `n_updates`."""
+    score_direction: bool
+    """False: any cut direction hits, and the direction heads learn only when to cut."""
+    difficulty_quantile: float
+    """Train on maps up to this quantile of the split's difficulty score."""
+    speed_scale: float = 1.0
+    """Multiplies saber.yaml note_speed_mps."""
+    dagger_fraction: float = 0.0
+    """Share of envs moved by the policy's greedy actions instead of the expert's."""
+
+
+@dataclasses.dataclass(frozen=True)
 class BCConfig:
     maps_dir: str
     split: str
@@ -53,6 +71,16 @@ class BCConfig:
     """Save a checkpoint and the log every this many updates (0: only at the end)."""
     brain_learning_rate: float | None = None
     """Separate Adam rate for brain params (see make_optimizer); None uses learning_rate."""
+    curriculum: tuple[Stage, ...] = ()
+    """Stages run in order; empty trains on every map with saber.yaml as given."""
+
+    def __post_init__(self) -> None:
+        stages = tuple(
+            s if isinstance(s, Stage) else Stage(**cast(dict[str, Any], s)) for s in self.curriculum
+        )
+        if stages and not math.isclose(sum(s.fraction for s in stages), 1.0):
+            raise ValueError("curriculum stage fractions must sum to 1")
+        object.__setattr__(self, "curriculum", stages)
 
 
 class Policy(Protocol):
@@ -89,14 +117,25 @@ def split_heads(logits: jax.Array, heads: list[int]) -> list[jax.Array]:
 
 
 def cross_entropy(
-    logits: jax.Array, action: jax.Array, heads: list[int]
+    logits: jax.Array, action: jax.Array, heads: list[int], score_direction: bool = True
 ) -> tuple[jax.Array, jax.Array]:
-    """Summed cross-entropy against an (n_sabers, 2) action, and per-head argmax matches."""
+    """Summed cross-entropy against an (n_sabers, 2) action, and per-head argmax matches.
+
+    Without `score_direction` a direction head only learns whether to cut: when the
+    expert cuts, every cut direction counts as right.
+    """
     targets = action.reshape(-1)
-    parts = split_heads(logits, heads)
-    nll = sum(-jax.nn.log_softmax(p)[targets[i]] for i, p in enumerate(parts))
-    correct = jnp.stack([jnp.argmax(p) == targets[i] for i, p in enumerate(parts)])
-    return jnp.asarray(nll), correct
+    nll, correct = [], []
+    for i, p in enumerate(split_heads(logits, heads)):
+        log_p = jax.nn.log_softmax(p)
+        if i % 2 and not score_direction:
+            cuts = targets[i] != NO_CUT
+            nll.append(-jnp.where(cuts, jax.nn.logsumexp(log_p[:NO_CUT]), log_p[NO_CUT]))
+            correct.append((jnp.argmax(p) != NO_CUT) == cuts)
+        else:
+            nll.append(-log_p[targets[i]])
+            correct.append(jnp.argmax(p) == targets[i])
+    return jnp.sum(jnp.stack(nll)), jnp.stack(correct)
 
 
 def greedy_action(logits: jax.Array, heads: list[int]) -> jax.Array:
@@ -110,12 +149,12 @@ def rollout(
     episodes: Episodes,
     key: jax.Array,
     n_steps: int,
-    drive_with_expert: bool,
+    policy_drives: jax.Array,
 ) -> Metrics:
     """Run a batch of episodes, scoring the policy against the expert at every step.
 
-    With `drive_with_expert` the expert's actions move the env (training); otherwise
-    the policy's greedy actions do, and the hit counts measure how well it plays.
+    The expert's actions move each env except where `policy_drives` (n_envs,) is set;
+    there the policy's greedy actions do, and the hit counts measure how well it plays.
     """
     heads = action_heads(env.cfg.n_sabers)
     n_envs = episodes.speed_mps.shape[0]
@@ -129,13 +168,15 @@ def rollout(
         apply = jax.vmap(policy.apply, in_axes=(None, 0, 0, 0))
         carry, logits = apply(params, carry, obs, jax.random.split(key, n_envs))
         expert = jax.vmap(lambda s: saber_expert(env, s))(state)
-        nll, correct = jax.vmap(lambda lg, a: cross_entropy(lg, a, heads))(logits, expert)
-        action = (
-            expert if drive_with_expert else jax.vmap(lambda lg: greedy_action(lg, heads))(logits)
+        nll, correct = jax.vmap(lambda lg, a: cross_entropy(lg, a, heads, env.cfg.score_direction))(
+            logits, expert
         )
+        greedy = jax.vmap(lambda lg: greedy_action(lg, heads))(logits)
+        action = jnp.where(policy_drives[:, None, None], greedy, expert)
         obs, state, _, done, _ = jax.vmap(env.step)(state, action)
         live = alive.astype(jnp.float32)
-        return (obs, state, carry, alive & ~done), (nll * live, correct * live[:, None], live)
+        loop = (obs, state, carry, alive & ~done)
+        return loop, (nll * live, correct * live[:, None], live)
 
     init = (obs, state, carry, jnp.ones(n_envs, bool))
     (_, state, _, _), (nll, correct, live) = jax.lax.scan(
@@ -158,8 +199,9 @@ def make_steps(
     map_set: MapSet,
     cfg: BCConfig,
     optimizer: optax.GradientTransformation,
+    dagger_fraction: float = 0.0,
 ) -> tuple[Callable[..., Any], Callable[..., Metrics]]:
-    """Jitted (update, evaluate) over random windows of `map_set`."""
+    """Jitted (update, evaluate) over random windows of `map_set` (see `Stage`)."""
     # reset lets an episode run two timing windows past end_sec to judge its last notes.
     n_steps = math.ceil((cfg.window_sec + 2 * env.cfg.timing_window_sec) * env.cfg.step_hz) + 1
 
@@ -173,8 +215,10 @@ def make_steps(
 
     def loss(params: Any, key: jax.Array) -> tuple[jax.Array, Metrics]:
         episodes, key = episodes_and_key(key)
+        key, k_drive = jax.random.split(key)
+        drives = jax.random.uniform(k_drive, (cfg.batch_size,)) < dagger_fraction
         params = prepare(params)
-        metrics = rollout(env, policy, params, episodes, key, n_steps, drive_with_expert=True)
+        metrics = rollout(env, policy, params, episodes, key, n_steps, drives)
         return metrics.loss, metrics
 
     @jax.jit
@@ -186,9 +230,8 @@ def make_steps(
     @jax.jit
     def evaluate(params: Any, key: jax.Array) -> Metrics:
         episodes, key = episodes_and_key(key)
-        return rollout(
-            env, policy, prepare(params), episodes, key, n_steps, drive_with_expert=False
-        )
+        drives = jnp.ones(cfg.batch_size, bool)
+        return rollout(env, policy, prepare(params), episodes, key, n_steps, drives)
 
     return update, evaluate
 
@@ -237,32 +280,51 @@ def train(
     with params ready to run (live baseline applied).
     """
     prepare = getattr(policy, "prepare", lambda p: p)
-    map_set, _ = load_map_set(
-        Path(cfg.maps_dir), cfg.split, env.cfg.max_visible_notes, cfg.min_gap_sec
-    )
+    stages = cfg.curriculum or (Stage(1.0, env.cfg.score_direction, 1.0),)
+    ends = np.round(np.cumsum([s.fraction for s in stages]) * cfg.n_updates).astype(int)
     optimizer = make_optimizer(cfg, params)
-    update, evaluate = make_steps(env, policy, map_set, cfg, optimizer)
     opt_state = optimizer.init(params)
     key = jax.random.PRNGKey(cfg.seed)
     log = []
-    for i in range(1, cfg.n_updates + 1):
-        key, k_update, k_eval = jax.random.split(key, 3)
-        params, opt_state, metrics = update(params, opt_state, k_update)
-        if i % cfg.log_every == 0 or i == cfg.n_updates:
-            played = evaluate(params, k_eval)
-            judged = int(played.hits + played.misses + played.bad_cuts)
-            row = {
-                "update": i,
-                "loss": float(metrics.loss),
-                "head_accuracy": [round(float(a), 4) for a in metrics.head_accuracy],
-                "hit_rate": int(played.hits) / judged if judged else 0.0,
-                "bombs": int(played.bombs),
-            }
-            log.append(row)
-            print(row, flush=True)
-        every = cfg.checkpoint_every
-        if on_checkpoint is not None and ((every and i % every == 0) or i == cfg.n_updates):
-            on_checkpoint(i, prepare(params), log)
+    first = 1
+    for index, (stage, last) in enumerate(zip(stages, ends, strict=True)):
+        saber_cfg = dataclasses.replace(
+            env.cfg,
+            score_direction=stage.score_direction,
+            note_speed_mps=env.cfg.note_speed_mps * stage.speed_scale,
+        )
+        stage_env = dataclasses.replace(env, cfg=saber_cfg)
+        map_set, ids = load_map_set(
+            Path(cfg.maps_dir),
+            cfg.split,
+            env.cfg.max_visible_notes,
+            cfg.min_gap_sec,
+            stage.difficulty_quantile,
+        )
+        print(f"stage {index}, updates {first} to {last}, {len(ids)} maps: {stage}", flush=True)
+        update, evaluate = make_steps(
+            stage_env, policy, map_set, cfg, optimizer, stage.dagger_fraction
+        )
+        for i in range(first, last + 1):
+            key, k_update, k_eval = jax.random.split(key, 3)
+            params, opt_state, metrics = update(params, opt_state, k_update)
+            if i % cfg.log_every == 0 or i == cfg.n_updates:
+                played = evaluate(params, k_eval)
+                judged = int(played.hits + played.misses + played.bad_cuts)
+                row = {
+                    "update": i,
+                    "stage": index,
+                    "loss": float(metrics.loss),
+                    "head_accuracy": [round(float(a), 4) for a in metrics.head_accuracy],
+                    "hit_rate": int(played.hits) / judged if judged else 0.0,
+                    "bombs": int(played.bombs),
+                }
+                log.append(row)
+                print(row, flush=True)
+            every = cfg.checkpoint_every
+            if on_checkpoint is not None and ((every and i % every == 0) or i == cfg.n_updates):
+                on_checkpoint(i, prepare(params), log)
+        first = last + 1
     return prepare(params), log
 
 
@@ -321,6 +383,10 @@ def apply_overrides(configs: dict[str, Any], args: list[str]) -> dict[str, Any]:
             value = raw.lower() == "true"
         elif isinstance(current, int):
             value = int(raw)
+        elif isinstance(current, tuple):
+            if raw.lower() != "none":
+                raise ValueError(f"{key} can only be switched off from the command line: none")
+            value = ()
         elif isinstance(current, float) or current is None:
             value = None if raw.lower() == "none" else float(raw)
         else:
