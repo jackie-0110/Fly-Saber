@@ -1,45 +1,41 @@
-import { Clock3, Pause, Play, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Pause, Play, RotateCcw } from 'lucide-react'
+
+const CONTROLS = [
+  { label: 'Play session', Icon: Play },
+  { label: 'Pause session', Icon: Pause },
+  { label: 'Restart session', Icon: RotateCcw },
+]
 
 export function SessionTimeline() {
   return (
-    <section className="session-timeline" aria-labelledby="timeline-heading">
-      <div className="timeline-heading">
-        <h2 id="timeline-heading">
-          <Clock3 aria-hidden="true" />
-          Session timeline
-        </h2>
-        <span>No session loaded</span>
+    <section className="timeline" aria-labelledby="timeline-heading">
+      <div className="section-head">
+        <h2 id="timeline-heading">Timeline</h2>
+        <span className="section-meta">No session loaded</span>
       </div>
-      <div className="timeline-controls">
-        <div className="playback-buttons">
-          <Button variant="outline" size="icon-sm" disabled aria-label="Play session">
-            <Play aria-hidden="true" />
-          </Button>
-          <Button variant="outline" size="icon-sm" disabled aria-label="Pause session">
-            <Pause aria-hidden="true" />
-          </Button>
-          <Button variant="outline" size="icon-sm" disabled aria-label="Restart session">
-            <RotateCcw aria-hidden="true" />
-          </Button>
-          <span className="playback-speed">1×</span>
+      <div className="timeline-row">
+        <div className="playback" role="group" aria-label="Playback">
+          {CONTROLS.map(({ label, Icon }) => (
+            <button key={label} type="button" className="tool-button" disabled aria-label={label}>
+              <Icon aria-hidden="true" />
+            </button>
+          ))}
+          <span className="playback-speed" aria-label="Playback speed 1×">
+            1×
+          </span>
         </div>
-        <div className="timeline-track" aria-label="Timeline unavailable until a session is loaded">
+        <div className="timeline-track" aria-hidden="true">
           <div className="timeline-rail">
-            <span />
+            <span className="timeline-head" />
           </div>
-          <div className="timeline-ticks">
+          <div className="timeline-ends">
             <span>00:00</span>
             <span>--:--</span>
-            <span>--:--</span>
-            <span>--:--</span>
-            <span>--:--</span>
-            <span>--:--</span>
           </div>
         </div>
-        <div className="timeline-time">
-          00:00<span>/ --:--</span>
-        </div>
+        <p className="timeline-clock">
+          00:00 <span>/ --:--</span>
+        </p>
       </div>
     </section>
   )

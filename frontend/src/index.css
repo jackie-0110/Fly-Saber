@@ -1,54 +1,91 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--foreground);
-  --color-muted: var(--surface-muted);
-  --color-muted-foreground: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--foreground);
-  --color-destructive: #dc8578;
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--raised);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--raised);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--raised);
+  --color-secondary: var(--panel);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--panel);
+  --color-muted-foreground: var(--ink-3);
+  --color-accent: var(--hover);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--danger);
   --color-border: var(--line);
-  --color-input: var(--line);
-  --color-ring: var(--mint);
+  --color-input: var(--line-strong);
+  --color-ring: var(--accent);
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 9px;
+  --radius-lg: 8px;
   --radius-xl: 12px;
 }
 
 :root {
-  font-family: 'DM Sans', sans-serif;
-  color: #e2e4e6;
-  background: #202124;
+  color-scheme: light;
+
+  /* Chrome: warm paper neutrals, tinted toward the brand hue. */
+  --paper: oklch(0.982 0.005 85);
+  --panel: oklch(0.962 0.007 85);
+  --raised: oklch(0.995 0.003 85);
+  --hover: oklch(0.935 0.009 85);
+  --line: oklch(0.885 0.009 85);
+  --line-strong: oklch(0.8 0.011 85);
+  --ink: oklch(0.25 0.012 70);
+  --ink-2: oklch(0.42 0.012 70);
+  --ink-3: oklch(0.52 0.011 70);
+
+  /* One accent for focus, selection, and the brand mark. */
+  --accent: oklch(0.5 0.085 190);
+  --accent-soft: oklch(0.93 0.03 190);
+  --warn: oklch(0.72 0.13 75);
+  --danger: oklch(0.55 0.15 30);
+
+  /* Saber colors, matched to the scene art. Ink variants hold contrast on paper. */
+  --coral: oklch(0.74 0.1 35);
+  --mint: oklch(0.82 0.07 180);
+  --coral-ink: oklch(0.56 0.13 35);
+  --mint-ink: oklch(0.52 0.08 185);
+
+  /* Viewers (game scene, brain) stay dark, like imagery in a light map tool. */
+  --scene: oklch(0.24 0.014 230);
+  --scene-ink: oklch(0.93 0.008 230);
+  --scene-ink-2: oklch(0.78 0.015 230);
+
+  /* Type: one family, fixed rem scale. */
+  --font: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+
+  /* Space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  font-family: var(--font);
+  font-size: 100%;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
+  font-kerning: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color-scheme: dark;
-  --mint: #b6d5d0;
-  --muted: #a0a8af;
-  --line: #41454b;
-  --background: #202124;
-  --foreground: #e2e4e6;
-  --card: #292a2d;
-  --popover: #33373b;
-  --primary: #b6d5d0;
-  --primary-foreground: #242b2d;
-  --secondary: #34373c;
-  --surface-muted: #2d3034;
-  --accent: #3b4248;
 }
 
 * {
@@ -57,50 +94,29 @@
 body {
   margin: 0;
   min-width: 320px;
-}
-button,
-a,
-summary {
-  -webkit-tap-highlight-color: transparent;
+  background: var(--paper);
 }
 button {
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 button:disabled {
   cursor: not-allowed;
 }
-button:focus-visible,
-a:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--mint);
-  outline-offset: 5px;
-}
-button,
-a {
-  touch-action: manipulation;
+:where(button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 h1,
 h2,
 h3,
-p {
+p,
+dl,
+dd {
   margin: 0;
 }
-button svg {
-  width: 20px;
-  height: 20px;
-}
 ::selection {
-  background: #b6d5d0;
-  color: #202124;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  background: var(--accent-soft);
+  color: var(--ink);
 }

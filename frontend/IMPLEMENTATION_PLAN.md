@@ -1,8 +1,8 @@
-# FlyArcade frontend implementation plan
+# FlySaber frontend implementation plan
 
 ## Scope and current state
 
-This plan follows [`FLYARCADE_HANDOFF.md`](../FLYARCADE_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The handoff describes a fly playing from visual input, with interventions that affect its behavior. The frontend must communicate that goal without claiming that this static preview demonstrates it.
+This plan follows [`FLYSABER_HANDOFF.md`](../FLYSABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The handoff describes a fly playing from visual input, with interventions that affect its behavior. The frontend must communicate that goal without claiming that this static preview demonstrates it.
 
 The implementation lives in the repository's canonical `frontend/` directory. The handoff's older `web/` path was superseded by the team reorganization; `make frontend` runs this client. Preserve the existing Vite `/api` and `/ws` development proxies for integration with `server/`.
 

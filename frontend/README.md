@@ -1,4 +1,4 @@
-# FlyArcade frontend
+# FlySaber frontend
 
 A static, responsive Fly Saber observation workspace built with React, TypeScript, Vite, Tailwind CSS, and shadcn/ui. The dark grey workstation layout follows the project handoff and supplied references: a dominant game viewport, right-hand brain inspector, and bottom timeline/readouts.
 

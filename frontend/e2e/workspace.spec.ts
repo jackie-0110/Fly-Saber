@@ -16,9 +16,9 @@ test('production workspace loads without runtime errors or failed assets', async
   })
 
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Fly Saber', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'FlySaber home', exact: true })).toBeVisible()
   await expect(page.getByRole('main')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'FlyArcade home' })).toHaveAttribute('href', '/')
+  await expect(page.getByRole('link', { name: 'FlySaber home' })).toHaveAttribute('href', '/')
   await page.waitForLoadState('networkidle')
   expect(errors).toEqual([])
 })
@@ -31,19 +31,17 @@ test('playback controls stay disabled until a session is loaded', async ({ page 
   await expect(page.getByText('No session loaded', { exact: true })).toBeVisible()
 })
 
-test('workspace fits the viewport and inspector tabs support the keyboard', async ({ page }) => {
+test('workspace fits the viewport and the connection status opens from the keyboard', async ({
+  page,
+}) => {
   await page.goto('/')
-  await page.getByRole('tab', { name: 'Activity', exact: true }).focus()
-  await page.keyboard.press('ArrowRight')
-  await expect(page.getByRole('tab', { name: 'Details', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
-  await expect(page.getByRole('tabpanel', { name: 'Details', exact: true })).toBeVisible()
-  await page.keyboard.press('ArrowRight')
-  await expect(page.getByRole('tabpanel', { name: 'Next steps', exact: true })).toBeVisible()
-  await page.keyboard.press('Home')
-  await expect(page.getByRole('tabpanel', { name: 'Activity', exact: true })).toBeVisible()
+  const status = page.getByRole('button', { name: 'Offline preview' })
+  await status.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('Simulation server not connected', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Simulation server not connected', { exact: true })).toBeHidden()
+  await expect(status).toBeFocused()
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
