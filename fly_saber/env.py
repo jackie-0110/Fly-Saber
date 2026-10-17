@@ -13,6 +13,7 @@ from typing import Any
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from fly_saber.eye import EyeConfig, Patches, lattice, render
 from fly_saber.maps.adapt import ANY_DIRECTION, NoteArrays
@@ -128,8 +129,16 @@ class SaberEnv:
     directions: jax.Array
 
     @classmethod
-    def create(cls, cfg: SaberConfig, eye_cfg: EyeConfig) -> "SaberEnv":
-        directions, _ = lattice(eye_cfg)
+    def create(
+        cls, cfg: SaberConfig, eye_cfg: EyeConfig, directions: np.ndarray | None = None
+    ) -> "SaberEnv":
+        """`directions` are the eye's (n, 2) viewing angles; the hex lattice by default.
+
+        Pass the brain's eye column angles (training/brain_policy.py) so observations
+        line up with the brain's eye input.
+        """
+        if directions is None:
+            directions, _ = lattice(eye_cfg)
         return cls(cfg, eye_cfg, jnp.asarray(directions, dtype=jnp.float32))
 
     def time(self, state: SaberState) -> jax.Array:
