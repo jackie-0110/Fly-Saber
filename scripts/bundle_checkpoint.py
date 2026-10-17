@@ -2,9 +2,9 @@
 
 Owner: Person 1. Usage (on HiPerGator, repo root):
     uv run python scripts/bundle_checkpoint.py \
-        checkpoints/real/fast/seed0/bc_950.npz bundles/real_fast
+        checkpoints/real/fast/seed0/bc_950.npz bundles/real
 Then copy the folder off the cluster, for example:
-    scp -r <gatorlink>@hpg.rc.ufl.edu:/blue/uf-sps/<gatorlink>/Fly-Saber/bundles/real_fast .
+    scp -r <gatorlink>@hpg.rc.ufl.edu:/blue/uf-sps/<gatorlink>/Fly-Saber/bundles/real .
 
 The bundle holds the checkpoint, its log, config, and eval files, and subgraph/ (neurons,
 edges, groups, meta). Load it with training.play_eval.load_trained(ckpt, subgraph_dir=...)
