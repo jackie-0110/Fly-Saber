@@ -12,9 +12,8 @@ from flyarcade.sim.eye import Patches
 
 N_LANES = 4
 N_LAYERS = 3
-# Sim cut directions: 0 up, 1 down, 2 left, 3 right, 4 any (adapt.py maps the 9 map values here).
-ANY_DIRECTION = 4
 
+# Indexed by sim direction (flyarcade.maps.adapt): 0 up, 1 down, 2 left, 3 right, 4 any.
 # Unit vector toward the side of the block where each cut starts; that half is drawn bright.
 CUT_START_SIDE = jnp.array([[0.0, -1.0], [0.0, 1.0], [1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]])
 
