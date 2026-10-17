@@ -28,7 +28,7 @@ class Catalog:
         path = self.maps_dir / "demo_allowlist.json"
         if not path.exists():
             return set()
-        return set(json.loads(path.read_text()))
+        return {entry["key"] for entry in json.loads(path.read_text())}
 
     def get_map(self, map_id: str) -> dict[str, Any] | None:
         if not MAP_ID_PATTERN.fullmatch(map_id):

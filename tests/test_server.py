@@ -59,7 +59,7 @@ def client(tmp_path: Path) -> TestClient:
         (tmp_path / "normalized" / f"{map_id}.json").write_text(json.dumps(make_map(map_id)))
     (tmp_path / "audio" / "abc12.ogg").write_bytes(AUDIO_BYTES)
     (tmp_path / "audio" / "zzz99.ogg").write_bytes(AUDIO_BYTES)
-    (tmp_path / "demo_allowlist.json").write_text(json.dumps(["abc12"]))
+    (tmp_path / "demo_allowlist.json").write_text(json.dumps([{"key": "abc12"}]))
     return TestClient(create_app(tmp_path))
 
 
