@@ -16,6 +16,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://fonts.googleapis.com/**', (route) =>
     route.fulfill({ contentType: 'text/css', body: '' }),
   )
+  await page.route('https://api.beatsaver.com/**', (route) => route.fulfill({ json: { docs: [] } }))
 })
 
 test('production workspace loads without runtime errors or failed assets', async ({ page }) => {
@@ -39,17 +40,19 @@ test('production workspace loads without runtime errors or failed assets', async
   expect(errors).toEqual([])
 })
 
-test('playback controls stay disabled until a session is loaded', async ({ page }) => {
+test('playback controls stay disabled until a song is loaded', async ({ page }) => {
   await page.goto('/')
-  for (const name of ['Play session', 'Pause session', 'Restart session']) {
+  for (const name of ['Play song', 'Restart song']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeDisabled()
   }
-  await expect(page.getByText('No session loaded', { exact: true })).toBeVisible()
+  await expect(page.getByRole('slider', { name: 'Song position', exact: true })).toBeDisabled()
 })
 
 test('workspace fits the viewport and inspector tabs support the keyboard', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('tab', { name: 'Neurons', exact: true }).focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByRole('tabpanel', { name: 'Songs', exact: true })).toBeVisible()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByRole('tabpanel', { name: 'Session', exact: true })).toBeVisible()
   await page.keyboard.press('ArrowRight')

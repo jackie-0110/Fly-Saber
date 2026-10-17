@@ -5,7 +5,9 @@ import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
 import { SessionReadouts } from '@/components/session-readouts'
 import { Separator } from '@/components/ui/separator'
+import { SongHeader } from '@/components/song-header'
 import './App.css'
+import './song-workspace.css'
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
       </header>
       <main className="workspace">
         <section className="observation-workspace" aria-label="Fly Saber observation workspace">
+          <SongHeader />
           <GamePreview />
           <SessionTimeline />
           <SessionReadouts />

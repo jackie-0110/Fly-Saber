@@ -116,7 +116,7 @@
 }
 .observation-workspace {
   display: grid;
-  grid-template-rows: minmax(460px, 1fr) 110px 132px;
+  grid-template-rows: minmax(460px, 1fr) 48px 132px;
   min-width: 0;
 }
 .game-viewport {
@@ -306,39 +306,22 @@
   font-size: 12px;
 }
 .session-timeline {
+  display: flex;
+  align-items: center;
   border-top: 1px solid #414347;
   background: #292a2d;
-  padding: 15px 22px 12px;
-}
-.timeline-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.timeline-heading h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.timeline-heading h2 svg {
-  width: 14px;
-  height: 14px;
-  color: #a0a6aa;
-}
-.timeline-heading > span {
-  font-size: 10px;
-  color: #93999f;
+  padding: 8px 16px;
 }
 .timeline-controls {
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   gap: 24px;
 }
 .playback-buttons {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 5px;
 }
@@ -361,14 +344,19 @@
     sans-serif;
 }
 .timeline-track {
+  position: relative;
+  display: flex;
+  align-items: center;
   flex: 1;
   min-width: 50px;
+  height: 30px;
 }
 .timeline-rail {
   position: relative;
+  flex: 1;
   height: 2px;
   background: #55585c;
-  margin: 0 3px 9px;
+  margin: 0 3px;
 }
 .timeline-rail::after {
   content: '';
@@ -382,12 +370,18 @@
   background: #303338;
 }
 .timeline-ticks {
+  position: absolute;
+  top: calc(50% + 7px);
+  left: 3px;
+  right: 3px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   color: #8d9399;
   font:
     8px ui-monospace,
     monospace;
+  line-height: 10px;
 }
 .timeline-time {
   font:
@@ -396,8 +390,7 @@
   color: #d0d3d4;
   display: flex;
   gap: 8px;
-  align-self: flex-start;
-  padding-top: 4px;
+  align-self: center;
 }
 .timeline-time > span {
   color: #838a90;
@@ -1174,7 +1167,7 @@
     min-height: 0;
   }
   .observation-workspace {
-    grid-template-rows: 540px 112px auto;
+    grid-template-rows: 540px 48px auto;
   }
   .game-art {
     object-position: 52% center;
@@ -1217,16 +1210,13 @@
     height: 26px;
   }
   .session-timeline {
-    padding: 14px 16px;
+    padding: 8px 16px;
   }
   .timeline-controls {
     gap: 18px;
   }
   .playback-speed {
     display: none;
-  }
-  .timeline-heading > span {
-    font-size: 9px;
   }
   .timeline-ticks {
     font-size: 6px;
@@ -1315,16 +1305,13 @@
   }
   .observation-workspace {
     min-height: 0;
-    grid-template-rows: minmax(0, 1fr) 72px 112px;
+    grid-template-rows: minmax(0, 1fr) 48px 112px;
   }
   .game-art {
     object-fit: contain;
   }
   .session-timeline {
     padding: 8px 16px;
-  }
-  .timeline-heading {
-    margin-bottom: 6px;
   }
   .playback-buttons button {
     width: 26px;
@@ -1561,7 +1548,7 @@
     width: 22px;
   }
   .observation-workspace {
-    grid-template-rows: 490px 112px auto;
+    grid-template-rows: 490px 48px auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

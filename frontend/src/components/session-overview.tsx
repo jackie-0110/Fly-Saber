@@ -1,7 +1,10 @@
 import { Activity, SlidersHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { usePlayer } from '@/game/store'
 
 export function SessionOverview() {
+  const song = usePlayer((s) => s.song)
+  const chart = usePlayer((s) => s.chart)
   return (
     <>
       <section className="session-overview" aria-labelledby="overview-heading">
@@ -24,7 +27,9 @@ export function SessionOverview() {
           </div>
           <div>
             <dt>Map / audio</dt>
-            <dd className="muted-value">No map loaded</dd>
+            <dd className="muted-value">
+              {song && chart ? `${song.title} · ${chart.difficulty.name}` : 'No map loaded'}
+            </dd>
           </div>
           <div>
             <dt>Session status</dt>
@@ -41,8 +46,8 @@ export function SessionOverview() {
         <Badge variant="outline">Coming later</Badge>
       </div>
       <p className="inspector-footnote">
-        Explore the supplied neuron anatomy. Live game state and neuron firing require a backend
-        session.
+        Audio and chart preview run locally. Real-time fly actions and neuron firing require a
+        backend session.
       </p>
     </>
   )

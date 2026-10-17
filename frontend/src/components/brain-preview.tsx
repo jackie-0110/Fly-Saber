@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cellTypeColor, filterNeuronIndices, loadBrainData } from '@/brain/data'
 import type { BrainData } from '@/brain/data'
 import type { CameraAction } from '@/brain/brain-scene'
+import { SongLibrary } from '@/components/song-library'
+import { usePlayer } from '@/game/store'
 
 const BrainScene = lazy(() => import('@/brain/brain-scene'))
 const number = new Intl.NumberFormat('en-US')
@@ -54,6 +56,8 @@ function SceneFallback({ message, onRetry }: { message: string; onRetry?: () => 
 }
 
 export function BrainPreview() {
+  const inspectorTab = usePlayer((state) => state.inspectorTab)
+  const setInspectorTab = usePlayer((state) => state.setInspectorTab)
   const [data, setData] = useState<BrainData | null>(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -170,13 +174,21 @@ export function BrainPreview() {
   )
 
   return (
-    <Tabs defaultValue="activity" className="brain-inspector">
+    <Tabs
+      value={inspectorTab}
+      onValueChange={(value) => setInspectorTab(value as typeof inspectorTab)}
+      className="brain-inspector"
+    >
       <TabsList className="inspector-tabs" aria-label="Brain inspector view">
         <TabsTrigger value="activity">Neurons</TabsTrigger>
+        <TabsTrigger value="songs">Songs</TabsTrigger>
         <TabsTrigger value="session">Session</TabsTrigger>
         <TabsTrigger value="details">Details</TabsTrigger>
         <TabsTrigger value="next">Next steps</TabsTrigger>
       </TabsList>
+      <TabsContent value="songs" className="songs-tab" forceMount>
+        <SongLibrary />
+      </TabsContent>
       <TabsContent value="activity" className="activity-tab">
         <div className="brain-title">
           <div>
@@ -522,9 +534,10 @@ export function BrainPreview() {
             </p>
           </li>
           <li>
-            <strong>3D Fly Saber</strong>
+            <strong>Real-time Fly Saber</strong>
             <p>
-              Live blocks and sabers, with an independent camera and a shared simulation timeline.
+              Connect real-time inference to the song clock for fly saber actions, judged hits, and
+              scores. The chart preview and movable camera are ready to use.
             </p>
           </li>
           <li>
