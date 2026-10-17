@@ -20,10 +20,11 @@ SSH_TARGET=${SSH_TARGET:-root@$SERVER_IP}
 REMOTE_DIR=${REMOTE_DIR:-Fly-Saber}
 SITE=${SITE:-https://flysaber.jackie-courtney.com}
 WORKER=${WORKER:-flysaber}
-# Workers cannot fetch bare IPs (Cloudflare error 1003), so the backend needs a hostname:
-# a DNS-only (grey cloud) A record for it pointing at SERVER_IP.
+# Workers cannot fetch bare IPs (Cloudflare error 1003), so the backend needs a hostname.
+# api.jackie-courtney.com is a Cloudflare Tunnel to the server's port 80; cloudflared must
+# be running on the server (error 1033 means it is not).
 BACKEND_HOST=${BACKEND_HOST:-api.jackie-courtney.com}
-BACKEND_URL=${BACKEND_URL:-http://$BACKEND_HOST}
+BACKEND_URL=${BACKEND_URL:-https://$BACKEND_HOST}
 PULL=${PULL:-0}
 
 step() { printf '\n== %s\n' "$*"; }
@@ -49,9 +50,12 @@ fi
 
 step "check: backend answers from outside at $BACKEND_URL"
 if ! curl -fsS --max-time 10 "$BACKEND_URL/api/games"; then
-    fail "No answer at $BACKEND_URL/api/games. Open TCP 80 in the Vultr firewall group
-   (my.vultr.com -> Network -> Firewall -> your group -> add rule TCP 80 from anywhere),
-   then rerun with SKIP_SERVER=1."
+    curl -sS --max-time 10 "$BACKEND_URL/api/games" | grep -q 1033 &&
+        fail "Tunnel not connected (error 1033): run the 'cloudflared service install <token>'
+   command from Zero Trust -> Networks -> Tunnels on the server, with the public hostname
+   $BACKEND_HOST -> http://localhost:80. Then rerun with SKIP_SERVER=1."
+    fail "No answer at $BACKEND_URL/api/games. Check the backend answers on the server:
+   curl http://$SERVER_IP/api/games (open TCP 80 in the Vultr firewall if it times out)."
 fi
 echo
 
@@ -80,9 +84,9 @@ case "$code" in
 200) echo "live: open $SITE; the header badge should read 'Backend connected'." ;;
 503) fail "The Worker still has no BACKEND_URL. Check the secret is on the production
    Worker '$WORKER' (dashboard -> Workers -> $WORKER -> Settings -> Variables and Secrets)." ;;
-403) fail "Cloudflare error 1003: Workers may not fetch a bare IP. Add a DNS-only (grey cloud)
-   A record api.jackie-courtney.com -> $SERVER_IP, then rerun with SKIP_SERVER=1." ;;
+403) fail "Cloudflare error 1003: the Worker's BACKEND_URL is still a bare IP. Set it to
+   $BACKEND_URL (dashboard -> Workers -> $WORKER -> Settings -> Variables and Secrets)." ;;
 502) fail "The Worker cannot reach $BACKEND_URL even though it answers directly. Check the
-   DNS record points at $SERVER_IP and is DNS only (grey cloud), not proxied." ;;
+   secret is exactly $BACKEND_URL, then 'npx wrangler tail $WORKER' while reloading." ;;
 *) fail "Unexpected response; check 'npx wrangler tail $WORKER' while reloading the site." ;;
 esac
