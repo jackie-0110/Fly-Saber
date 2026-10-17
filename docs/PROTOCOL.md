@@ -281,7 +281,7 @@ logits_per_head = split_heads(out.logits, cfg.action_heads)
 
 One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs: `jax.vmap(step, in_axes=(None, 0, 0, None, 0))`.
 
-Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
+**Training memory:** `remat: true` (default) wraps the step in `jax.checkpoint`, so backprop through a rollout stores each frame's inputs and recomputes the substeps. Measured for one BC update (64 envs, 10 s windows): 169 GB without it, 2.5 GB with it; memory grows linearly with envs times window length. Gradients are identical (tested). Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
 
 **Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
 

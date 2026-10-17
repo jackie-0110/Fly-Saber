@@ -249,7 +249,10 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
         )
         return v, out
 
-    return step
+    # Gradient checkpointing: backprop through a rollout keeps only each frame's inputs
+    # and recomputes the substeps, instead of storing every edge value of every substep
+    # (169 GB for one default BC update; see docs/PROTOCOL.md section 5).
+    return jax.checkpoint(step) if cfg.remat else step
 
 
 def split_heads(logits: Array, heads: list[int]) -> list[Array]:

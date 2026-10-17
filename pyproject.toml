@@ -20,6 +20,8 @@ dependencies = [
 [project.optional-dependencies]
 audio = ["librosa>=0.10"]
 llm = ["google-genai>=1.0"]
+# GPU JAX for HiPerGator (Linux + NVIDIA only): uv sync --extra cuda
+cuda = ["jax[cuda12]>=0.4.30"]
 
 [dependency-groups]
 dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8", "types-PyYAML"]

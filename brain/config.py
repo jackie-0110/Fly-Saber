@@ -58,3 +58,4 @@ class ModelConfig:
     modulation_gain: dict[str, float] = field(default_factory=dict)
     modulation_max_log_gain: float = 1.0
     rate_max: float = 10.0  # saturation level for activation relu_sat
+    remat: bool = True  # gradient checkpointing per brain step; trades compute for memory

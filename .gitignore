@@ -36,3 +36,4 @@ frontend/playwright-report/
 
 # SLURM logs
 slurm-*.out
+logs/
