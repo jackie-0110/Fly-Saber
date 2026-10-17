@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Expand,
   Minimize,
-  Orbit,
   RotateCcw,
   ZoomIn,
   ZoomOut,
@@ -256,7 +255,6 @@ export function BrainPreview() {
           tabIndex={0}
           role="region"
           aria-label="Interactive 3D fly neuron view"
-          aria-describedby="brain-camera-help"
           onKeyDown={onCameraKey}
         >
           {error ? (
@@ -383,11 +381,6 @@ export function BrainPreview() {
             <ZoomOut aria-hidden="true" />
           </Button>
         </div>
-        <p className="brain-camera-help" id="brain-camera-help">
-          <Orbit aria-hidden="true" />
-          Drag to orbit. Scroll or pinch to zoom. Right-drag or two fingers to pan. Focus the view:
-          arrow keys rotate, +/− zoom, Home resets.
-        </p>
         <div className="brain-color-legend">
           <span
             className="type-swatch"
