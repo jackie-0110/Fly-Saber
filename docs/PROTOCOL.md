@@ -281,6 +281,14 @@ logits_per_head = split_heads(out.logits, cfg.action_heads)
 
 One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs: `jax.vmap(step, in_axes=(None, 0, 0, None, 0))`.
 
+**Readout and training (status).** The first HiPerGator BC run (lr 1e-3, raw DN readout) sat exactly at the no-vision base rate (loss 4.4, position accuracy 37%, hit rate 0) for 300 updates. Diagnosis:
+
+- Visual information does reach the DNs: a least-squares readout of the *untrained* brain's DN rates predicts the expert's next cell on held-out songs at 59% (base rate 27%; eye pixels 79%, projection neurons 68%). Gradient descent finds that readout very slowly because DN rates are highly correlated.
+- So `training/calibration.py` **fits the readout** before BC: it plays 64 synthetic songs with the expert, sets `dn_mean`/`dn_std` (fixed params, saved in checkpoints), and solves ridge regression per head plus a temperature. The step reads `clip((rate - dn_mean) / dn_std, +-5) / sqrt(D)`.
+- Episodes start from `rest_state` (brain settled on the gray background), not zeros; `BrainPolicy.rest` holds it. After loading a checkpoint, recompute it.
+- Result with no gradient training: greedy play hits **18% of notes on training songs and 16% on the held-out song**, versus 0% before.
+- The readout reads DN ripples of about 1e-5, so updating the brain's own parameters washes them out (brain lr 1e-5: loss 3.4 to 97 in ten updates). For now `freeze_brain: true` and `brain_learning_rate: 0.0`: BC fine-tunes the readout only (position accuracy 56% to 63% in 40 small updates). Training the brain itself needs a readout that tracks the brain's own baseline; next step.
+
 **Training memory:** `remat: true` (default) wraps the step in `jax.checkpoint`, so backprop through a rollout stores each frame's inputs and recomputes the substeps. Measured for one BC update (64 envs, 10 s windows): 169 GB without it, 2.5 GB with it; memory grows linearly with envs times window length. Gradients are identical (tested). Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
 
 **Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.

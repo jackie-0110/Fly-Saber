@@ -46,6 +46,8 @@ class BCConfig:
     seed: int
     variant: str
     checkpoint_dir: str
+    brain_learning_rate: float | None = None
+    """Separate Adam rate for brain params (see make_optimizer); None uses learning_rate."""
 
 
 class Policy(Protocol):
@@ -181,6 +183,25 @@ def make_steps(
     return update, evaluate
 
 
+# Connectome brain params that are readout, not brain (brain.model.brain.Params field names).
+READOUT_FIELDS = ("readout_w", "readout_b", "value_w", "value_b")
+
+
+def make_optimizer(cfg: BCConfig, params: Any) -> optax.GradientTransformation:
+    """Adam at `learning_rate`; brain params at `brain_learning_rate` when it is set.
+
+    The fitted readout reads ripples of about 1e-5 in DN rates, so full-rate Adam steps on
+    the brain's own parameters wash the signal out in an update or two (Person 1).
+    """
+    if cfg.brain_learning_rate is None or not hasattr(params, "_fields"):
+        return optax.adam(cfg.learning_rate)
+    labels = type(params)(*("readout" if f in READOUT_FIELDS else "brain" for f in params._fields))
+    return optax.multi_transform(
+        {"readout": optax.adam(cfg.learning_rate), "brain": optax.adam(cfg.brain_learning_rate)},
+        labels,
+    )
+
+
 def train(
     env: SaberEnv, policy: Policy, params: Any, cfg: BCConfig
 ) -> tuple[Any, list[dict[str, Any]]]:
@@ -188,7 +209,7 @@ def train(
     map_set, _ = load_map_set(
         Path(cfg.maps_dir), cfg.split, env.cfg.max_visible_notes, cfg.min_gap_sec
     )
-    optimizer = optax.adam(cfg.learning_rate)
+    optimizer = make_optimizer(cfg, params)
     update, evaluate = make_steps(env, policy, map_set, cfg, optimizer)
     opt_state = optimizer.init(params)
     key = jax.random.PRNGKey(cfg.seed)

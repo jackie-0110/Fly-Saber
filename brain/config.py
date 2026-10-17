@@ -59,3 +59,11 @@ class ModelConfig:
     modulation_max_log_gain: float = 1.0
     rate_max: float = 10.0  # saturation level for activation relu_sat
     remat: bool = True  # gradient checkpointing per brain step; trades compute for memory
+    # Readout normalization: actions read (DN rate - mean) / std, both measured once on
+    # flickering visual input when params are created. See brain/model/brain.py.
+    readout_norm: bool = True
+    calibration_stimuli: int = 16
+    calibration_frames: int = 90
+    readout_std_floor: float = 0.1  # fraction of the median DN std; avoids dividing by ~0
+    readout_clip: float = 5.0  # normalized DN values are clipped to +-this
+    freeze_brain: bool = False  # stop gradients at the DNs: train only the readout, much faster

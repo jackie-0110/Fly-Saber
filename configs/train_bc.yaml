@@ -5,8 +5,9 @@ min_gap_sec: 0.0          # curriculum: thin same-color notes closer than this
 window_sec: 10.0          # episode length; a random window of a random map
 batch_size: 64            # envs per update
 learning_rate: 0.001
-n_updates: 2000
+n_updates: 500           # readout-only fine-tuning levels off fast (freeze_brain in model.yaml)
 log_every: 50             # also runs a greedy evaluation rollout
 seed: 0
 variant: real              # label for checkpoints/{variant}/seed{seed}/
 checkpoint_dir: checkpoints
+brain_learning_rate: 0.0   # Person 1: the brain is frozen for now, see model.yaml freeze_brain
