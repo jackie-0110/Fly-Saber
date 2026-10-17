@@ -1,4 +1,4 @@
-"""Checkpointed brains in the live server: listing, ready, and play."""
+"""Trained brains in the live server: bundles listed and loaded, ready, and play."""
 
 import json
 from pathlib import Path
@@ -11,47 +11,64 @@ from fastapi.testclient import TestClient
 from fly_saber.config import load_config
 from fly_saber.env import SaberConfig
 from fly_saber.eye import EyeConfig
-from server.app import BrainSpec, create_app, serving_brains
+from server.app import create_app, serving_brains
+from server.protocol import Brain
 from tests.server.test_server import play_to_end, start, write_maps
 from tests.training.test_brain_policy import model_config, write_subgraph
+from training.bc import BCConfig
 from training.brain_policy import build
+from training.bundle import bundle, bundle_view_only
 from training.checkpoints import save_checkpoint, subgraph_fingerprint
 
 
-def spec(brain_id: str, checkpoint: Path) -> BrainSpec:
-    return BrainSpec(brain_id, brain_id.title(), "test brain", str(checkpoint))
+def mode(brain_id: str) -> Brain:
+    return Brain(id=brain_id, label=brain_id.title(), description="test brain")
 
 
-def write_checkpoint(directory: Path) -> Path:
+def write_bundles(directory: Path) -> Path:
+    """bundles/ with a trained `real`, a view-only `shuffled_free`, a broken `shuffled_signs`,
+    and no `shuffled_layers`."""
     subgraph = directory / "subgraph"
     subgraph.mkdir()
     write_subgraph(subgraph)
     counts = {"n_neurons": 4, "n_edges": 3, "n_synapses": 30}
     (subgraph / "meta.json").write_text(json.dumps(counts))
+    (subgraph / "groups.json").write_text(json.dumps({"DN_all": [3]}))
     cfg = model_config(subgraph, [13, 5, 13, 5])
-    saber = load_config(SaberConfig, "saber")
-    _, _, params = build(cfg, saber, load_config(EyeConfig, "eye"), jax.random.PRNGKey(0))
-    return save_checkpoint(
-        directory / "real.npz",
+    saber, eye = load_config(SaberConfig, "saber"), load_config(EyeConfig, "eye")
+    _, _, params = build(cfg, saber, eye, jax.random.PRNGKey(0))
+    checkpoint = save_checkpoint(
+        directory / "run" / "bc_1.npz",
         params,
         variant="real",
         stage="bc",
         step=1,
-        configs={"model": cfg},
+        configs={
+            "model": cfg,
+            "saber": saber,
+            "eye": eye,
+            "train": load_config(BCConfig, "train_bc"),
+        },
         subgraph=subgraph_fingerprint(subgraph),
     )
+    bundles = directory / "bundles"
+    bundle(checkpoint, bundles / "real")
+    bundle_view_only(subgraph, bundles / "shuffled_free", "rewired")
+    bundle(checkpoint, bundles / "shuffled_signs")
+    (bundles / "shuffled_signs" / "bc_1.npz").unlink()
+    return bundles
 
 
 @pytest.fixture(scope="module")
 def client(tmp_path_factory: pytest.TempPathFactory) -> TestClient:
     directory = tmp_path_factory.mktemp("brains")
     write_maps(directory)
-    checkpoint = write_checkpoint(directory)
-    brains = serving_brains([spec("real", checkpoint), spec("rewired", directory / "none.npz")])
-    return TestClient(create_app(directory, brains))
+    bundles = write_bundles(directory)
+    modes = [mode(m) for m in ("real", "shuffled_layers", "shuffled_signs", "shuffled_free")]
+    return TestClient(create_app(directory, serving_brains(modes, bundles)))
 
 
-def test_only_brains_with_checkpoints_are_listed(client: TestClient) -> None:
+def test_only_modes_with_a_loadable_trained_bundle_are_listed(client: TestClient) -> None:
     assert [b["id"] for b in client.get("/api/brains").json()] == ["expert", "real"]
 
 

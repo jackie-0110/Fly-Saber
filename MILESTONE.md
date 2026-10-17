@@ -25,7 +25,7 @@ The first end-to-end moment. Everything else builds on it.
 
 - [x] **B1. A trained checkpoint.** PR #30 (Person 1): `bundles/real_fast/bc_950.npz`, 31.4% held-out hits. Full results in `results/README.md`.
 - [x] **B2. Checkpoint bundled with its subgraph.** PR #27 adds `scripts/bundle_checkpoint.py`, a deterministic subgraph build, and a content-hash fingerprint; PR #30 ships the bundle. Subgraph rebuilds on different machines differ (19,462 vs 19,463 neurons), so **always load a bundle's own `subgraph/`, never a local rebuild.**
-- [ ] **B3. Server loads bundles** (Person 2). One loader, `training.play_eval.load_trained(ckpt, subgraph_dir=...)` from PR #27, replacing `training.brain_policy.load` from PR #28; `configs/server.yaml` points at bundles; a brain that fails to load is skipped with a log line instead of stopping startup.
+- [x] **B3. Server loads bundles** (Person 2). `/api/brains` lists each mode in `configs/brains.yaml` with a trained `bundles/<id>/`, loaded with `training.play_eval.load_trained` from the bundle's own subgraph; a bundle that fails to load is skipped with a log line. **Remaining (Person 1):** run `scripts/export_brains.py` and commit `bundles/real/` (and the control modes); today only `bundles/real_fast/` exists, which the server does not look for.
 - [ ] **B4. Improve the trained fly** (Person 1 runs, Person 2 owns BC). Readout-only (33.9% held-out) still beats brain training (31.4%). Not blocking: the fly already plays from vision.
 
 ## Milestone C: the must-ship demo features

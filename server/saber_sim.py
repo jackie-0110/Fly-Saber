@@ -20,8 +20,8 @@ from fly_saber.eye import EyeConfig
 from fly_saber.maps.adapt import note_arrays
 from server.protocol import RenderState
 from server.session import NoteEvent, StepOutput
-from training.bc import greedy_action
-from training.brain_policy import load
+from training.bc import action_heads, greedy_action
+from training.play_eval import load_trained
 
 Act = Callable[[SaberState, jax.Array, Any, jax.Array], tuple[jax.Array, Any]]
 """(state, obs, carry, key) -> ((n_sabers, 2) action, carry) for one unbatched env.
@@ -74,12 +74,14 @@ def expert_sims() -> LiveSaber:
     return LiveSaber(env, lambda state, obs, carry, key: (saber_expert(env, state), carry), ())
 
 
-def brain_sims(checkpoint: Path) -> LiveSaber:
-    """The real env played greedily by a checkpointed brain, seeing through its eye columns."""
-    env, policy, params, model_cfg = load(
-        checkpoint, load_config(SaberConfig, "saber"), load_config(EyeConfig, "eye")
-    )
-    heads = list(model_cfg.action_heads)
+def brain_sims(checkpoint: Path, subgraph_dir: Path) -> LiveSaber:
+    """The env played greedily by a trained brain, seeing through its eye columns.
+
+    `subgraph_dir` must hold the exact subgraph it was trained on (a bundle's subgraph/).
+    """
+    trained = load_trained(checkpoint, subgraph_dir)
+    policy, params = trained.policy, trained.params
+    heads = action_heads(trained.env.cfg.n_sabers)
 
     def act(
         state: SaberState, obs: jax.Array, v: jax.Array, key: jax.Array
@@ -87,8 +89,8 @@ def brain_sims(checkpoint: Path) -> LiveSaber:
         v, logits = policy.apply(params, v, obs, key)
         return greedy_action(logits, heads), v
 
-    neurons = pd.read_parquet(Path(model_cfg.subgraph_dir) / "neurons.parquet", columns=["type"])
-    return LiveSaber(env, act, policy.init_carry(), policy.n_neurons, cell_types(neurons))
+    neurons = pd.read_parquet(subgraph_dir / "neurons.parquet", columns=["type"])
+    return LiveSaber(trained.env, act, policy.init_carry(), trained.n_neurons, cell_types(neurons))
 
 
 class EnvSaberSim:

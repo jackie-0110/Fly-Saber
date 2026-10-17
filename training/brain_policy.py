@@ -3,10 +3,8 @@
 Owner: Person 2. See docs/PROTOCOL.md sections 2 and 5.
 """
 
-import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 
 import jax
 import numpy as np
@@ -28,7 +26,6 @@ from brain.model.interventions import Interventions, no_interventions
 from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
 from fly_saber.eye import EyeConfig
 from training.calibration import fit_readout
-from training.checkpoints import load_checkpoint, read_meta, subgraph_fingerprint
 
 
 @dataclass(frozen=True)
@@ -105,34 +102,3 @@ def build(
         baseline,
     )
     return env, policy, params
-
-
-def load(
-    path: Path, saber_cfg: SaberConfig, eye_cfg: EyeConfig
-) -> tuple[SaberEnv, BrainPolicy, Params, ModelConfig]:
-    """A checkpointed brain ready to play: env, policy resting under the trained params, params.
-
-    Uses the checkpoint's model config, so its subgraph_dir must hold the subgraph it was
-    trained on (load_checkpoint raises otherwise).
-    """
-    saved = ModelConfig(**read_meta(path)["configs"]["model"])
-    model_cfg = dataclasses.replace(saved, remat=False)
-    graph, columns, n_neurons = load_graph(model_cfg)
-    env = column_env(saber_cfg, eye_cfg, columns)
-    # Shapes only: readout_norm would calibrate a readout the checkpoint overwrites.
-    template = init_params(
-        jax.random.PRNGKey(0),
-        graph,
-        dataclasses.replace(model_cfg, readout_norm=False),
-        n_neurons,
-    )
-    params, _ = load_checkpoint(
-        path, template, expect_subgraph=subgraph_fingerprint(model_cfg.subgraph_dir)
-    )
-    rest = rest_state(params, graph, model_cfg, n_neurons)
-    if model_cfg.readout_norm and model_cfg.live_baseline:
-        params = with_live_baseline(params, graph, model_cfg, n_neurons, rest)
-    policy = BrainPolicy(
-        make_step(graph, model_cfg, n_neurons), n_neurons, no_interventions(n_neurons), rest
-    )
-    return env, policy, params, model_cfg
