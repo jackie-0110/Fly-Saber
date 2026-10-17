@@ -111,6 +111,13 @@ Text messages are JSON objects with a `type` field. Binary messages carry activi
 | `human_action` | `color`, `cell`, `cut` | You vs. the Fly (stretch). Same encoding as a saber in `render_state`. |
 | `narrate` | `slot` | Ask for an explanation of the last miss (Person 3). |
 
+Server behaviour:
+
+- Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
+- `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
+- `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
+- The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
+
 #### Server to client
 
 | `type` | Fields | Rate |
