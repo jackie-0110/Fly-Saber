@@ -12,40 +12,10 @@ or point model.subgraph_dir at bundle/subgraph. Do not rebuild the subgraph else
 rebuilds can put different neurons in different slots.
 """
 
-import json
-import shutil
 import sys
 from pathlib import Path
 
-from training.checkpoints import read_meta, subgraph_fingerprint, subgraph_mismatch
-
-SUBGRAPH_FILES = ("neurons.parquet", "edges.parquet", "groups.json", "meta.json")
-
-
-def bundle(checkpoint: Path, out: Path) -> Path:
-    meta = read_meta(checkpoint)
-    src = Path(meta["configs"]["model"]["subgraph_dir"])
-    bad = subgraph_mismatch(meta["subgraph"] or {}, subgraph_fingerprint(src))
-    if bad:
-        raise SystemExit(f"{src} does not match the checkpoint ({', '.join(bad)}); not bundling")
-    (out / "subgraph").mkdir(parents=True, exist_ok=True)
-    for name in SUBGRAPH_FILES:
-        shutil.copyfile(src / name, out / "subgraph" / name)
-    shutil.copyfile(checkpoint, out / checkpoint.name)
-    for extra in ("bc_log.json", "config.json", f"eval_{checkpoint.stem}.json"):
-        if (checkpoint.parent / extra).exists():
-            shutil.copyfile(checkpoint.parent / extra, out / extra)
-    manifest = {
-        "checkpoint": checkpoint.name,
-        "source": str(checkpoint),
-        "variant": meta["variant"],
-        "step": meta["step"],
-        "metrics": meta["metrics"],
-        "subgraph_fingerprint": subgraph_fingerprint(out / "subgraph"),
-    }
-    (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=1))
-    return out
-
+from training.bundle import bundle
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

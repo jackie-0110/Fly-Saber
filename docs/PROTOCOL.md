@@ -257,6 +257,23 @@ Lesion wins over stimulation and mood for neurons in both. Any group in `groups.
 
 **Effect on motor output before training** (`uv run python scripts/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
 
+### Brain modes (`scripts/export_brains.py`, `configs/brains.yaml`)
+
+Four brains the demo can switch between, all with the **same neurons** (one `neurons.json`), different wiring:
+
+| `id` | What | Playable |
+|---|---|---|
+| `real` | The fly's own wiring | yes |
+| `shuffled_layers` | Same layer-to-layer connection counts, random partners within each layer pair | yes |
+| `shuffled_signs` | Real wiring, excitation and inhibition scrambled | yes |
+| `shuffled_free` | Partners from anywhere: 1,068 direct eye-to-motor connections versus 1 | view only (no checkpoint) |
+
+Run on HiPerGator (it needs the checkpoints and their subgraphs). It writes:
+
+- **`bundles/<id>/`** for the server: `bc_<n>.npz` plus `subgraph/` (exact training files), `MANIFEST.json` (`checkpoint` is null for view-only). The server's `GET /api/brains` should list these, and load each from its bundle.
+- **`frontend/public/data/brains/index.json`**: `{schema_version, modes: [{id, label, description, playable, bundle, play, wiring}]}`. `play` is `{heldout, train}` hit rates (from `eval_<ckpt>.json`) or null. `wiring` has `direct_eye_to_motor_connections`, `eye_to_motor_synapses_median`, `eye_to_motor_synapses_histogram` (synapses: motor neuron count), `motor_neurons_unreachable_from_eye`, `connections_shared_with_real` (0 to 1), `excitatory_neuron_fraction`.
+- **`frontend/public/data/brains/<id>.json`**: `{id, sign: int[N], edges_columns: ["pre","post","weight","sign"], edges: [[pre, post, weight, sign], ...]}`. `sign` replaces `neurons.json`'s `sign` for that mode (only `shuffled_signs` differs). `edges` is the strongest 60 connections of each layer-to-layer block (about 2,500), neuron indices into `neurons.json`, for drawing the wiring in 3D: in `shuffled_free` many lines run straight from the eyes to the motor neurons.
+
 ## 5. Brain step and checkpoints (Person 1)
 
 `brain/model/brain.py`, configured by `configs/model.yaml`:
