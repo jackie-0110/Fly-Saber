@@ -649,6 +649,10 @@
   width: 70px;
   accent-color: #a5d4cf;
 }
+.brain-display-controls input[type='checkbox'] {
+  width: 13px;
+  height: 13px;
+}
 .brain-display-controls input:focus-visible {
   outline: 2px solid #a5d4cf;
   outline-offset: 3px;
@@ -725,6 +729,21 @@
 .brain-color-legend > span:last-child {
   margin-left: auto;
   color: #9daeb3;
+}
+.brain-connection-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1.5em 1.5em;
+  gap: 4px;
+  padding: 7px 19px;
+  color: #b3c0c4;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.brain-connection-summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .type-swatch {
   width: 7px;
@@ -1312,7 +1331,7 @@
     min-height: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto auto auto;
     grid-template-areas:
       'title'
       'filters'
@@ -1321,6 +1340,7 @@
       'camera'
       'help'
       'legend'
+      'connections'
       'selection'
       'note';
   }
@@ -1377,6 +1397,10 @@
   .brain-color-legend {
     grid-area: legend;
     padding: 7px 14px;
+  }
+  .brain-connection-summary {
+    grid-area: connections;
+    padding: 6px 14px;
   }
   .neuron-inspector {
     grid-area: selection;

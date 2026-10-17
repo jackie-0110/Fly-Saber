@@ -14,9 +14,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { SessionOverview } from '@/components/session-overview'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cellTypeColor, filterNeuronIndices, loadBrainData } from '@/brain/data'
+import {
+  cellTypeColor,
+  filterEdgeIndices,
+  filterNeuronIndices,
+  loadBrainData,
+  neuronConnectionStats,
+} from '@/brain/data'
 import type { BrainData } from '@/brain/data'
 import type { CameraAction } from '@/brain/brain-scene'
+import { MOVING_EDGE_LIMIT } from '@/brain/rendering'
 import { SongLibrary } from '@/components/song-library'
 import { usePlayer } from '@/game/store'
 
@@ -70,6 +77,8 @@ export function BrainPreview() {
   const [cameraReady, setCameraReady] = useState(false)
   const [pointSize, setPointSize] = useState(1.5)
   const [opacity, setOpacity] = useState(0.65)
+  const [showConnections, setShowConnections] = useState(true)
+  const [cameraMoving, setCameraMoving] = useState(false)
   const stageRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenError, setFullscreenError] = useState('')
@@ -117,6 +126,14 @@ export function BrainPreview() {
   const indices = useMemo(
     () => (data ? filterNeuronIndices(data, group, cellType) : []),
     [data, group, cellType],
+  )
+  const edgeIndices = useMemo(
+    () => (data && showConnections ? filterEdgeIndices(data, indices, selected) : []),
+    [data, indices, selected, showConnections],
+  )
+  const connections = useMemo(
+    () => (data && selected !== null ? neuronConnectionStats(data, selected) : null),
+    [data, selected],
   )
   const availableCellTypes = useMemo(() => {
     if (!data) return []
@@ -236,7 +253,7 @@ export function BrainPreview() {
         <div className="neuron-count" role="status">
           {asset
             ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
-            : 'Loading authentic neuron coordinates…'}
+            : 'Loading neuron coordinates and connections…'}
           {(group || cellType) && (
             <Button
               variant="ghost"
@@ -268,7 +285,7 @@ export function BrainPreview() {
               }}
             />
           ) : !data ? (
-            <SceneFallback message="Loading neuron coordinates…" />
+            <SceneFallback message="Loading neuron coordinates and connections…" />
           ) : contextLost ? (
             fallback
           ) : (
@@ -277,12 +294,15 @@ export function BrainPreview() {
                 <BrainScene
                   data={data}
                   indices={indices}
+                  edgeIndices={edgeIndices}
+                  showConnections={showConnections}
                   selected={selected}
                   onSelect={setSelected}
                   onNavigateReady={onNavigateReady}
                   onFailure={onContextLost}
                   pointSize={pointSize}
                   opacity={opacity}
+                  onMotionChange={setCameraMoving}
                 />
               </Suspense>
             </SceneBoundary>
@@ -310,6 +330,15 @@ export function BrainPreview() {
             </div>
           </div>
           <div className="brain-display-controls">
+            <label>
+              <input
+                type="checkbox"
+                checked={showConnections}
+                disabled={!data}
+                onChange={(event) => setShowConnections(event.target.checked)}
+              />
+              Connections
+            </label>
             <label>
               Point size
               <input
@@ -399,6 +428,27 @@ export function BrainPreview() {
           <span>Color identifies cell type</span>
           <span>Click a point to inspect</span>
         </div>
+        <div className="brain-connection-summary" role="status">
+          <span>
+            {data
+              ? `${number.format(cameraMoving && selected === null ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT) : edgeIndices.length)} of ${number.format(data.edges.n_edges)} connections shown`
+              : 'Loading connections…'}
+          </span>
+          {showConnections && selected !== null && (
+            <span>
+              <span style={{ color: '#8ec5ff' }}>Blue: incoming</span>
+              {' · '}
+              <span style={{ color: '#f0c987' }}>Gold: outgoing</span>
+            </span>
+          )}
+          {showConnections && selected === null && (
+            <span>
+              {cameraMoving && edgeIndices.length > MOVING_EDGE_LIMIT
+                ? 'Movement preview; full detail returns when still.'
+                : 'Select a neuron to trace its connections.'}
+            </span>
+          )}
+        </div>
         <div className="neuron-inspector">
           <div className="neuron-selection-heading">
             <h3>Neuron inspector</h3>
@@ -453,6 +503,24 @@ export function BrainPreview() {
                 <dt>Class</dt>
                 <dd>{asset.superclasses[asset.superclass[selected]].replaceAll('_', ' ')}</dd>
               </div>
+              {connections && (
+                <>
+                  <div>
+                    <dt>Incoming</dt>
+                    <dd>
+                      {number.format(connections.incoming)} connections /{' '}
+                      {number.format(connections.incomingSynapses)} synapses
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Outgoing</dt>
+                    <dd>
+                      {number.format(connections.outgoing)} connections /{' '}
+                      {number.format(connections.outgoingSynapses)} synapses
+                    </dd>
+                  </div>
+                </>
+              )}
               <div>
                 <dt>Position (µm)</dt>
                 <dd>
@@ -483,9 +551,24 @@ export function BrainPreview() {
       <TabsContent value="details" className="inspector-prose">
         <h2>About the neuron view</h2>
         <p>
-          This point cloud uses the supplied MaleCNS visual-to-motor subgraph. The few points below
-          the main brain are ascending-neuron soma locations present in this export. It is a subset
-          of the source connectome.
+          This view uses the supplied MaleCNS visual-to-motor subgraph. The few points below the
+          main brain are ascending-neuron soma locations present in this export. It is a subset of
+          the source connectome.
+        </p>
+        <p>
+          Connections come from the exact graph bundled with the trained real fly model (bc_950,
+          training update 950). Lines join presynaptic to postsynaptic neuron locations; they do not
+          trace axon paths. All connections are included at rest. During camera movement, dense
+          views use an evenly distributed sample of real connections and a lower pixel resolution;
+          full detail returns when the camera settles. Selected-neuron connections stay complete.
+          Filters keep connections only when both neurons are visible; selecting a neuron shows its
+          visible incoming (blue) and outgoing (gold) connections. Inspector totals include all its
+          connections, including those hidden by filters. Overlapping positions can hide individual
+          lines.
+        </p>
+        <p>
+          Synapse counts describe anatomical connections, not learned weights or firing activity.
+          Training keeps the wiring fixed and adjusts neuron and cell-type-pair parameters.
         </p>
         <p>
           Points summarize neuron locations, not their full branching shapes. Some positions are
@@ -501,6 +584,14 @@ export function BrainPreview() {
           <div>
             <dt>Neuron count</dt>
             <dd>{asset ? number.format(asset.n_neurons) : 'Not loaded'}</dd>
+          </div>
+          <div>
+            <dt>Directed connections</dt>
+            <dd>{data ? number.format(data.edges.n_edges) : 'Not loaded'}</dd>
+          </div>
+          <div>
+            <dt>Synapses</dt>
+            <dd>{data ? number.format(data.edges.n_synapses) : 'Not loaded'}</dd>
           </div>
           <div>
             <dt>Cell types</dt>
