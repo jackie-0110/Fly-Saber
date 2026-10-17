@@ -13,7 +13,7 @@ The spec's must-ship tier (handoff section 1), as the stage demo shows it. The M
 3. Real and scrambled brains play the same song side by side. **Server done**, UI missing (C2).
 4. The 3D neuron cloud lights up with live activity. **Not started** (C3).
 5. A replay of each demo plays with the server off. **Not started** (C4).
-6. The public URL plays only allowlisted audio. **Not started** (D5).
+6. Anyone picks any BeatSaver map and the fly plays it, including maps it has never seen. **Not started** (C5).
 
 Plus the acceptance tests in handoff section 18 (E2).
 
@@ -23,15 +23,17 @@ Out of the MVP, in "Can wait": narrator, fly's-eye view, opto, Brain Explorer li
 
 Work top to bottom. Items in the same step can run in parallel.
 
-1. **Unblock:** keep the live song picker (C5); make the two decisions below.
+1. **Unblock:** BeatSaver play (C5), so #44 can merge; make the two decisions below.
 2. **Interactive demo:** C1, C2, C3, C6.
-3. **Public URL:** D3, D5, D6, in parallel with step 2.
+3. **Public URL:** D3, D6, D7, in parallel with step 2.
+
+Front-end work is split: Person 2 builds the client plumbing (session client and store: `set_interventions`, two slots, activity decoding, replay source), Person 3 builds the UI on top.
 4. **Safety net and ship:** C4, then E1 to E3.
 
 ## Decisions needed
 
 - **Versus control (all).** #30 measured, held out: partners shuffled within layers 51.8%, real 31.4%, E/I shuffled 20.0%. Both controls are bundled (`shuffled_layers`, `shuffled_signs`). Pick one for the stage and decide what the pitch claims.
-- **Stage song and the score we claim (all).** The only held-out allowlisted song plays to the fly's weak spots: `2dd26_expert` scores 16.4% live (`2dd26_expertplus` 21.6%). The best allowlisted map, `304be_expertplus`, scores 33.3% but is a training song. Options: lead with 304be labelled as a training song and show 2dd26 as "never heard"; or allowlist another held-out CC song that suits the fly (Person 2).
+- **Stage song and the score we claim (all).** The only held-out allowlisted song plays to the fly's weak spots: `2dd26_expert` scores 16.4% live (`2dd26_expertplus` 21.6%). The best allowlisted map, `304be_expertplus`, scores 33.3% but is a training song. Options: lead with 304be labelled as a training song and show 2dd26 as "never heard"; or, once C5 lands, pick a held-out BeatSaver map that suits the fly.
 
 ## Done
 
@@ -50,20 +52,20 @@ Work top to bottom. Items in the same step can run in parallel.
 - [ ] **C2. Versus UI** (Person 3). The client sends `brains: [a, b]`, handles `slot` 1 in frames, events and `ended`, and the screen splits. Today `session-client.ts` fails unless there is exactly one slot.
 - [ ] **C3. Live neuron activity.** Pin the binary layout in PROTOCOL.md section 6 (Person 1); stream kinds 1 and 2 (Person 2); decode them and light the neuron cloud (Person 3). Neuron order matches `neurons.json` and `ready.cell_types`. Must hold 30 Hz on the public host (E2).
 - [ ] **C4. Replay fallback** (Person 3, Person 2 pairs). `scripts/record_replays.py` records each demo map's frames and events for `real` and the Versus control; a replay player in the front end runs them with the server off. Both are stubs today.
-- [ ] **C5. Keep the live song and brain picker** (Person 3). Open PR #44 deletes `live-songs.tsx`, the only UI that starts a fly session, plus `live-session.spec.ts` and `live-integration.spec.ts`. Merged as is, the browser could only play BeatSaver previews, which the fly never plays. Keep the picker, or move it, before #44 merges.
+- [ ] **C5. The fly plays any BeatSaver map** (Person 2 server and store, Person 3 UI). The server fetches and normalizes a BeatSaver chart by its map id (`<key>_<difficulty>`); audio stays in the browser, since the fly plays from vision. The Python normalizer catches up with the browser's parser (Info.dat v4, v4 charts, song time offset), so every Standard map the browser previews also plays. Community then replaces the Live songs list, and the brain picker moves into it. Open PR #44 deletes `live-songs.tsx`, today the only UI that starts a fly session: rebase it onto C5 and adapt `live-session.spec.ts` and `live-integration.spec.ts` instead of deleting them.
 
 ## Milestone D: public URL
 
 - [x] **D1. Hosting decision.** The front end is at https://flysaber.jackie-courtney.com, a Cloudflare Worker (#41) that proxies `/api/*` and `/ws/*` to its `BACKEND_URL` secret, so the browser stays same-origin and the server needs no CORS. Person 1 runs the backend on Vultr with `scripts/deploy_vultr.sh` (#42).
 - [ ] **D3. Backend hostname and TLS** (Person 1). `docs/CI_CD.md` sets `BACKEND_URL=http://<server ip>:8000`; check that the Worker can fetch a bare IP and port, and if it can't, give the host a DNS name. Use a single-level name such as `flysaber-api.jackie-courtney.com`: Cloudflare's free certificate doesn't cover `api.flysaber.jackie-courtney.com`.
-- [ ] **D5. Allowlisted audio only on the public URL** (Person 3, spec 8.4). The in-browser BeatSaver search plays any map's audio, with no production gate. Hide it, or limit it to the allowlist, on the public build. #44 makes it the sidebar's default view.
+- **D5. Allowlisted audio only: dropped** (2026-10-17). This is a non-commercial demo; spec 8.4 no longer applies, and BeatSaver audio plays in the browser.
 - [ ] **D6. Size the public host** (Person 1). The real brain runs about 2.1x real time on a laptop CPU, so a Versus session (2 brain slots) takes most of a laptop. Set `MAX_SESSIONS` to what the Vultr host keeps at 30 Hz with activity streaming.
 - [ ] **D7. Fix the "Workers Builds: flysaber" check** (whoever set up Cloudflare). It fails on every PR.
 
 ## Milestone E: ship
 
 - [ ] **E1. README results with real numbers** (Person 3 owns `docs/RESULTS.md`): held-out hit rate, real vs. scrambled, the looming lesion, the blindfold.
-- [ ] **E2. Acceptance tests** (handoff section 18) pass on the public host, including 30 Hz with activity streaming and replay with the server off.
+- [ ] **E2. Acceptance tests** (handoff section 18) pass on the public host, including 30 Hz with activity streaming and replay with the server off. The allowlisted-audio test is dropped with D5.
 - [ ] **E3. Rehearse the demo** (all), once live and once from replays.
 
 ## Risks to check
