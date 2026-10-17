@@ -39,12 +39,14 @@ class BrainPolicy:
     n_neurons: int
     interventions: Interventions
     rest: jax.Array | None = None
-    baseline: Callable[[Params], Params] | None = None
+    baseline: Callable[[Params, Interventions | None], Params] | None = None
     """Sets the live readout baseline from the current params (with_live_baseline)."""
 
-    def prepare(self, params: Params) -> Params:
+    def prepare(self, params: Params, iv: Interventions | None = None) -> Params:
         """Params to run with: call once per update on the trained params (training/bc.py)."""
-        return params if self.baseline is None else self.baseline(params)
+        # Server: call again with the live interventions whenever the UI changes them, so
+        # the readout re-centers on the modified brain's rest (see brain.model.brain.rest_dn).
+        return params if self.baseline is None else self.baseline(params, iv)
 
     """Episode start state (brain.model.brain.rest_state); None starts from all zeros.
     After loading a checkpoint, replace it: dataclasses.replace(policy, rest=rest_state(...))."""
@@ -84,8 +86,8 @@ def build(
     baseline = None
     if model_cfg.readout_norm and model_cfg.live_baseline:
 
-        def baseline(p: Params) -> Params:
-            return with_live_baseline(p, graph, model_cfg, n_neurons, rest)
+        def baseline(p: Params, iv: Interventions | None = None) -> Params:
+            return with_live_baseline(p, graph, model_cfg, n_neurons, rest, iv)
 
         params = baseline(params)
     policy = BrainPolicy(

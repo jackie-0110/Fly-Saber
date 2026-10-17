@@ -12,6 +12,7 @@ All brains and conditions play the same song windows, so differences are paired.
 """
 
 import argparse
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,13 @@ def main() -> None:
     ap.add_argument("--splits", nargs="+", default=["heldout", "train"])
     ap.add_argument("--windows", type=int, default=256, help="song windows per split")
     ap.add_argument("--window-sec", type=float, default=10.0)
+    ap.add_argument(
+        "--fixed-baseline",
+        action="store_true",
+        help="keep the untouched brain's readout baseline under every control (old behavior)",
+    )
+    ap.add_argument("--subgraph", type=Path, help="subgraph dir, e.g. a bundle's subgraph/")
+    ap.add_argument("--maps-dir", help="override the training config's maps_dir")
     args = ap.parse_args()
 
     controls = load_controls()
@@ -42,11 +50,20 @@ def main() -> None:
     summary: dict[str, dict[str, Any]] = {}
     for path in args.checkpoints:
         print(f"evaluating {label(path)} ...", flush=True)
-        trained = load_trained(path)
+        trained = load_trained(path, args.subgraph)
+        if args.maps_dir:
+            cfg = dataclasses.replace(trained.train_cfg, maps_dir=args.maps_dir)
+            trained = dataclasses.replace(trained, train_cfg=cfg)
         result: dict[str, Any] = {"checkpoint": str(path), "meta": trained.meta["metrics"]}
         for split in args.splits:
             result[split] = play_conditions(
-                trained, controls, named, split, args.windows, args.window_sec
+                trained,
+                controls,
+                named,
+                split,
+                args.windows,
+                args.window_sec,
+                rebaseline=not args.fixed_baseline,
             )
         out = path.with_name(f"eval_{path.stem}.json")
         out.write_text(json.dumps(result, indent=1))

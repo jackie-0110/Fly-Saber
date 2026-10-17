@@ -259,16 +259,29 @@ def init_state(n_neurons: int) -> Array:
     return jnp.zeros(n_neurons)
 
 
-def rest_dn(params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, v0: Array) -> Array:
+def rest_dn(
+    params: Params,
+    graph: Graph,
+    cfg: ModelConfig,
+    n_neurons: int,
+    v0: Array,
+    iv: Interventions | None = None,
+) -> Array:
     """DN rates of the brain at rest under `params`: settled on the gray background for
-    `baseline_frames` from `v0` (a previous rest state), no interventions. Differentiable in
-    params; this is the live readout baseline."""
+    `baseline_frames` from `v0` (a previous rest state). Differentiable in params; this is
+    the live readout baseline.
+
+    With `iv` (lesions, opto, moods; noise is ignored), the rest is that of the modified
+    brain. The readout then measures how vision moves the DNs *in the lesioned brain*,
+    instead of being blinded by the shift in their background: without this, every UI
+    control dropped the trained fly to 0 to 4% hits, even lesioning the 2 giant fibers.
+    """
     from brain.model.interventions import no_interventions
 
     step = make_step(graph, dataclasses.replace(cfg, readout_norm=False), n_neurons)
     # numpy, not jnp: this runs inside jitted training steps, where jnp ops are traced.
     gray = jnp.full((2, int(np.asarray(graph.input_column).max()) + 1), 0.5)
-    iv = no_interventions(n_neurons)
+    iv = no_interventions(n_neurons) if iv is None else iv._replace(noise_std=jnp.zeros(()))
 
     def body(v: Array, _: None) -> tuple[Array, None]:
         return step(params, v, gray, iv, jax.random.PRNGKey(0))[0], None
@@ -279,10 +292,16 @@ def rest_dn(params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, v0: 
 
 
 def with_live_baseline(
-    params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, v0: Array
+    params: Params,
+    graph: Graph,
+    cfg: ModelConfig,
+    n_neurons: int,
+    v0: Array,
+    iv: Interventions | None = None,
 ) -> Params:
-    """`params` with dn_mean set to rest_dn. Call on the params at the start of every loss."""
-    return params._replace(dn_mean=rest_dn(params, graph, cfg, n_neurons, v0))
+    """`params` with dn_mean set to rest_dn. Call on the params at the start of every loss,
+    and again whenever the live interventions change (pass them as `iv`)."""
+    return params._replace(dn_mean=rest_dn(params, graph, cfg, n_neurons, v0, iv))
 
 
 def rest_state(
