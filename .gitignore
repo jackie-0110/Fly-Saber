@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Data and outputs (large; never commit)
+data/raw/*
+data/processed/*
+data/maps/*
+!data/**/.gitkeep
+!data/maps/demo_allowlist.json
+checkpoints/
+runs/
+wandb/
+replays/
+*.npz
+
+# Web
+web/node_modules/
+web/dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# SLURM logs
+slurm-*.out
