@@ -1,6 +1,6 @@
-# FlyArcade: 3-Person Work Split
+# Fly Saber: 3-Person Work Split
 
-Companion to `FLYARCADE_HANDOFF.md`. That file is the full spec; this one says who builds what.
+Companion to `FLY_SABER_HANDOFF.md`. That file is the full spec; this one says who builds what.
 
 **Principle:** every person owns one piece of the AI/ML work plus one piece of the engineering. Nobody is "just front end" or "just infra," everyone can explain the ML to judges, and training waits never leave someone idle.
 

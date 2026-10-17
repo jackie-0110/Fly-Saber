@@ -10,8 +10,9 @@
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test": "npm run test:unit && playwright test",
+    "test:ui": "playwright test --ui",
+    "test:unit": "node --experimental-strip-types --test tests/brain-data.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

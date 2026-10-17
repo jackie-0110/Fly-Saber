@@ -23,8 +23,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     JAX_PLATFORMS=cpu
 WORKDIR /app
-RUN groupadd --gid 10001 flyarcade \
-    && useradd --uid 10001 --gid flyarcade --create-home flyarcade
+RUN groupadd --gid 10001 fly_saber \
+    && useradd --uid 10001 --gid fly_saber --create-home fly_saber
 COPY --from=python-builder /app/.venv /app/.venv
 COPY brain/ brain/
 COPY fly_saber/ fly_saber/
@@ -33,7 +33,7 @@ COPY server/ server/
 COPY configs/ configs/
 COPY data/maps/demo_allowlist.json data/maps/demo_allowlist.json
 COPY --from=frontend /frontend/dist frontend/dist/
-USER flyarcade
+USER fly_saber
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/games', timeout=3)"]

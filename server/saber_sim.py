@@ -1,6 +1,6 @@
 """The real Fly Saber env behind the session's Sim interface (spec 13).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 from collections.abc import Callable

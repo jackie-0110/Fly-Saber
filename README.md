@@ -1,8 +1,8 @@
-# FlyArcade
+# Fly Saber
 
 A simulated fruit fly brain, built from the real MaleCNS connectome, plays **Fly Saber** (a rhythm game) from its own visual input while you watch its neurons fire and change its brain live: lesion cell types, trigger neurons, blind an eye, scramble its wiring.
 
-> Work in progress for SwampHacks. Full spec: [`FLYARCADE_HANDOFF.md`](FLYARCADE_HANDOFF.md). Who builds what: [`FLYARCADE_TEAM_SPLIT.md`](FLYARCADE_TEAM_SPLIT.md).
+> Work in progress for SwampHacks. Full spec: [`FLY_SABER_HANDOFF.md`](FLY_SABER_HANDOFF.md). Who builds what: [`FLY_SABER_TEAM_SPLIT.md`](FLY_SABER_TEAM_SPLIT.md).
 
 ## Stack
 
@@ -48,7 +48,7 @@ docs/        PROTOCOL (hour 0 contracts), DATA_NOTES, ARCHITECTURE, RESULTS
 data/        gitignored raw and processed data (except the demo allowlist)
 ```
 
-Each folder has its own README with what is in it and who owns it. The handoff spec's section 4 layout (`flyarcade/...`) maps onto this as: `connectome/` and `model/` to `brain/`, `sim/` and `maps/` to `fly_saber/`, `train/` to `training/`, `web/` to `frontend/`.
+Each folder has its own README with what is in it and who owns it. The handoff spec's section 4 layout (`fly_saber/...`) maps onto this as: `connectome/` and `model/` to `brain/`, `sim/` and `maps/` to `fly_saber/`, `train/` to `training/`, `web/` to `frontend/`.
 
 ## Who owns what
 

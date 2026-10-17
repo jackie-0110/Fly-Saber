@@ -1,6 +1,6 @@
 """Stack normalized maps into one padded batch and sample training windows (spec 7.2, 12).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 import json

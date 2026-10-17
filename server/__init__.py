@@ -1,4 +1,4 @@
 """FastAPI and WebSocket server.
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """

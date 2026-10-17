@@ -1,6 +1,6 @@
 """WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2 and 3 (spec 13).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 from typing import Annotated, Any, Literal
