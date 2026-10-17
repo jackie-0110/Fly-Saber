@@ -79,6 +79,16 @@ The front end already has the full map from REST and positions notes from the au
 }
 ```
 
+### Env interface for the brain (Person 2 to Person 1)
+
+`fly_saber.env.SaberEnv`, gymnax style, every method pure and `jit`/`vmap` safe:
+
+- `reset(notes, speed_mps, start_sec, end_sec) -> (obs, state)`; `notes` from `fly_saber.maps.adapt.note_arrays`.
+- `step(state, action) -> (obs, state, reward, done, events)`.
+- `obs`: float32 `(2, n_ommatidia)`, values 0 to 1, lattice order of `fly_saber.eye.lattice` (left eye first). Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8.
+- `action`: int32 `(n_sabers, 2)`, rows red then blue: `[cell, cut]`, cell 0 to 11 or 12 (idle), cut 0 up, 1 down, 2 left, 3 right, or 4 (no cut). That is a 13-way position head and a 5-way direction head per saber. `n_sabers` is 1 when `saber.yaml` sets `two_sabers: false`.
+- `fly_saber.experts.saber_expert(env, state)` returns the perfect action, for behavior cloning.
+
 A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb hit) or when it passes the hit plane (miss).
 
 ## 3. WebSocket and REST (Person 2)
