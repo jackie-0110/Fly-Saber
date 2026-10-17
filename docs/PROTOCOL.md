@@ -8,7 +8,7 @@ Fill these in during the hour 0 contracts session (30 minutes, all three). Every
 | `render_state` format | Person 2 | 3 | Draft |
 | WebSocket protocol (both directions) | Person 2 | 3 | Draft |
 | `groups.json` and interventions schema | Person 1 | 2, 3 | groups done, interventions TODO |
-| Brain step function signature and checkpoint format | Person 1 | 2, 3 | TODO |
+| Brain step function signature and checkpoint format | Person 1 | 2, 3 | step done, checkpoints TODO |
 | Activity stream format (quantized rates, cell-type means) | Person 1 | 3 | TODO |
 
 ## 1. Normalized map schema (Person 2)
@@ -209,9 +209,43 @@ Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, a
 
 **Eye input (to agree with Person 2):** the eye drives photoreceptors by `(side, hex1, hex2)`. About 170 to 180 of the 220 sampled columns per eye have a photoreceptor; for the rest, inject into that column's L1 and L2 with inverted sign (see DATA_NOTES).
 
-Interventions schema: TODO (with `brain/model/interventions.py`).
+**Interventions** (`brain/model/interventions.py`): a `NamedTuple` pytree passed into every step, so the server can change it live without recompiling.
+
+| Field | Shape | Meaning |
+|---|---|---|
+| `gain` | (N,) | output multiplier; 0 lesions the neuron (its rate and its synaptic output) |
+| `opto` | (N,) | extra input current; around 5 forces a neuron on |
+| `noise_std` | () | std of current noise on every neuron each substep (for the arousal slider) |
+
+Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, groups["giant_fiber"], 5.0)`. Mood sliders: TODO.
 
 ## 5. Brain step and checkpoints (Person 1)
+
+`brain/model/brain.py`, configured by `configs/model.yaml`:
+
+```python
+graph, columns, n = load_graph(cfg)          # columns: eye column table, one row per column
+params = init_params(key, graph, cfg, n)
+step = make_step(graph, cfg, n)              # pure function: jit it, vmap it over envs
+v = init_state(n)                            # reset at episode start
+v, out = step(params, v, eye, interventions, key)
+logits_per_head = split_heads(out.logits, cfg.action_heads)
+```
+
+| Argument / output | Shape | Meaning |
+|---|---|---|
+| `eye` | (n_columns,) float in [0, 1] | luminance per eye column, in the order of the `columns` table (sorted by side, hex1, hex2; 437 columns, about 220 per eye) |
+| `v` | (N,) | membrane potentials; carry between frames, reset per episode |
+| `key` | PRNGKey | for noise; pass a fresh one per frame |
+| `out.logits` | (sum of `action_heads`,) | `[13, 5, 13, 5]`: red position (12 cells + idle), red direction (4 + no_cut), blue position, blue direction |
+| `out.value` | () | PPO value estimate |
+| `out.rates` | (N,) | all neuron rates, for the activity stream |
+
+One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs: `jax.vmap(step, in_axes=(None, 0, 0, None, 0))`.
+
+Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
+
+Checkpoint format: TODO (with `training/checkpoints.py`).
 
 ## 6. Activity stream (Person 1)
 

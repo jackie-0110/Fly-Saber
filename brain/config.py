@@ -36,3 +36,17 @@ class SubgraphConfig:
     max_neurons: int
     hex_inherit_superclasses: list[str]
     hex_inherit_passes: int
+
+
+@dataclass(frozen=True)
+class ModelConfig:
+    subgraph_dir: str
+    frame_ms: float
+    substeps: int
+    tau_init_ms: float
+    tau_min_ms: float
+    bias_init: float
+    activation: str
+    in_weight_scale: float
+    input_scale: float
+    action_heads: list[int]
