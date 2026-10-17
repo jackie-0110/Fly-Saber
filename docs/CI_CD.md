@@ -65,9 +65,11 @@ songs into the Docker volume `fly-saber-maps` on first run, starts the container
 `--restart unless-stopped` on port 80, and waits until `/api/games` answers. Then:
 
 1. Open TCP 80 in the Vultr firewall group (or `ufw allow 80/tcp`).
-2. In Cloudflare, set the `flysaber` Worker secret `BACKEND_URL=http://<server ip>`, with
-   no port. Deployed Workers ignore non-standard ports in `fetch()`, so a backend on
-   `:8000` is fetched on port 80 and the site shows "Backend disconnected".
+2. In Cloudflare DNS, add an A record `api` → `<server ip>` with proxy status **DNS only**
+   (grey cloud). Workers may not fetch a bare IP (error 1003).
+3. Set the `flysaber` Worker secret `BACKEND_URL=http://api.<your domain>`, with no port.
+   Deployed Workers ignore non-standard ports in `fetch()`, so a backend on `:8000` is
+   fetched on port 80 and the site shows "Backend disconnected".
 
 Or run everything from your laptop, including the Worker secret and an end-to-end check:
 `bash scripts/go_live.sh` (defaults: server `64.177.52.103`, site

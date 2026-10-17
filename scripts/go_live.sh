@@ -20,7 +20,10 @@ SSH_TARGET=${SSH_TARGET:-root@$SERVER_IP}
 REMOTE_DIR=${REMOTE_DIR:-Fly-Saber}
 SITE=${SITE:-https://flysaber.jackie-courtney.com}
 WORKER=${WORKER:-flysaber}
-BACKEND_URL=${BACKEND_URL:-http://$SERVER_IP}
+# Workers cannot fetch bare IPs (Cloudflare error 1003), so the backend needs a hostname:
+# a DNS-only (grey cloud) A record for it pointing at SERVER_IP.
+BACKEND_HOST=${BACKEND_HOST:-api.jackie-courtney.com}
+BACKEND_URL=${BACKEND_URL:-http://$BACKEND_HOST}
 PULL=${PULL:-0}
 
 step() { printf '\n== %s\n' "$*"; }
@@ -77,9 +80,9 @@ case "$code" in
 200) echo "live: open $SITE; the header badge should read 'Backend connected'." ;;
 503) fail "The Worker still has no BACKEND_URL. Check the secret is on the production
    Worker '$WORKER' (dashboard -> Workers -> $WORKER -> Settings -> Variables and Secrets)." ;;
-502) fail "The Worker cannot reach $BACKEND_URL even though it answers directly. Cloudflare
-   may refuse Worker requests to a bare IP. Give the server a hostname instead: a Cloudflare
-   Tunnel (cloudflared) to localhost:80, then rerun with BACKEND_URL=https://<that host>
-   SKIP_SERVER=1." ;;
+403) fail "Cloudflare error 1003: Workers may not fetch a bare IP. Add a DNS-only (grey cloud)
+   A record api.jackie-courtney.com -> $SERVER_IP, then rerun with SKIP_SERVER=1." ;;
+502) fail "The Worker cannot reach $BACKEND_URL even though it answers directly. Check the
+   DNS record points at $SERVER_IP and is DNS only (grey cloud), not proxied." ;;
 *) fail "Unexpected response; check 'npx wrangler tail $WORKER' while reloading the site." ;;
 esac
