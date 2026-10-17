@@ -31,7 +31,7 @@ const edges = JSON.parse(
 // CI browsers rasterize WebGL in software, where drawing all 340k edges stalls the page.
 // Tests that need "All" detail use a prefix of the real table: it still exceeds the
 // movement preview, so preview, restore and upload behavior are exercised the same way.
-const FIXTURE_EDGES = 2 * MOVING_EDGE_LIMIT + 7
+const FIXTURE_EDGES = MOVING_EDGE_LIMIT + 5_007
 const fixture = (() => {
   const slice = <T>(values: T[]) => values.slice(0, FIXTURE_EDGES)
   const weight = slice(edges.weight)
@@ -203,7 +203,8 @@ test('connections load after the neurons and a failed load is retried on its own
 test('camera movement uses a resident preview buffer and restores every connection', async ({
   page,
 }, testInfo) => {
-  test.setTimeout(45_000)
+  // Many phases (drag, settle, resize, selected drag) on a full-size software canvas.
+  test.setTimeout(90_000)
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   // Inspect actual WebGL submissions rather than relying on a fast test machine.
