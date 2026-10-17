@@ -1,8 +1,8 @@
-.PHONY: setup data subgraph export-web maps train-bc train-ppo serve frontend test lint fmt
+.PHONY: setup data subgraph export-web maps train-bc train-ppo serve frontend test test-python test-frontend lint fmt build check docker-build
 
 setup:
-	uv sync
-	cd frontend && npm install
+	uv sync --locked --dev
+	cd frontend && npm ci
 
 data:
 	uv run python scripts/fetch_data.py
@@ -28,15 +28,30 @@ serve:
 frontend:
 	cd frontend && npm run dev
 
-test:
-	uv run pytest
+test: test-python test-frontend
+
+test-python:
+	uv run --locked pytest
+
+test-frontend: build
+	cd frontend && npm test
+
+build:
+	cd frontend && npm run build
+
+check: lint test
+
+docker-build:
+	docker build -f docker/Dockerfile -t fly-saber:local .
 
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy
 	cd frontend && npm run lint
+	cd frontend && npm run format:check
 
 fmt:
 	uv run ruff check --fix .
 	uv run ruff format .
+	cd frontend && npm run format

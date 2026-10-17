@@ -112,3 +112,40 @@ def test_groups(toy: tuple[pd.DataFrame, pd.DataFrame]) -> None:
     assert groups["DN_all"] == [idx[7]]
     assert groups["photoreceptors_left"] == [idx[1]]
     assert "photoreceptors_right" not in groups
+
+
+def test_modulatory_neurons(toy: tuple[pd.DataFrame, pd.DataFrame]) -> None:
+    neurons, edges = toy
+    extra = pd.DataFrame(
+        [
+            (9, "OA-VUMa1", "cb_intrinsic", "M", NAN, NAN, "octopamine", 80.0),
+            (10, "PPM1201", "cb_intrinsic", "L", NAN, NAN, "dopamine", 90.0),
+            (11, "PAM01", "cb_intrinsic", "L", NAN, NAN, "dopamine", 95.0),
+        ],
+        columns=["body_id", "type", "superclass", "side", "hex1", "hex2", "nt", "x"],
+    ).set_index("body_id")
+    extra["y"] = extra["z"] = extra["x"]
+    neurons = pd.concat([neurons, extra])
+    edges = pd.concat(
+        [
+            edges,
+            pd.DataFrame(
+                [(9, 5, 30), (10, 7, 25), (11, 7, 6)], columns=["body_pre", "body_post", "weight"]
+            ),
+        ]
+    )
+    cfg = _cfg(
+        modulatory_nts=["octopamine", "dopamine"],
+        max_modulatory_per_nt=5,
+        min_modulatory_synapses=20,
+    )
+    sub = build_subgraph(neurons, edges, cfg)
+    role = dict(zip(sub.neurons["body_id"], sub.neurons["role"], strict=True))
+    assert role[9] == "modulatory" and role[10] == "modulatory"
+    assert 11 not in role  # 6 synapses onto the subgraph, below min_modulatory_synapses
+    assert list(sub.neurons["role"]).index("modulatory") > list(sub.neurons["role"]).index(
+        "intermediate"
+    )
+    groups = build_groups(sub.neurons)
+    idx = {b: i for i, b in enumerate(sub.neurons["body_id"])}
+    assert groups["octopamine"] == [idx[9]] and groups["dopamine"] == [idx[10]]

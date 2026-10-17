@@ -26,6 +26,7 @@ from brain.model.brain import (
     param_counts,
 )
 from brain.model.interventions import no_interventions
+from brain.model.stimuli import looming_eye
 
 FRAMES = 90  # 3 seconds of game time
 T = TypeVar("T")
@@ -33,16 +34,6 @@ T = TypeVar("T")
 
 def _wait(x: T) -> T:
     return jax.block_until_ready(x)  # type: ignore[no-untyped-call,no-any-return]
-
-
-def looming_eye(n_frames: int, columns: pd.DataFrame) -> np.ndarray:
-    """A dark disc expanding on a bright background in the left eye, centered on its columns."""
-    left = (columns["side"] == "L").to_numpy()
-    h = columns[["hex1", "hex2"]].to_numpy(dtype=float)
-    center = h[left].mean(axis=0)
-    dist = np.linalg.norm(h - center, axis=1)
-    radius = np.linspace(0, dist[left].max(), n_frames)[:, None]
-    return np.where(left & (dist < radius), 0.0, 1.0).astype(np.float32)
 
 
 def main(batches: list[int]) -> None:
@@ -70,7 +61,7 @@ def main(batches: list[int]) -> None:
     run = jax.jit(rollout)
     key = jax.random.PRNGKey(1)
     loom = jnp.asarray(looming_eye(FRAMES, columns))
-    gray = jnp.full_like(loom, 1.0)
+    gray = loom.at[:, 0].set(1.0)  # same neutral color channel, no disc
 
     rates, _ = run(params, loom, key)
     base, _ = run(params, gray, key)

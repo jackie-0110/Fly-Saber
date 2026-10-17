@@ -8,7 +8,7 @@ Fill these in during the hour 0 contracts session (30 minutes, all three). Every
 | `render_state` format | Person 2 | 3 | Draft |
 | WebSocket protocol (both directions) | Person 2 | 3 | Draft |
 | `groups.json` and interventions schema | Person 1 | 2, 3 | groups done, interventions TODO |
-| Brain step function signature and checkpoint format | Person 1 | 2, 3 | step done, checkpoints TODO |
+| Brain step function signature and checkpoint format | Person 1 | 2, 3 | Done |
 | Activity stream format (quantized rates, cell-type means) | Person 1 | 3 | TODO |
 
 ## 1. Normalized map schema (Person 2)
@@ -85,7 +85,8 @@ The front end already has the full map from REST and positions notes from the au
 
 - `reset(notes, speed_mps, start_sec, end_sec) -> (obs, state)`; `notes` from `fly_saber.maps.adapt.note_arrays`.
 - `step(state, action) -> (obs, state, reward, done, events)`.
-- `obs`: float32 `(2, n_ommatidia)`, values 0 to 1, lattice order of `fly_saber.eye.lattice` (left eye first). Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8.
+- `obs`: float32 `(2, n_eye)`, values 0 to 1. Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8.
+- Eye for training and live play: `training.brain_policy.build(model_cfg, saber_cfg, eye_cfg, key)` makes the env see through the brain's own eye columns (angles from `brain.connectome.metadata.column_angles`, the same as `columns.json`), so `n_eye` is the 437 columns in `load_graph`'s column-table order and `obs` is exactly the brain's `eye` argument. `BrainPolicy` wraps `make_step` in the `Policy` interface of `training/bc.py`. Without a brain, `SaberEnv.create` falls back to a synthetic hex lattice (`fly_saber.eye.lattice`, left eye first).
 - `action`: int32 `(n_sabers, 2)`, rows red then blue: `[cell, cut]`, cell 0 to 11 or 12 (idle), cut 0 up, 1 down, 2 left, 3 right, or 4 (no cut). That is a 13-way position head and a 5-way direction head per saber. `n_sabers` is 1 when `saber.yaml` sets `two_sabers: false`.
 - `fly_saber.experts.saber_expert(env, state)` returns the perfect action, for behavior cloning.
 
@@ -169,7 +170,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 | `body_id` | int64 | MaleCNS body id |
 | `type` | str | cell type, e.g. `T4a`, `LPLC2`, `DNp01` |
 | `superclass` | str | e.g. `ol_intrinsic`, `visual_projection`, `descending_neuron` |
-| `role` | str | `columnar`, `projection`, `descending`, `intermediate` |
+| `role` | str | `columnar`, `projection`, `descending`, `intermediate`, `modulatory` (octopamine, dopamine, serotonin; the mood system) |
 | `side` | str | `L`, `R`, `M` (rarely missing) |
 | `x`, `y`, `z` | float64 | soma position in 8 nm voxels; NaN for 144 neurons |
 | `position_inherited` | bool | true if position was copied from the strongest partner (photoreceptors mostly) |
@@ -179,7 +180,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 **`edges.parquet`**: `pre` (int32 index), `post` (int32 index), `weight` (int32 synapse count, at least 5), `sign` (int8, sign of `pre`). Sorted by `post` then `pre`.
 
-**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `modulatory_<nt>`, plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `brain/connectome/groups.py`.
+**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `eye_left`, `eye_right` (photoreceptors plus lamina), `octopamine`, `dopamine`, `serotonin` (modulatory-role neurons, what the mood sliders drive), `modulatory_<nt>` (every neuron with that transmitter, including a serotonergic DN), plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `brain/connectome/groups.py`.
 
 **`meta.json`**: counts, sign totals, and the config used.
 
@@ -194,7 +195,7 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | int | 1 |
-| `n_neurons` | int | N (19,403) |
+| `n_neurons` | int | N (19,462) |
 | `cell_types` | string[] | sorted unique types. **Cell-type id = index in this list**, the same list and order as `ready.cell_types` and activity kind 2 |
 | `superclasses`, `roles`, `sides`, `nts`, `position_sources` | string[] | lookup tables for the coded arrays below |
 | `bounds_um` | `{min: [x,y,z], max: [x,y,z]}` | bounding box of all positions, micrometers |
@@ -207,7 +208,21 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 
 Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Center on `bounds_um` for the camera.
 
-**Eye input (to agree with Person 2):** the eye drives photoreceptors by `(side, hex1, hex2)`. About 170 to 180 of the 220 sampled columns per eye have a photoreceptor; for the rest, inject into that column's L1 and L2 with inverted sign (see DATA_NOTES).
+**Eye input:** the brain takes `eye` as `(2, n_columns)`, one value per kept eye column (437) in the order of `columns.json` below. Row 0 is luminance and drives R1 to R6; in columns with no traced R1 to R6 (most of them, see DATA_NOTES) it drives that column's L1 and L2 with inverted sign instead. Row 1 is color (red notes high, blue low, background 0.5) and drives R7 and R8. The env should render the eye at the column directions in `columns.json`, so its `obs` is exactly this array.
+
+**`columns.json`** (`frontend/public/data/brain/columns.json`, 10 KB): struct of arrays, position `i` is column `i` (`eye[:, i]`).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `n_columns` | int | 437 (217 left, 220 right) |
+| `side` | string[] | `L` or `R` |
+| `hex1`, `hex2` | int[] | MaleCNS column coordinates (even numbers only: every 2nd column is kept) |
+| `azimuth_deg`, `elevation_deg` | float[] | viewing direction, `fly_saber/eye.py` convention: azimuth positive to the fly's right, elevation positive up |
+| `luminance_input` | int[] | 0 a traced R1-R6 takes luminance, 1 the L1/L2 fallback does (index into `luminance_inputs`) |
+| `spacing_deg`, `kept_spacing_deg` | float | 5 between neighboring real columns (from `configs/eye.yaml`); 10 between kept columns |
+
+Angles: hex1 and hex2 are axial hex coordinates with axes 120 degrees apart. **+hex1 points up and forward, +hex2 up and backward**, the same in both eyes (fit to lamina soma positions, which map the eye directly). So forward = (sqrt(3)/2) * 5 * (hex1 - hex2) and up = 0.5 * 5 * (hex1 + hex2) degrees, then each eye is shifted so its most frontal column is 10 degrees past the midline (`binocular_overlap_deg`) and its vertical midpoint is the equator. Result: each eye spans about -129 to +10 degrees azimuth (mirrored for the right eye) and -80 to +80 degrees elevation. The optic chiasm flips front and back between lamina and medulla, but the hex coordinates name columns, and the connectome wiring already carries the flip, so **the renderer must not flip anything**. The absolute angles are an idealized lattice; the orientation is measured. Kept columns are 10 degrees apart, so the acceptance angle should be about 10 degrees, or the fly sees gaps.
+
 
 **Interventions** (`brain/model/interventions.py`): a `NamedTuple` pytree passed into every step, so the server can change it live without recompiling.
 
@@ -217,24 +232,47 @@ Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, a
 | `opto` | (N,) | extra input current; around 5 forces a neuron on |
 | `noise_std` | () | std of current noise on every neuron each substep (for the arousal slider) |
 
-Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, groups["giant_fiber"], 5.0)`. Mood sliders: TODO.
+Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, groups["giant_fiber"], 5.0)`.
+
+**`set_interventions` payload** (the `interventions` field of the WebSocket message). The server builds the pytree with `brain.model.controls.from_controls(payload, groups, load_controls(), n_neurons)`, which validates names and clamps values (ValueError on bad input, answer `error`). Every key is optional; `{}` is the unmodified brain. Each message replaces the previous state, it does not add to it.
+
+```jsonc
+{
+  "lesion": ["looming_detectors", "eye_left"],   // group names: silence them
+  "stimulate": { "giant_fiber": 5.0 },          // group -> opto current, 0 to stimulation.max
+  "mood": { "arousal": 0.8, "calm": -0.3 },     // mood name -> level, -1 to 1, 0 neutral
+  "noise": 0.1                                  // neural noise std, 0 to noise.max
+}
+```
+
+Lesion wins over stimulation and mood for neurons in both. Any group in `groups.json` is accepted; the curated ones are in `controls.json`.
+
+**`controls.json`** (`frontend/public/data/brain/controls.json`, from `configs/controls.yaml`): what the UI shows.
+
+- `sections`: `[{group, label, description, n_neurons}]`, 12 lesionable brain sections (each eye, motion detectors, looming detectors, LC feature detectors, HS/VS, central relay, giant fiber, all DNs, octopamine, dopamine, serotonin).
+- `moods`: `[{name, label, group, low_label, high_label, description, min: -1, max: 1, default: 0}]`: `arousal` (octopamine), `reward_drive` (dopamine), `calm` (serotonin).
+- `stimulation: {min, max}`, `noise: {min, max, default}`.
+
+**How moods work:** a mood level drives its modulatory group like opto. Each neuron those modulatory neurons synapse onto has its output multiplied by exp(gain * change in their rate from rest), with `modulation_gain` per transmitter in `configs/model.yaml` (octopamine +1, dopamine +1, serotonin -1, an assumption) and capped at e. At level 0 the factor is exactly 1, so moods never need retraining. -1 silences the group (same as lesioning it). Targets are mostly central relay neurons, visual projection neurons (LC9, LC14), and DNs; in this data the modulatory neurons do not synapse directly onto T4/T5.
+
+**Effect on motor output before training** (`uv run python scripts/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
 
 ## 5. Brain step and checkpoints (Person 1)
 
 `brain/model/brain.py`, configured by `configs/model.yaml`:
 
 ```python
-graph, columns, n = load_graph(cfg)          # columns: eye column table, one row per column
+graph, columns, n = load_graph(cfg)  # columns: eye column table, one row per column
 params = init_params(key, graph, cfg, n)
-step = make_step(graph, cfg, n)              # pure function: jit it, vmap it over envs
-v = init_state(n)                            # reset at episode start
+step = make_step(graph, cfg, n)  # pure function: jit it, vmap it over envs
+v = init_state(n)  # reset at episode start
 v, out = step(params, v, eye, interventions, key)
 logits_per_head = split_heads(out.logits, cfg.action_heads)
 ```
 
 | Argument / output | Shape | Meaning |
 |---|---|---|
-| `eye` | (n_columns,) float in [0, 1] | luminance per eye column, in the order of the `columns` table (sorted by side, hex1, hex2; 437 columns, about 220 per eye) |
+| `eye` | (2, n_columns) float in [0, 1] | row 0 luminance, row 1 color, per eye column in `columns.json` order (437 columns) |
 | `v` | (N,) | membrane potentials; carry between frames, reset per episode |
 | `key` | PRNGKey | for noise; pass a fresh one per frame |
 | `out.logits` | (sum of `action_heads`,) | `[13, 5, 13, 5]`: red position (12 cells + idle), red direction (4 + no_cut), blue position, blue direction |
@@ -243,9 +281,30 @@ logits_per_head = split_heads(out.logits, cfg.action_heads)
 
 One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs: `jax.vmap(step, in_axes=(None, 0, 0, None, 0))`.
 
-Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
+Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
 
-Checkpoint format: TODO (with `training/checkpoints.py`).
+**Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
+
+```python
+from training.checkpoints import save_checkpoint, load_checkpoint, subgraph_fingerprint
+
+fp = subgraph_fingerprint(model_cfg.subgraph_dir)
+save_checkpoint(
+    path,
+    params,
+    variant="real",
+    stage="bc",
+    step=i,
+    configs={"model": model_cfg, "train": bc_cfg},
+    subgraph=fp,
+    metrics=row,
+)
+params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expect_subgraph=fp)
+```
+
+- Arrays are keyed by pytree path (`.log_tau`, `.readout_w`, ...); a `__meta__` entry holds JSON: `format_version`, `variant`, `stage` (`bc` or `ppo`), `step`, `config_hash` (12 hex chars over all `configs`), `configs`, `subgraph` (neuron, edge, synapse counts), `metrics`.
+- Loading takes a template pytree (any policy: brain `Params`, MLP, stub) and raises if keys or shapes differ, or if the checkpoint was trained on a different subgraph. Writes are atomic, so the server never reads a half-written file.
+- About 0.7 MB for the brain.
 
 ## 6. Activity stream (Person 1)
 

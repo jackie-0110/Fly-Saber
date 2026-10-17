@@ -70,7 +70,7 @@ Keyed by `body`. Use `consensus_nt` (falls back to cell-type level). Values: `ac
 
 | | Count |
 |---|---|
-| Neurons | 19,403 (10,122 columnar, 5,471 projection, 2,500 intermediate, 1,310 descending) |
+| Neurons | 19,462 (10,122 columnar, 5,471 projection, 2,479 intermediate, 1,310 descending, 80 modulatory) |
 | Edges | 336,983 carrying 6.1M synapses |
 | Edge signs | 254k excitatory, 76k inhibitory, 7k zero (octopamine, dopamine, serotonin, unclear) |
 | Positions | 2,793 inherited from a partner, 144 missing |
@@ -80,13 +80,17 @@ Each kept neuron gets only part of its real input from inside the subgraph (medi
 
 Intermediates are the top 2,500 central neurons by min(synapses in from projection neurons, synapses out to DNs); a neuron needs both.
 
+**Modulatory neurons.** The visual-to-motor cut alone had no octopamine or dopamine neurons, so mood sliders had nothing to act on. In the whole CNS there are 392 dopamine, 101 octopamine, and 48 serotonin neurons; 55, 39, and 31 of them synapse onto the subgraph. We keep, per transmitter, up to 60 with at least 20 synapses onto it: 37 dopamine, 31 octopamine (the OA-VUMa family, OA-AL2i, OA-ASM), 12 serotonin. 21 of them had been picked as intermediates, where their unsigned synapses did nothing; they moved to the `modulatory` role, which shifted neuron indices once. Their 6,698 synapses reach 2,665 neurons, mostly central relay, LC projection neurons, and DNs, not T4/T5 (real octopaminergic modulation of motion vision may act without direct synapses). Modulatory neurons get no synaptic input in the model: their real inputs (internal state, other senses) are outside it, so the mood sliders drive them.
+
 ## FlyWire (Person 1)
 
 Not downloaded yet.
 
 ## Ommatidia to photoreceptor mapping (Person 2)
 
-See MaleCNS deviation 2. Hex grid is about 36 by 39 per eye, 892 columns.
+**Column orientation.** Fitting soma positions against `(hex1, hex2)`: in the lamina (which sits directly under the retina, so it maps the eye), +hex1 moves up and forward, +hex2 up and backward, in both eyes (vertical fit R2 0.99, front-back 0.6 to 0.85). In the medulla the front-back direction is reversed, which is the first optic chiasm, as expected. The hex axes are 120 degrees apart, not 60: with 120 degrees the 892 columns form an eye 1.15 times taller than wide, as a fly eye is; with 60 degrees it would be 3.3 times taller than wide. Angles per column are in `frontend/public/data/brain/columns.json` (PROTOCOL section 4).
+
+**R1-R6 coverage is sparse.** Only 48 of 217 left and 97 of 220 right kept columns have a traced R1-R6; others have only R7/R8 or no photoreceptor. In those columns L1 and L2 take the luminance input directly with inverted sign (photoreceptor synapses onto them are inhibitory). 1,648 neurons take eye input in total.
 
 ## Beat Saber map formats, v2 and v3 (Person 2)
 

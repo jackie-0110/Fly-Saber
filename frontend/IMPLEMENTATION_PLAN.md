@@ -10,7 +10,7 @@ Implemented now:
 
 - React, TypeScript, and Vite with shadcn/ui components and a dark grey workstation design system.
 - A workstation layout with a compact toolbar, large Fly Saber viewport, right-hand brain/session inspector, and bottom timeline/readouts, stacking vertically on small screens.
-- The original Fly Saber SVG remains a static preview. The brain SVG has been replaced with a real 19,403-neuron cloud loaded from the committed MaleCNS JSON assets.
+- The original Fly Saber SVG remains a static preview. The brain SVG has been replaced with a real 19,462-neuron cloud loaded from the committed MaleCNS JSON assets.
 - Brain orbit, pan, zoom, display-axis presets, keyboard navigation, group/type filters, point selection, and position provenance are implemented. Rendering is lazy-loaded and uses a single point cloud with error/retry states.
 - Honest anatomy/preview labels, inactive playback, unreported scores, fullscreen game viewing, and Neurons/Details/Next steps inspector tabs.
 - No network session, fake firing animation, audio, or game simulation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).

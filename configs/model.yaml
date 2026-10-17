@@ -11,8 +11,11 @@ tau_min_ms: 10.0      # keeps dt / tau < 1 so Euler stays stable
 # inhibit the lamina, so with zero rest the relu clamps everything past the eye to 0.
 bias_init: 0.5
 
-# f(v): relu or softplus.
-activation: relu
+# f(v): relu, softplus, or relu_sat (relu that levels off smoothly at rate_max, like a real
+# neuron's maximum firing rate). Saturation keeps excitatory loops from running away when
+# mood sliders turn gains up; at normal rates (about 0.7) relu_sat is almost exactly relu.
+activation: relu_sat
+rate_max: 10.0
 
 # Each neuron's incoming weights sum to this in absolute value (before trainable scales).
 # Below 1 keeps the untrained network from running away.
@@ -20,6 +23,18 @@ in_weight_scale: 0.9
 
 # Eye luminance (0 to 1) times this is the current into input neurons.
 input_scale: 1.0
+
+# Neuromodulation (the mood system). Modulatory neurons have no synaptic inputs in the model;
+# mood sliders and optogenetics drive them. When one's rate moves by d from its resting rate,
+# each neuron it synapses onto has its output multiplied by exp(gain * d), averaged over that
+# transmitter's inputs to it. At rest d = 0, so an untouched brain is unchanged. Signs are a
+# modeling assumption: octopamine raises gain (arousal; Suver et al. 2012, motion vision in
+# flight), dopamine raises it (arousal and motivation), serotonin lowers it (quiescence).
+modulation_gain:
+  octopamine: 1.0
+  dopamine: 1.0
+  serotonin: -1.0
+modulation_max_log_gain: 1.0   # caps any neuron's modulation at e, about 2.7x
 
 # Action heads, from the Fly Saber env (Person 2 contract): per saber, 12 cells + idle
 # and 4 directions + no_cut. Red saber first, then blue.

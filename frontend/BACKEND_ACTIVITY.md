@@ -14,6 +14,6 @@ Relevant files: `src/brain/data.ts` validates and preserves the exported index m
 
 ## Additional asset needed for neuron shapes
 
-The current export has one location per neuron, not its branching morphology. Inspection found 19,395 neuron locations at source z below 400 micrometers and eight distant `ascending_neuron` somas at z above 500 micrometers. All eight have `position_source: soma`; they are supplied coordinates, not points introduced by the renderer. The 1,310 descending neurons also have only a single location each, so their long axons are not visible.
+The current export has one location per neuron, not its branching morphology. Inspection found 19,454 neuron locations at source z below 400 micrometers and eight distant `ascending_neuron` somas at z above 500 micrometers. All eight have `position_source: soma`; they are supplied coordinates, not points introduced by the renderer. The 1,310 descending neurons also have only a single location each, so their long axons are not visible.
 
 A continuous ventral nerve cord view or long neuron paths needs an additional authentic asset: selected neuron skeletons (for example SWC), sampled morphology points, or an anatomical mesh with source/version and coordinate units. Preserve body-ID/index mapping and use the same coordinate transform. Do not connect isolated soma points with invented axons or fill the missing cord with synthetic data.

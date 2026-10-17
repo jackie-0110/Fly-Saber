@@ -4,8 +4,6 @@ Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 import asyncio
-import bisect
-import random
 import uuid
 from collections.abc import Callable
 from contextlib import suppress
@@ -15,7 +13,6 @@ from typing import Any, Literal, Protocol
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from fly_saber.maps.adapt import ANY_DIRECTION, SIM_DIRECTION
 from server.catalog import Catalog
 from server.protocol import (
     Brain,
@@ -32,8 +29,6 @@ from server.protocol import (
     Ready,
     RenderState,
     Reset,
-    Saber,
-    Score,
     SlotInfo,
     Start,
     client_message_adapter,
@@ -42,8 +37,11 @@ from server.protocol import (
 STEP_HZ = 30
 GAMES = [Game(id="saber", label="Fly Saber")]
 BRAINS = [
-    Brain(id="real", label="Real wiring", description="Connectome weights as measured."),
-    Brain(id="scrambled", label="Scrambled", description="Same neurons, shuffled wiring."),
+    Brain(
+        id="expert",
+        label="Scripted expert",
+        description="Perfect player that reads the map; stands in until trained brains load.",
+    ),
 ]
 
 
@@ -70,80 +68,6 @@ class Sim(Protocol):
 
 
 SimFactory = Callable[[dict[str, Any], str, int], Sim]
-
-# render_state has no "any" cut, so the fake saber cuts down on those notes.
-ANY_DIRECTION_CUT = 1
-
-
-class FakeSaberSim:
-    """Stand-in for the Fly Saber env: hits each note with a fixed probability."""
-
-    HIT_PROBABILITY = 0.85
-
-    def __init__(self, map_data: dict[str, Any], brain: str, seed: int) -> None:
-        self.notes: list[dict[str, Any]] = map_data["notes"]
-        self.note_times = [n["time_sec"] for n in self.notes]
-        self.end_t = max([map_data["song"]["duration_sec"], *self.note_times])
-        self.rng_seed = f"{seed}:{brain}"
-        self.reset(0.0)
-
-    def reset(self, song_t: float) -> RenderState:
-        self.rng = random.Random(self.rng_seed)
-        self.start_t, self.t, self.n_steps = song_t, song_t, 0
-        self.next_note = bisect.bisect_right(self.note_times, song_t)
-        self.hits = self.misses = self.combo = self.max_combo = 0
-        return self.render_state(cuts={})
-
-    def step(self) -> StepOutput:
-        self.n_steps += 1
-        self.t = self.start_t + self.n_steps / STEP_HZ
-        events, cuts = [], {}
-        while self.next_note < len(self.notes) and self.note_times[self.next_note] <= self.t:
-            note = self.notes[self.next_note]
-            self.next_note += 1
-            if note["is_bomb"]:
-                continue
-            if self.rng.random() < self.HIT_PROBABILITY:
-                self.hits += 1
-                self.combo += 1
-                self.max_combo = max(self.max_combo, self.combo)
-                cut = int(SIM_DIRECTION[note["cut_direction"]])
-                cuts[note["color"]] = ANY_DIRECTION_CUT if cut == ANY_DIRECTION else cut
-                events.append(NoteEvent(self.t, "hit", note["id"]))
-            else:
-                self.misses += 1
-                self.combo = 0
-                events.append(NoteEvent(self.t, "miss", note["id"]))
-        return StepOutput(self.render_state(cuts), events, self.t >= self.end_t)
-
-    def render_state(self, cuts: dict[int, int]) -> RenderState:
-        return RenderState(
-            t=round(self.t, 6),
-            step=self.n_steps,
-            sabers=[
-                Saber(color=color, cell=self.next_cell(color), cut=cuts.get(color))
-                for color in (0, 1)
-            ],
-            score=self.score(),
-        )
-
-    def next_cell(self, color: int) -> int | None:
-        for note in self.notes[self.next_note :]:
-            if note["color"] == color:
-                return int(note["layer"] * 4 + note["lane"])
-        return None
-
-    def score(self) -> Score:
-        judged = self.hits + self.misses
-        accuracy = self.hits / judged if judged else 0.0
-        return Score(
-            score=round(100 * accuracy),
-            combo=self.combo,
-            max_combo=self.max_combo,
-            hits=self.hits,
-            misses=self.misses,
-            accuracy=accuracy,
-        )
 
 
 @dataclass
@@ -240,12 +164,15 @@ class Session:
 
     async def tick(self) -> None:
         """Step each slot up to the client's song clock, then send its latest frame."""
+        next_tick = self.now()
         while not all(run.done for run in self.slots):
-            await asyncio.sleep(1 / STEP_HZ)
+            next_tick += 1 / STEP_HZ
+            await asyncio.sleep(max(0.0, next_tick - self.now()))
             target = self.song_t()
             for slot, run in enumerate(self.slots):
                 stepped = False
-                while not run.done and run.render_state.t + 1 / STEP_HZ <= target + 1e-9:
+                # Nearest step, not floor: ticks land on step boundaries and jitter either way.
+                while not run.done and run.render_state.t + 0.5 / STEP_HZ <= target:
                     out = run.sim.step()
                     run.render_state, run.done, stepped = out.render_state, out.done, True
                     for e in out.events:

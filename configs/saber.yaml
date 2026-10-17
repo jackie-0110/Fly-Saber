@@ -1,8 +1,10 @@
 # saber.yaml (owner: Person 2). Loaded into a dataclass; no magic numbers in code.
-# Geometry in meters. The eye sits behind the hit plane, level with the middle layer.
-lane_spacing_m: 0.6
-layer_spacing_m: 0.55
-block_size_m: 0.5
+# Geometry in meters, as the fly sees it. The eye sits behind the hit plane, level with
+# the middle layer. Twice a human-scale grid so blocks stay resolvable at the brain's
+# 10 deg column spacing; the front end draws its own scale.
+lane_spacing_m: 1.2
+layer_spacing_m: 1.1
+block_size_m: 1.0
 eye_distance_m: 1.0
 
 # Cut direction encoding (README): the half of the block where the cut starts is bright.
@@ -14,6 +16,7 @@ blue_chroma: 0.0
 
 # Timing and judging.
 step_hz: 30
+note_speed_mps: 7.0           # one speed for training and live play, not the mapper's
 timing_window_sec: 0.1        # a cut counts within this many seconds of the note's time
 spawn_distance_m: 12.0        # notes are drawn once this close to the hit plane
 max_visible_notes: 16         # nearest notes rendered per frame

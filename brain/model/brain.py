@@ -10,6 +10,12 @@ and its sparsity is fixed. Trained: per-neuron time constant, bias, and output
 scale, plus one scale per (pre cell type, post cell type) pair. Actions and the
 value estimate are linear readouts of descending neuron rates only.
 
+Neuromodulation: modulatory neurons (octopamine, dopamine, serotonin) do not
+send fast synaptic current. Instead each neuron's rate is multiplied by
+exp(sum over transmitters of gain_nt * weighted mean (r_j - rest_j)) over the
+modulatory neurons j that synapse onto it. Modulatory neurons get no synaptic
+input here (mood sliders and opto drive them), so at rest the factor is 1.
+
 Usage:
     graph, columns, n = load_graph(cfg)
     params = init_params(key, graph, cfg, n)
@@ -29,8 +35,12 @@ from jax import Array
 from brain.config import ModelConfig
 from brain.model.interventions import Interventions
 
-PHOTORECEPTOR_TYPES = r"R1-R6|R7.*|R8.*"
-FALLBACK_INPUT_TYPES = ("L1", "L2")  # driven directly in columns with no photoreceptor
+# Eye channels (Person 2 contract): 0 luminance, 1 color (red notes high, blue low).
+LUMINANCE, COLOR = 0, 1
+N_EYE_CHANNELS = 2
+LUMINANCE_TYPES = r"R1-R6"
+COLOR_TYPES = r"R7.*|R8.*"
+FALLBACK_INPUT_TYPES = ("L1", "L2")  # take luminance in columns with no traced R1-R6
 
 
 class Graph(NamedTuple):
@@ -43,7 +53,11 @@ class Graph(NamedTuple):
     dn: Array  # (D,) int32 descending neuron indices
     input_neuron: Array  # (M,) int32 neurons that receive eye input
     input_column: Array  # (M,) int32 eye column feeding each input neuron
+    input_channel: Array  # (M,) int32 0 luminance (R1-R6, fallback), 1 color (R7, R8)
     input_sign: Array  # (M,) float32 +1 photoreceptor, -1 lamina fallback
+    mod_pre: Array  # (K,) int32 modulatory neuron
+    mod_post: Array  # (K,) int32 neuron it modulates, sorted
+    mod_weight: Array  # (K,) float32 gain_nt * share of that transmitter's input to post
 
 
 class Params(NamedTuple):
@@ -73,12 +87,16 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
     """Build the Graph from subgraph files.
 
     Also returns the eye column table (column id -> side, hex1, hex2), and the
-    neuron count. The eye passes one luminance value per column, in this order.
+    neuron count. The eye passes (2, n_columns): luminance and color per column,
+    columns in this order.
     """
     d = Path(cfg.subgraph_dir)
     neurons = pd.read_parquet(d / "neurons.parquet")
     edges = pd.read_parquet(d / "edges.parquet")
-    edges = edges[edges["sign"] != 0]  # modulatory and unclear: no fast transmission
+    modulatory = (neurons["role"] == "modulatory").to_numpy()
+    mod = _modulation_edges(neurons, edges, modulatory, cfg.modulation_gain)
+    # Fast synapses: signed, and none into modulatory neurons (sliders drive those).
+    edges = edges[(edges["sign"] != 0) & ~modulatory[edges["post"]]]
 
     w = np.log1p(edges["weight"].to_numpy(dtype=np.float64))
     total_in = np.bincount(edges["post"], weights=w, minlength=len(neurons))
@@ -87,22 +105,49 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
     types = neurons["type"].to_numpy()
     pair_ids, _ = pd.factorize(pd.Series(types[edges["pre"]]) + ">" + types[edges["post"]])
 
-    columns, input_neuron, input_column, input_sign = _eye_inputs(neurons)
+    columns, inputs = eye_inputs(neurons)
     graph = Graph(
         pre=jnp.asarray(edges["pre"], dtype=jnp.int32),
         post=jnp.asarray(edges["post"], dtype=jnp.int32),
         weight=jnp.asarray(w, dtype=jnp.float32),
         pair=jnp.asarray(pair_ids, dtype=jnp.int32),
         dn=jnp.asarray(np.flatnonzero(neurons["role"] == "descending"), dtype=jnp.int32),
-        input_neuron=jnp.asarray(input_neuron, dtype=jnp.int32),
-        input_column=jnp.asarray(input_column, dtype=jnp.int32),
-        input_sign=jnp.asarray(input_sign, dtype=jnp.float32),
+        input_neuron=jnp.asarray(inputs["neuron"], dtype=jnp.int32),
+        input_column=jnp.asarray(inputs["column"], dtype=jnp.int32),
+        input_channel=jnp.asarray(inputs["channel"], dtype=jnp.int32),
+        input_sign=jnp.asarray(inputs["sign"], dtype=jnp.float32),
+        mod_pre=jnp.asarray(mod["pre"], dtype=jnp.int32),
+        mod_post=jnp.asarray(mod["post"], dtype=jnp.int32),
+        mod_weight=jnp.asarray(mod["weight"], dtype=jnp.float32),
     )
     return graph, columns, len(neurons)
 
 
-def _eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
-    """Map eye columns to input neurons (see docs/DATA_NOTES.md, deviation 6)."""
+def _modulation_edges(
+    neurons: pd.DataFrame, edges: pd.DataFrame, modulatory: np.ndarray, gain: dict[str, float]
+) -> pd.DataFrame:
+    """Modulatory synapses as (pre, post, weight), weight = gain_nt * share of post's nt input."""
+    empty = pd.DataFrame({"pre": [], "post": [], "weight": []})
+    if not modulatory.any() or not gain or "nt" not in neurons:
+        return empty
+    nt = neurons["nt"].to_numpy()
+    e = edges[modulatory[edges["pre"]] & ~modulatory[edges["post"]]].copy()
+    e["nt"] = nt[e["pre"]]
+    e = e[e["nt"].isin(list(gain))]
+    if e.empty:
+        return empty
+    w = np.log1p(e["weight"].to_numpy(dtype=np.float64))
+    share = w / e.assign(w=w).groupby(["post", "nt"])["w"].transform("sum").to_numpy()
+    e["weight"] = share * e["nt"].map(gain).to_numpy()
+    return e.sort_values(["post", "pre"])[["pre", "post", "weight"]]
+
+
+def eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Map eye columns to input neurons (see docs/DATA_NOTES.md, deviation 6).
+
+    Returns the column table and one row per input neuron: neuron index,
+    column, channel (0 luminance, 1 color), and sign.
+    """
     col = neurons[neurons["role"] == "columnar"].dropna(subset=["hex1", "side"])
     columns = (
         col[["side", "hex1", "hex2"]].drop_duplicates().sort_values(["side", "hex1", "hex2"])
@@ -111,17 +156,20 @@ def _eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, np.nda
     key = list(zip(col["side"], col["hex1"], col["hex2"], strict=True))
     col = col.assign(column=[column_id[k] for k in key])
 
-    photo = col[col["type"].str.fullmatch(PHOTORECEPTOR_TYPES)]
-    lit = set(photo["column"])
-    fallback = col[col["type"].isin(FALLBACK_INPUT_TYPES) & ~col["column"].isin(lit)]
-
-    inputs = pd.concat([photo.assign(sign=1.0), fallback.assign(sign=-1.0)])
-    return (
-        columns,
-        inputs.index.to_numpy(),
-        inputs["column"].to_numpy(),
-        inputs["sign"].to_numpy(),
+    luminance = col[col["type"].str.fullmatch(LUMINANCE_TYPES)]
+    color = col[col["type"].str.fullmatch(COLOR_TYPES)]
+    fallback = col[
+        col["type"].isin(FALLBACK_INPUT_TYPES) & ~col["column"].isin(set(luminance["column"]))
+    ]
+    inputs = pd.concat(
+        [
+            luminance.assign(channel=LUMINANCE, sign=1.0),
+            color.assign(channel=COLOR, sign=1.0),
+            fallback.assign(channel=LUMINANCE, sign=-1.0),
+        ]
     )
+    inputs = inputs.rename_axis("neuron").reset_index()[["neuron", "column", "channel", "sign"]]
+    return columns, inputs
 
 
 def init_params(key: Array, graph: Graph, cfg: ModelConfig, n_neurons: int) -> Params:
@@ -150,9 +198,14 @@ def init_state(n_neurons: int) -> Array:
 def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
     """One game frame: `substeps` Euler steps of the dynamics, then the readout.
 
-    `eye` is (n_columns,) luminance in [0, 1], ordered like load_graph's column table.
+    `eye` is (2, n_columns) in [0, 1]: row 0 luminance, row 1 color, columns ordered
+    like load_graph's column table.
     """
-    act = {"relu": jax.nn.relu, "softplus": jax.nn.softplus}[cfg.activation]
+
+    def relu_sat(v: Array) -> Array:
+        return cfg.rate_max * jnp.tanh(jax.nn.relu(v) / cfg.rate_max)
+
+    act = {"relu": jax.nn.relu, "softplus": jax.nn.softplus, "relu_sat": relu_sat}[cfg.activation]
     dt = cfg.frame_ms / cfg.substeps
 
     def step(
@@ -163,13 +216,23 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
         eye_current = (
             jnp.zeros(n_neurons)
             .at[graph.input_neuron]
-            .add(graph.input_sign * eye[graph.input_column] * cfg.input_scale)
+            .add(graph.input_sign * eye[graph.input_channel, graph.input_column] * cfg.input_scale)
         )
         drive = eye_current + params.bias + iv.opto
         alpha = dt / (cfg.tau_min_ms + jnp.exp(params.log_tau))
+        rest = act(params.bias) * jnp.exp(params.log_out)  # modulatory rate with no input
+
+        def modulation(r: Array) -> Array:
+            delta = r[graph.mod_pre] - rest[graph.mod_pre]
+            log_gain = jax.ops.segment_sum(
+                graph.mod_weight * delta, graph.mod_post, n_neurons, indices_are_sorted=True
+            )
+            cap = cfg.modulation_max_log_gain
+            return jnp.exp(jnp.clip(log_gain, -cap, cap))
 
         def substep(v: Array, k: Array) -> tuple[Array, None]:
             r = act(v) * out_scale
+            r = r * modulation(r)
             syn = jax.ops.segment_sum(
                 efficacy * r[graph.pre], graph.post, n_neurons, indices_are_sorted=True
             )
@@ -177,7 +240,7 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
             return v + alpha * (-v + syn + drive + noise), None
 
         v, _ = jax.lax.scan(substep, v, jax.random.split(key, cfg.substeps))
-        rates = act(v) * iv.gain
+        rates = act(v) * iv.gain * modulation(act(v) * out_scale)
         dn = rates[graph.dn]
         out = StepOutput(
             logits=dn @ params.readout_w + params.readout_b,

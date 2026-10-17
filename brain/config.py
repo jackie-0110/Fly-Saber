@@ -3,7 +3,7 @@
 Owner: Person 1.
 """
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -36,6 +36,9 @@ class SubgraphConfig:
     max_neurons: int
     hex_inherit_superclasses: list[str]
     hex_inherit_passes: int
+    modulatory_nts: list[str] = field(default_factory=list)
+    max_modulatory_per_nt: int = 0
+    min_modulatory_synapses: int = 0
 
 
 @dataclass(frozen=True)
@@ -50,3 +53,8 @@ class ModelConfig:
     in_weight_scale: float
     input_scale: float
     action_heads: list[int]
+    # Neuromodulation: log-gain on each target per unit change of its modulators' rate
+    # from rest. Empty disables it. See brain/model/brain.py.
+    modulation_gain: dict[str, float] = field(default_factory=dict)
+    modulation_max_log_gain: float = 1.0
+    rate_max: float = 10.0  # saturation level for activation relu_sat
