@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import jax
+import jax.numpy as jnp
 
 from brain.config import ModelConfig
 from brain.model.brain import (
@@ -30,7 +31,7 @@ from fly_saber.env import SaberConfig, SaberEnv
 from fly_saber.eye import EyeConfig
 from fly_saber.maps.dataset import load_map_set, sample_episodes
 from training.bc import BCConfig, rollout
-from training.brain_policy import BrainPolicy, eye_directions
+from training.brain_policy import BrainPolicy, column_env
 from training.checkpoints import load_checkpoint, read_meta, subgraph_fingerprint
 
 
@@ -80,7 +81,7 @@ def load_trained(path: str | Path, subgraph_dir: str | Path | None = None) -> Tr
     rest = rest_state(params, graph, model_cfg, n)
     if model_cfg.readout_norm and model_cfg.live_baseline:
         params = with_live_baseline(params, graph, model_cfg, n, rest)
-    env = SaberEnv.create(saber_cfg, eye_cfg, eye_directions(columns, eye_cfg))
+    env = column_env(saber_cfg, eye_cfg, columns)
     policy = BrainPolicy(make_step(graph, model_cfg, n), n, no_interventions(n), rest)
     groups = json.loads((Path(model_cfg.subgraph_dir) / "groups.json").read_text())
     return Trained(path, meta, env, policy, params, groups, n, train_cfg)
@@ -120,7 +121,8 @@ def play_conditions(
     @jax.jit
     def play(iv: Interventions) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
         policy = dataclasses.replace(trained.policy, interventions=iv)
-        m = rollout(env, policy, trained.params, episodes, k_play, n_steps, drive_with_expert=False)
+        drives = jnp.ones(n_windows, bool)
+        m = rollout(env, policy, trained.params, episodes, k_play, n_steps, drives)
         return m.hits, m.misses, m.bad_cuts, m.bombs
 
     results = {}
