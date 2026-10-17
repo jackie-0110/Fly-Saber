@@ -47,7 +47,8 @@ If you have more than one group, add `--account=<group> --qos=<group>` to `sbatc
 
 ## Troubleshooting
 
-- `FLY_BLUE: set FLY_BLUE ...`: export it (and add it to `~/.bashrc`), then resubmit with `--export=ALL`.
+- `env.sh: no Fly-Saber repo in ...`: submit from the repo root (`cd $FLY_BLUE/Fly-Saber`), or export `FLY_BLUE` (the folder containing the repo) and resubmit with `--export=ALL`.
+- `DependencyNeverSatisfied` on the bench job: the setup job failed. `scancel` the bench job, read `logs/fly-setup-<jobid>.out`, fix, and resubmit both.
 - `jax ... [CpuDevice(id=0)]` in the bench log: GPU JAX did not install. Run `source training/slurm/env.sh && uv sync --extra cuda` inside a GPU job, check `nvidia-smi` works there.
 - Disk quota errors: uv caches go to `$FLY_BLUE/.cache` through `env.sh`; check `home_quota` and `blue_quota`.
 - Job pending a long time: `squeue --me` shows the reason; try the other GPU partition.
