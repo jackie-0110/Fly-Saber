@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-This plan follows [`FLY_SABER_HANDOFF.md`](../FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The chart preview is now interactive. Fly actions and neuron firing still require a real backend connection.
+This plan follows [`FLY_SABER_HANDOFF.md`](../FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The chart preview is now interactive. Single-player sessions now connect to the backend for fly actions, score and note events. Neuron firing still requires the activity stream.
 
 The current implementation is in `frontend/`, per the frontend owner's request. The repository has since been reorganized around this directory. Keep build, Docker, and deployment paths aligned with it.
 
@@ -16,9 +16,9 @@ Implemented now:
 - The brain renders a real 19,462-neuron cloud loaded from the committed MaleCNS JSON assets.
 - Brain orbit, pan, zoom, display-axis presets, keyboard navigation, group/type filters, point selection, and position provenance are implemented. Rendering is lazy-loaded and uses a single point cloud with error/retry states.
 - Honest anatomy/chart-preview labels, unreported scores, fullscreen game viewing, and Neurons/Songs/Session/Details/Next steps inspector tabs.
-- No fly session, fabricated firing animation, or browser policy simulation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
+- Single-player live sessions with server map/brain selection, real saber/score/note events, audio-clock sync, pause/resume/seek and reconnect. No browser policy simulation or fabricated firing animation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
 
-See [SONG_PREVIEW.md](./SONG_PREVIEW.md) for implemented map/audio behavior and the remaining real-time inference integration. The sections below retain the broader live-session roadmap; their scene, camera, and local-audio foundations are already implemented.
+See [SONG_PREVIEW.md](./SONG_PREVIEW.md) for implemented map/audio behavior and live-session behavior and remaining stream integration. The sections below retain the broader live-session roadmap; their scene, camera, and local-audio foundations are already implemented.
 
 The current point cloud uses supplied anatomical positions, including partner and type-mean estimates marked in the export. Colors identify cell types, not firing. The old neural SVG remains decorative artwork only and must never become scientific test data.
 

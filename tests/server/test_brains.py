@@ -171,3 +171,20 @@ def test_bad_interventions_get_error_and_socket_stays_open(
         ws.send_json({"type": "set_interventions", **message})
         assert ws.receive_json()["type"] == "error"
         assert start(ws, ["real"])["type"] == "ready"
+
+
+def test_interventions_recenter_the_readout(tmp_path: Path) -> None:
+    """set_interventions re-centers the readout on the modified brain (PR #36); without it
+    every lesion collapsed the trained fly to about 0% hits."""
+    import numpy as np
+
+    from server.saber_sim import brain_sims
+
+    bundles = write_bundles(tmp_path)
+    live = brain_sims(bundles / "real" / "bc_1.npz", bundles / "real" / "subgraph")
+    _, untouched = live.interventions({})
+    _, lesioned = live.interventions({"lesion": ["DN_all"]})
+    trained = np.load(bundles / "real" / "bc_1.npz")[".dn_mean"]
+    np.testing.assert_allclose(np.asarray(untouched.dn_mean), trained, rtol=1e-5)
+    # The silenced DN rests at 0, so its baseline follows it down.
+    assert float(lesioned.dn_mean[0]) == 0.0 < float(untouched.dn_mean[0])

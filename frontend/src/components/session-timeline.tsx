@@ -4,12 +4,15 @@ import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatTime } from '@/game/chart'
 import { usePlayer } from '@/game/store'
+import { useSession } from '@/game/session'
 
 export function SessionTimeline() {
   const time = usePlayer((s) => s.time)
   const duration = usePlayer((s) => s.duration)
   const playing = usePlayer((s) => s.playing)
   const chart = usePlayer((s) => s.chart)
+  const live = usePlayer((s) => !!s.song?.serverMapId)
+  const connecting = useSession((s) => s.status === 'connecting')
   const loading = usePlayer((s) => s.loading)
   const rate = usePlayer((s) => s.rate)
   const volume = usePlayer((s) => s.volume)
@@ -43,7 +46,7 @@ export function SessionTimeline() {
             className="primary-play"
             variant="outline"
             size="icon-sm"
-            disabled={disabled}
+            disabled={disabled || connecting}
             onClick={() =>
               playing ? usePlayer.getState().pause() : void usePlayer.getState().play()
             }
@@ -54,7 +57,7 @@ export function SessionTimeline() {
           <Button
             variant="outline"
             size="icon-sm"
-            disabled={disabled}
+            disabled={disabled || connecting}
             onClick={() => usePlayer.getState().restart()}
             aria-label="Restart song"
           >
@@ -65,7 +68,7 @@ export function SessionTimeline() {
             aria-label="Playback speed"
             value={rate}
             onChange={(event) => usePlayer.getState().setRate(Number(event.target.value))}
-            disabled={disabled}
+            disabled={disabled || live}
           >
             {[0.5, 0.75, 1, 1.25, 1.5].map((value) => (
               <option key={value} value={value}>

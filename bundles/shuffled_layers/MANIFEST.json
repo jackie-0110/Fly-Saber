@@ -1,0 +1,26 @@
+{
+ "checkpoint": "bc_1000.npz",
+ "source": "checkpoints/rewired_layered/fast/seed0/bc_1000.npz",
+ "variant": "rewired_layered",
+ "step": 1000,
+ "metrics": {
+  "update": 1000,
+  "loss": 1.8418656587600708,
+  "head_accuracy": [
+   0.7969,
+   0.9677,
+   0.7798,
+   0.9619
+  ],
+  "hit_rate": 0.46925795053003533,
+  "bombs": 2
+ },
+ "subgraph_fingerprint": {
+  "n_neurons": 19463,
+  "n_edges": 340922,
+  "n_synapses": 6175540,
+  "variant": "rewired_layered",
+  "neurons_sha256": "d197716db5254ea0",
+  "edges_sha256": "815f94a3bb0ff2a9"
+ }
+}

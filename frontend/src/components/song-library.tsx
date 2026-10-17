@@ -1,24 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ArrowDownToLine,
-  ArrowUpRight,
-  Check,
-  LoaderCircle,
-  Music2,
-  Search,
-  Upload,
-  X,
-} from 'lucide-react'
+import { ArrowDownToLine, ArrowUpRight, Check, LoaderCircle, Music2, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { difficultyLabel, formatTime } from '@/game/chart'
 import { searchSongs } from '@/game/songs'
 import type { SongResult } from '@/game/songs'
 import { usePlayer } from '@/game/store'
+import { LiveSongs } from '@/components/live-songs'
 
 export function SongLibrary() {
   const active = usePlayer((s) => s.inspectorTab === 'songs')
+  const [source, setSource] = useState<'live' | 'community'>('live')
+  return (
+    <>
+      <div className="library-sources" role="group" aria-label="Song source">
+        <Button
+          variant={source === 'live' ? 'secondary' : 'ghost'}
+          size="sm"
+          aria-pressed={source === 'live'}
+          onClick={() => setSource('live')}
+        >
+          Live songs
+        </Button>
+        <Button
+          variant={source === 'community' ? 'secondary' : 'ghost'}
+          size="sm"
+          aria-pressed={source === 'community'}
+          onClick={() => setSource('community')}
+        >
+          Community preview
+        </Button>
+      </div>
+      {source === 'live' ? active && <LiveSongs /> : <CommunitySongLibrary />}
+    </>
+  )
+}
+
+function CommunitySongLibrary() {
+  const active = usePlayer((s) => s.inspectorTab === 'songs')
   const loaded = usePlayer((s) => s.song)
-  const selectedChart = usePlayer((s) => s.chart)
   const loading = usePlayer((s) => s.loading)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('Latest')
@@ -28,11 +47,9 @@ export function SongLibrary() {
   const [page, setPage] = useState(0)
   const [more, setMore] = useState(false)
   const [searched, setSearched] = useState(false)
-  const [dragging, setDragging] = useState(false)
   const [lastQuery, setLastQuery] = useState({ query: '', sort: 'Latest' })
   const request = useRef<AbortController | null>(null)
   const initial = useRef(false)
-  const fileInput = useRef<HTMLInputElement>(null)
 
   const search = useCallback(async (text: string, order: string, nextPage = 0) => {
     request.current?.abort()
@@ -64,7 +81,7 @@ export function SongLibrary() {
         setError(
           cause instanceof Error && cause.name !== 'TypeError'
             ? cause.message
-            : 'Could not reach song search. Try again, or import a map ZIP below.',
+            : 'Could not reach song search. Try again in a moment.',
         )
     } finally {
       if (!controller.signal.aborted) setBusy(false)
@@ -100,7 +117,7 @@ export function SongLibrary() {
         </div>
         <Music2 aria-hidden="true" />
       </div>
-      <p className="library-intro">Browse community maps or bring your own map ZIP.</p>
+      <p className="library-intro">Browse community maps and choose a track to explore.</p>
       <form
         className="song-search"
         onSubmit={(event) => {
@@ -141,70 +158,6 @@ export function SongLibrary() {
           </Button>
         </div>
       </form>
-      <div
-        className={`map-import${dragging ? ' is-dragging' : ''}`}
-        onDragOver={(event) => {
-          event.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault()
-          setDragging(false)
-          const file = event.dataTransfer.files[0]
-          if (file) void usePlayer.getState().importFile(file)
-        }}
-      >
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".zip"
-          className="sr-only"
-          aria-label="Import map ZIP"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            if (file) void usePlayer.getState().importFile(file)
-            event.target.value = ''
-          }}
-        />
-        <button
-          type="button"
-          className="map-import-button"
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload aria-hidden="true" />
-          <span>
-            <strong>Import map ZIP</strong>
-            <small>Drop a map here, or choose a file</small>
-          </span>
-          <ArrowUpRight aria-hidden="true" />
-        </button>
-      </div>
-      {loaded && (
-        <section className="loaded-difficulties" aria-label="Loaded song difficulties">
-          <div className="library-section-label">
-            <span>LOADED TRACK</span>
-            <Check aria-hidden="true" />
-          </div>
-          <strong>{loaded.title}</strong>
-          <div className="difficulty-buttons">
-            {loaded.charts.map((chart) => (
-              <button
-                key={chart.map_id}
-                type="button"
-                aria-pressed={selectedChart?.map_id === chart.map_id}
-                disabled={!!loading}
-                onClick={() => usePlayer.getState().selectChart(chart.map_id)}
-                title={`${chart.characteristic} · ${chart.notes.length} notes`}
-                data-difficulty={chart.difficulty.name}
-              >
-                {difficultyLabel(chart.difficulty.name)}
-                {chart.characteristic !== 'Standard' && <small> {chart.characteristic}</small>}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
       <div className="library-section-label">
         <span>
           {lastQuery.query
@@ -323,7 +276,7 @@ export function SongLibrary() {
         </Button>
       )}
       <p className="library-footnote">
-        Existing charts only. Map ZIPs stay in this browser and are cleared on refresh.
+        Existing charts only. Loaded maps stay in this browser and are cleared on refresh.
       </p>
     </div>
   )
