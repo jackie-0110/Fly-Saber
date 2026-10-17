@@ -54,10 +54,17 @@ readout_std_floor: 0.1
 # are about +-1.
 readout_clip: 5.0
 
-# Train only the readout (stop gradients at the DNs). The fitted readout reads DN ripples of
-# about 1e-5, and even brain-param Adam steps of 1e-5 wash them out (loss 3.4 -> 97 in ten
-# updates). Until the readout tracks the brain's own baseline, keep the brain frozen.
-freeze_brain: true
+# Live baseline. The fitted readout reads DN ripples of about 1e-5; with a fixed baseline,
+# brain-param Adam steps of 1e-5 shifted DN rates far more and wrecked it (loss 3.4 -> 97 in
+# ten updates). With live_baseline the readout subtracts the DNs' resting rates under the
+# current params (the brain settled on the gray background for baseline_frames), recomputed
+# every update with gradients, so drift in the brain's operating point cancels.
+live_baseline: true
+baseline_frames: 45
+
+# Train only the readout (stop gradients at the DNs). Off: the live baseline lets the brain
+# itself train.
+freeze_brain: false
 
 # Action heads, from the Fly Saber env (Person 2 contract): per saber, 12 cells + idle
 # and 4 directions + no_cut. Red saber first, then blue.

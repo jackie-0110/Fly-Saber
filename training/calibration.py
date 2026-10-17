@@ -19,7 +19,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from brain.config import ModelConfig
-from brain.model.brain import Graph, Params, make_step, rest_state
+from brain.model.brain import Graph, Params, make_step, rest_dn, rest_state
 from brain.model.interventions import no_interventions
 from fly_saber.env import SaberEnv, SaberState
 from fly_saber.experts import saber_expert
@@ -117,7 +117,11 @@ def fit_readout(
     """
     dn, actions = expert_play(env, params, graph, cfg, n, key, cfg.calibration_stimuli)
     n_songs, _, d = dn.shape
-    mean, std = dn.reshape(-1, d).mean(0), dn.reshape(-1, d).std(0)
+    std = dn.reshape(-1, d).std(0)
+    if cfg.live_baseline:  # same baseline the step will subtract every update
+        mean = np.asarray(rest_dn(params, graph, cfg, n, rest_state(params, graph, cfg, n)))
+    else:
+        mean = dn.reshape(-1, d).mean(0)
     std = np.maximum(std, max(cfg.readout_std_floor * float(np.median(std)), 1e-6))
     z = np.clip((dn - mean) / std, -cfg.readout_clip, cfg.readout_clip) / np.sqrt(d)
 
@@ -125,16 +129,21 @@ def fit_readout(
     x_tr, x_te = z[train].reshape(-1, d), z[~train].reshape(-1, d)
     a_tr = actions[train].reshape(len(x_tr), -1)
     a_te = actions[~train].reshape(len(x_te), -1)
-    gram = x_tr.T @ x_tr + RIDGE / d * np.eye(d)  # z is already divided by sqrt(d)
+    # Center: with the rest baseline, game frames have a nonzero mean z; fold it into the bias.
+    z_bar = x_tr.mean(0)
+    x_c = x_tr - z_bar
+    gram = x_c.T @ x_c + RIDGE / d * np.eye(d)  # z is already divided by sqrt(d)
 
     weights, biases = [], []
     stats: dict[str, list[float]] = {"fit_accuracy": [], "base_rate": []}
     for h, size in enumerate(cfg.action_heads):
         y = np.eye(size)[a_tr[:, h]]
         prior = y.mean(0)
-        w = np.linalg.solve(gram, x_tr.T @ (y - prior))
-        b = np.log(prior + 1e-3)
-        weights.append(_best_temperature(x_tr @ w, b, a_tr[:, h]) * w)
+        w = np.linalg.solve(gram, x_c.T @ (y - prior))
+        b0 = np.log(prior + 1e-3)
+        t = _best_temperature(x_c @ w, b0, a_tr[:, h])
+        weights.append(t * w)
+        b = b0 - t * (z_bar @ w)
         biases.append(b)
         if len(x_te):
             pred = np.argmax(x_te @ weights[-1] + b, axis=1)

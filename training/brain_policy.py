@@ -3,6 +3,7 @@
 Owner: Person 2. See docs/PROTOCOL.md sections 2 and 5.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import jax
@@ -19,6 +20,7 @@ from brain.model.brain import (
     load_graph,
     make_step,
     rest_state,
+    with_live_baseline,
 )
 from brain.model.interventions import Interventions, no_interventions
 from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
@@ -37,6 +39,13 @@ class BrainPolicy:
     n_neurons: int
     interventions: Interventions
     rest: jax.Array | None = None
+    baseline: Callable[[Params], Params] | None = None
+    """Sets the live readout baseline from the current params (with_live_baseline)."""
+
+    def prepare(self, params: Params) -> Params:
+        """Params to run with: call once per update on the trained params (training/bc.py)."""
+        return params if self.baseline is None else self.baseline(params)
+
     """Episode start state (brain.model.brain.rest_state); None starts from all zeros.
     After loading a checkpoint, replace it: dataclasses.replace(policy, rest=rest_state(...))."""
 
@@ -71,10 +80,19 @@ def build(
     if model_cfg.readout_norm:  # fit the readout on expert play (Person 1, training/calibration.py)
         params, stats = fit_readout(env, params, graph, model_cfg, n_neurons, k_cal)
         print(f"readout fit on expert play: {stats}", flush=True)
+    rest = rest_state(params, graph, model_cfg, n_neurons)
+    baseline = None
+    if model_cfg.readout_norm and model_cfg.live_baseline:
+
+        def baseline(p: Params) -> Params:
+            return with_live_baseline(p, graph, model_cfg, n_neurons, rest)
+
+        params = baseline(params)
     policy = BrainPolicy(
         make_step(graph, model_cfg, n_neurons),
         n_neurons,
         no_interventions(n_neurons),
-        rest_state(params, graph, model_cfg, n_neurons),
+        rest,
+        baseline,
     )
     return env, policy, params

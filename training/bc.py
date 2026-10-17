@@ -164,8 +164,11 @@ def make_steps(
             k_episodes, map_set, cfg.batch_size, cfg.window_sec, env.cfg.note_speed_mps
         ), k_rollout
 
+    prepare = getattr(policy, "prepare", lambda p: p)  # live readout baseline (Person 1)
+
     def loss(params: Any, key: jax.Array) -> tuple[jax.Array, Metrics]:
         episodes, key = episodes_and_key(key)
+        params = prepare(params)
         metrics = rollout(env, policy, params, episodes, key, n_steps, drive_with_expert=True)
         return metrics.loss, metrics
 
@@ -178,13 +181,17 @@ def make_steps(
     @jax.jit
     def evaluate(params: Any, key: jax.Array) -> Metrics:
         episodes, key = episodes_and_key(key)
-        return rollout(env, policy, params, episodes, key, n_steps, drive_with_expert=False)
+        return rollout(
+            env, policy, prepare(params), episodes, key, n_steps, drive_with_expert=False
+        )
 
     return update, evaluate
 
 
-# Connectome brain params that are readout, not brain (brain.model.brain.Params field names).
+# Connectome brain params that are readout, not brain (brain.model.brain.Params field names),
+# and fixed buffers that optimizers must never move.
 READOUT_FIELDS = ("readout_w", "readout_b", "value_w", "value_b")
+FIXED_FIELDS = ("dn_mean", "dn_std")
 
 
 def make_optimizer(cfg: BCConfig, params: Any) -> optax.GradientTransformation:
@@ -195,9 +202,19 @@ def make_optimizer(cfg: BCConfig, params: Any) -> optax.GradientTransformation:
     """
     if cfg.brain_learning_rate is None or not hasattr(params, "_fields"):
         return optax.adam(cfg.learning_rate)
-    labels = type(params)(*("readout" if f in READOUT_FIELDS else "brain" for f in params._fields))
+
+    def label(field: str) -> str:
+        if field in FIXED_FIELDS:
+            return "fixed"
+        return "readout" if field in READOUT_FIELDS else "brain"
+
+    labels = type(params)(*(label(f) for f in params._fields))
     return optax.multi_transform(
-        {"readout": optax.adam(cfg.learning_rate), "brain": optax.adam(cfg.brain_learning_rate)},
+        {
+            "readout": optax.adam(cfg.learning_rate),
+            "brain": optax.adam(cfg.brain_learning_rate),
+            "fixed": optax.set_to_zero(),
+        },
         labels,
     )
 
@@ -229,7 +246,7 @@ def train(
             }
             log.append(row)
             print(row, flush=True)
-    return params, log
+    return getattr(policy, "prepare", lambda p: p)(params), log
 
 
 def run(cfg: BCConfig, model_cfg: ModelConfig, saber_cfg: SaberConfig, eye_cfg: EyeConfig) -> Path:

@@ -259,6 +259,32 @@ def init_state(n_neurons: int) -> Array:
     return jnp.zeros(n_neurons)
 
 
+def rest_dn(params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, v0: Array) -> Array:
+    """DN rates of the brain at rest under `params`: settled on the gray background for
+    `baseline_frames` from `v0` (a previous rest state), no interventions. Differentiable in
+    params; this is the live readout baseline."""
+    from brain.model.interventions import no_interventions
+
+    step = make_step(graph, dataclasses.replace(cfg, readout_norm=False), n_neurons)
+    # numpy, not jnp: this runs inside jitted training steps, where jnp ops are traced.
+    gray = jnp.full((2, int(np.asarray(graph.input_column).max()) + 1), 0.5)
+    iv = no_interventions(n_neurons)
+
+    def body(v: Array, _: None) -> tuple[Array, None]:
+        return step(params, v, gray, iv, jax.random.PRNGKey(0))[0], None
+
+    v = jax.lax.scan(body, jax.lax.stop_gradient(v0), None, length=cfg.baseline_frames)[0]
+    _, out = step(params, v, gray, iv, jax.random.PRNGKey(0))
+    return out.rates[graph.dn]
+
+
+def with_live_baseline(
+    params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, v0: Array
+) -> Params:
+    """`params` with dn_mean set to rest_dn. Call on the params at the start of every loss."""
+    return params._replace(dn_mean=rest_dn(params, graph, cfg, n_neurons, v0))
+
+
 def rest_state(
     params: Params, graph: Graph, cfg: ModelConfig, n_neurons: int, frames: int = 60
 ) -> Array:
@@ -330,7 +356,10 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
         if cfg.freeze_brain:
             dn = jax.lax.stop_gradient(dn)
         if cfg.readout_norm:
-            dn = (dn - jax.lax.stop_gradient(params.dn_mean)) / jax.lax.stop_gradient(params.dn_std)
+            # dn_mean is not stop-gradient: with live_baseline it is computed from the params
+            # each update (rest_dn) and gradients must flow through it. Optimizers keep the
+            # stored leaves fixed (FIXED_PARAMS).
+            dn = (dn - params.dn_mean) / jax.lax.stop_gradient(params.dn_std)
             # Divide by sqrt(D): Adam moves every readout weight by about the learning rate,
             # so with D inputs of size ~1 one update would shift logits by ~lr * D.
             dn = jnp.clip(dn, -cfg.readout_clip, cfg.readout_clip) / np.sqrt(graph.dn.shape[0])

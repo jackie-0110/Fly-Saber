@@ -230,7 +230,9 @@ def test_readout_norm_calibrates_and_is_never_trained() -> None:
         return jnp.sum(out.logits**2) + out.value**2
 
     g = jax.grad(loss)(params)
-    assert float(jnp.abs(g.dn_mean).max()) == 0.0 and float(jnp.abs(g.dn_std).max()) == 0.0
+    # dn_std never gets gradients. dn_mean does (the live baseline needs them); optimizers
+    # keep the stored leaf fixed (tests/training/test_bc.py).
+    assert float(jnp.abs(g.dn_std).max()) == 0.0
     assert float(jnp.abs(g.readout_w).max()) > 0.0
 
 
