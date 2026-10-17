@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from brain.connectome.metadata import cell_types
+from brain.model.brain import Params
 from brain.model.controls import from_controls, load_controls
 from brain.model.interventions import Interventions
 from fly_saber.config import load_config
@@ -87,19 +88,32 @@ def brain_sims(checkpoint: Path, subgraph_dir: Path) -> LiveSaber:
     `subgraph_dir` must hold the exact subgraph it was trained on (a bundle's subgraph/).
     """
     trained = load_trained(checkpoint, subgraph_dir)
-    policy, params = trained.policy, trained.params
+    policy, base_params = trained.policy, trained.params
     heads = action_heads(trained.env.cfg.n_sabers)
 
     controls = load_controls()
+    # Re-center the readout on the modified brain's rest (brain.model.brain.rest_dn). The
+    # readout reads DN ripples of about 1e-5; without this every lesion or mood shifts the
+    # DN background far more and collapses the trained fly to ~0% hits. Compiled once;
+    # each later change costs about 45 brain frames.
+    recenter = jax.jit(lambda iv: policy.prepare(base_params, iv))
 
     def act(
-        state: SaberState, obs: jax.Array, v: jax.Array, iv: Interventions, key: jax.Array
+        state: SaberState,
+        obs: jax.Array,
+        v: jax.Array,
+        controlled: tuple[Interventions, Params],
+        key: jax.Array,
     ) -> tuple[jax.Array, jax.Array]:
+        iv, params = controlled
         v, logits = dataclasses.replace(policy, interventions=iv).apply(params, v, obs, key)
         return greedy_action(logits, heads), v
 
-    def interventions(ui: Mapping[str, Any]) -> Interventions:
-        return from_controls(ui, trained.groups, controls, trained.n_neurons)
+    def interventions(ui: Mapping[str, Any]) -> tuple[Interventions, Params]:
+        """Brain controls and the params re-centered for them; both are step arguments,
+        so changing controls never recompiles."""
+        iv = from_controls(ui, trained.groups, controls, trained.n_neurons)
+        return iv, recenter(iv)
 
     neurons = pd.read_parquet(subgraph_dir / "neurons.parquet", columns=["type"])
     return LiveSaber(
