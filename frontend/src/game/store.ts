@@ -4,7 +4,7 @@ import type { PlaybackSnapshot } from './transport.ts'
 import type { Chart, Song } from './chart.ts'
 import { downloadSong, importSongFile } from './songs.ts'
 import type { SongResult } from './songs.ts'
-import { loadServerSong } from './catalog.ts'
+import { loadServerSong, withLiveCharts } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
 import { useSession } from './session.ts'
@@ -33,6 +33,11 @@ interface PlayerState extends PlaybackSnapshot {
   restart: () => void
   setRate: (rate: number) => void
   setVolume: (volume: number) => void
+}
+
+/** The server map a brain plays for the loaded chart, or undefined for a preview. */
+export function liveMapId(s: { song: Song | null; chart: Chart | null }): string | undefined {
+  return s.song?.serverMapId ?? (s.chart?.live ? s.chart.map_id : undefined)
 }
 
 let pending: AbortController | null = null
@@ -84,7 +89,7 @@ async function loadSong(
       song.charts[0]
     const coverUrl = song.cover ? URL.createObjectURL(song.cover) : null
     transport.load(audio)
-    if (song.serverMapId) transport.setRate(1)
+    if (liveMapId({ song, chart })) transport.setRate(1)
     usePlayer.setState({ song, chart, coverUrl, loading: '', error: '' })
     if (oldCover) URL.revokeObjectURL(oldCover)
   } catch (cause) {
@@ -129,7 +134,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   selectRemote: (result, difficulty, characteristic) =>
     loadSong(
       `Downloading ${result.title}…`,
-      (signal) => downloadSong(result, signal),
+      async (signal) => withLiveCharts(await downloadSong(result, signal), result.id, signal),
       difficulty,
       characteristic,
     ),
@@ -139,6 +144,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     const chart = get().song?.charts.find((c) => c.map_id === id)
     if (chart) {
       cancelSession()
+      if (chart.live) transport.setRate(1)
       set({ chart })
     }
   },
@@ -152,13 +158,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (get().loading || !get().chart || useSession.getState().status === 'connecting') return
     const attempt = ++playAttempt
     try {
-      if (get().song?.serverMapId) {
+      const mapId = liveMapId(get())
+      if (mapId) {
         if (!get().brain)
           throw new Error('Choose an available brain in the Songs tab, then press play.')
         await transport.unlock()
         if (attempt !== playAttempt) return
         if (get().duration > 0 && transport.getTime() >= get().duration) liveSession.disconnect()
-        await liveSession.prepare(get().song!.serverMapId!, get().brain)
+        await liveSession.prepare(mapId, get().brain)
         if (attempt !== playAttempt) return
       }
       await transport.play()
@@ -173,7 +180,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       transport.pause()
       set({
         error:
-          get().song?.serverMapId && cause instanceof Error
+          liveMapId(get()) && cause instanceof Error
             ? cause.message
             : 'Audio could not start. Press play again, or check your browser’s audio permissions.',
       })
@@ -199,7 +206,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     }
   },
   setRate: (rate) => {
-    if (!get().song?.serverMapId) transport.setRate(rate)
+    if (!liveMapId(get())) transport.setRate(rate)
   },
   setVolume: (volume) => transport.setVolume(volume),
 }))

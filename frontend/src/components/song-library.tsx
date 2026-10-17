@@ -27,7 +27,7 @@ export function SongLibrary() {
           aria-pressed={source === 'community'}
           onClick={() => setSource('community')}
         >
-          Community preview
+          Community
         </Button>
       </div>
       {source === 'live' ? active && <LiveSongs /> : <CommunitySongLibrary />}
@@ -120,7 +120,10 @@ function CommunitySongLibrary() {
       <div className="library-heading">
         <h2>Community maps</h2>
       </div>
-      <p className="library-intro">Browse community maps and choose a track to explore.</p>
+      <p className="library-intro">
+        Browse community maps. The server fetches the chart when you load one, so the fly can play
+        its Standard difficulties.
+      </p>
       <form
         className="song-search"
         onSubmit={(event) => {
