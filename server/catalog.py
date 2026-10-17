@@ -1,6 +1,6 @@
 """Normalized maps and allowlisted audio on disk (docs/PROTOCOL.md sections 1 and 3).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 import json

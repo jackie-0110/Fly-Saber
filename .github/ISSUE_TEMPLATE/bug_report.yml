@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in FlyArcade.
+description: Report a reproducible problem in FlySaber.
 body:
   - type: textarea
     id: behavior

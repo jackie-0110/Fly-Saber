@@ -1,6 +1,6 @@
 """FastAPI app, REST endpoints and WS /ws/session (spec 13).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 from pathlib import Path
@@ -41,7 +41,7 @@ def create_app(
     make_sim: SimFactory | None = None,
     frontend_dir: Path | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="FlyArcade")
+    app = FastAPI(title="FlySaber")
     make_sim = make_sim or expert_sims()
     catalog = Catalog(maps_dir)
     warm_up(catalog, make_sim)

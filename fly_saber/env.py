@@ -1,6 +1,6 @@
 """Fly Saber env, pure-functional JAX (spec 7.2).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 
 Actions are (n_sabers, 2) ints: [cell, cut]. Cell is layer * 4 + lane (0 to 11)
 or IDLE_CELL; cut is a sim direction 0 to 3 or NO_CUT. Saber 0 is red, 1 blue.

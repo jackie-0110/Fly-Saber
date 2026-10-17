@@ -1,6 +1,6 @@
 """Version-independent chart in beat time, produced by the v2 and v3 parsers.
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 from dataclasses import dataclass

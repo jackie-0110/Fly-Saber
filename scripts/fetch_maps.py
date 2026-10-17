@@ -1,6 +1,6 @@
 """Download allowlisted demo maps, normalize them, and stage their audio for the server.
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 import json

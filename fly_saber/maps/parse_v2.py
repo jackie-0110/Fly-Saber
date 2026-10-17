@@ -1,6 +1,6 @@
 """Map format v2 parser (spec 8.2).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 from typing import Any

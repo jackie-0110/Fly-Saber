@@ -21,14 +21,14 @@ def test_frontend_mount_preserves_api_and_websocket(tmp_path: Path) -> None:
     (maps / "demo_allowlist.json").write_text("[]")
     frontend = tmp_path / "dist"
     frontend.mkdir()
-    (frontend / "index.html").write_text("<!doctype html><title>FlyArcade</title>")
-    (frontend / "app.js").write_text("console.log('FlyArcade')")
+    (frontend / "index.html").write_text("<!doctype html><title>FlySaber</title>")
+    (frontend / "app.js").write_text("console.log('FlySaber')")
     with TestClient(create_app(maps_dir=maps, frontend_dir=frontend)) as client:
         homepage = client.get("/")
         assert homepage.status_code == 200
         assert "text/html" in homepage.headers["content-type"]
-        assert "FlyArcade" in homepage.text
-        assert client.get("/app.js").text == "console.log('FlyArcade')"
+        assert "FlySaber" in homepage.text
+        assert client.get("/app.js").text == "console.log('FlySaber')"
         assert client.get("/api/games").json() == [{"id": "saber", "label": "Fly Saber"}]
         assert client.get("/api/maps/missing_easy").status_code == 404
         assert client.get("/missing.js").status_code == 404

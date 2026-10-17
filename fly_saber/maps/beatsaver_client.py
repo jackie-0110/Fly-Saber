@@ -1,6 +1,6 @@
 """Cached BeatSaver API client (spec 8.1). Never called at demo time.
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLYSABER_HANDOFF.md for the spec.
 """
 
 import io
@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 
 API_URL = "https://api.beatsaver.com"
-USER_AGENT = "FlyArcade/0.1 (SwampHacks)"
+USER_AGENT = "FlySaber/0.1 (SwampHacks)"
 
 
 def make_client() -> httpx.Client:
