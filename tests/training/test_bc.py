@@ -119,3 +119,22 @@ def test_run_saves_a_brain_checkpoint_that_loads_back(tmp_path: Path) -> None:
     _, meta = load_checkpoint(path, template, expect_subgraph=subgraph_fingerprint(subgraph))
     assert path == tmp_path / "checkpoints" / "test" / "seed0" / "bc_2.npz"
     assert (meta["stage"], meta["step"]) == ("bc", 2)
+
+
+def test_optimizer_never_moves_fixed_brain_buffers() -> None:
+    import dataclasses
+
+    import optax
+
+    from brain.model.brain import Params
+    from training.bc import BCConfig, make_optimizer
+
+    zeros = jnp.zeros(3)
+    params = Params(*([zeros] * len(Params._fields)))
+    grads = Params(*([jnp.ones(3)] * len(Params._fields)))
+    base = BCConfig("", "train", 0.0, 1.0, 1, 1e-2, 1, 1, 0, "real", "")
+    opt = make_optimizer(dataclasses.replace(base, brain_learning_rate=1e-3), params)
+    updates, _ = opt.update(grads, opt.init(params), params)
+    new = optax.apply_updates(params, updates)
+    assert float(jnp.abs(new.dn_mean).max()) == 0.0 and float(jnp.abs(new.dn_std).max()) == 0.0
+    assert float(jnp.abs(new.bias).max()) > 0.0 and float(jnp.abs(new.readout_w).max()) > 0.0

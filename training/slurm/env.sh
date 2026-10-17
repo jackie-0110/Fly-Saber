@@ -1,4 +1,4 @@
-# Sourced by every FlyArcade SLURM job and by setup.sh (owner: Person 1).
+# Sourced by every Fly Saber SLURM job and by setup.sh (owner: Person 1).
 # Keeps uv's caches and Python installs on /blue: home is small and fills up fast.
 set -euo pipefail
 

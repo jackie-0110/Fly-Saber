@@ -1,6 +1,6 @@
 """Scrape the charts-only BeatSaver training set and write its index (spec 8.1).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 import json
