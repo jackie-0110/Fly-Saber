@@ -44,7 +44,9 @@ def _strongest_partner(edges: pd.DataFrame, value: pd.Series) -> pd.Series:
         ]
     )[["body", "partner", "weight"]]
     both = both[both["partner"].isin(value.dropna().index)]
-    best = both.sort_values("weight").groupby("body").tail(1).set_index("body")["partner"]
+    # Ties broken by partner body id: unstable sorts pick differently across machines.
+    both = both.sort_values(["weight", "partner"], kind="stable")
+    best = both.groupby("body").tail(1).set_index("body")["partner"]
     return pd.Series(value.reindex(best.to_numpy()).to_numpy(), index=best.index)
 
 
@@ -150,7 +152,12 @@ def build_subgraph(neurons: pd.DataFrame, edges: pd.DataFrame, cfg: SubgraphConf
     role = select_neurons(neurons, edges, cfg)
 
     kept = neurons.loc[role.index].assign(role=role, role_order=role.map(ROLES.index))
-    kept = kept.sort_values(["role_order", "type", "side"]).drop(columns="role_order")
+    # Body id last: this order is the neuron index everything else uses, so it must not
+    # depend on the sort implementation (it did: unstable sorts break ties per platform).
+    kept = kept.rename_axis("body_id").sort_values(
+        ["role_order", "type", "side", "body_id"], kind="stable"
+    )
+    kept = kept.drop(columns="role_order")
     sub_edges = edges[edges["body_pre"].isin(kept.index) & edges["body_post"].isin(kept.index)]
     kept = _fill_positions(kept, sub_edges)
 

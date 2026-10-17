@@ -16,6 +16,7 @@ from typing import Any, TypeVar
 
 import jax
 import numpy as np
+import pandas as pd
 
 FORMAT_VERSION = 1
 META_KEY = "__meta__"
@@ -33,12 +34,33 @@ def config_hash(configs: dict[str, Any]) -> str:
 
 
 def subgraph_fingerprint(subgraph_dir: str | Path) -> dict[str, Any]:
-    """Identity of the connectome a checkpoint was trained on, from its meta.json."""
-    meta = json.loads((Path(subgraph_dir) / "meta.json").read_text())
-    fingerprint = {k: meta[k] for k in ("n_neurons", "n_edges", "n_synapses")}
+    """Identity of the connectome a checkpoint was trained on.
+
+    Counts from meta.json, plus content hashes of the neuron order (body ids) and the
+    edge list, so a rebuilt subgraph with the same counts but different neurons in
+    different slots is caught.
+    """
+    d = Path(subgraph_dir)
+    meta = json.loads((d / "meta.json").read_text())
+    fingerprint: dict[str, Any] = {k: meta[k] for k in ("n_neurons", "n_edges", "n_synapses")}
     if meta.get("variant", "real") != "real":  # controls have the same counts
         fingerprint["variant"] = meta["variant"]
+    neurons = pd.read_parquet(d / "neurons.parquet")
+    if "body_id" in neurons:  # hand-built test subgraphs may not have body ids
+        fingerprint["neurons_sha256"] = _sha(neurons["body_id"].to_numpy(dtype=np.int64))
+    edges = pd.read_parquet(d / "edges.parquet", columns=["pre", "post", "weight"])
+    fingerprint["edges_sha256"] = _sha(edges.to_numpy(dtype=np.int64))
     return fingerprint
+
+
+def _sha(values: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(values).tobytes()).hexdigest()[:16]
+
+
+def subgraph_mismatch(trained: dict[str, Any], current: dict[str, Any]) -> list[str]:
+    """Fingerprint keys that differ. Only keys the checkpoint recorded are compared, so
+    older checkpoints (counts only) still load; newer ones are checked by content."""
+    return [k for k in trained if trained[k] != current.get(k)]
 
 
 def save_checkpoint(
@@ -88,10 +110,13 @@ def load_checkpoint(
 ) -> tuple[T, dict[str, Any]]:
     """Load params shaped like `template`. Raises if keys, shapes, or the subgraph differ."""
     meta = read_meta(path)
-    if expect_subgraph is not None and meta["subgraph"] != expect_subgraph:
-        raise ValueError(
-            f"{path}: trained on subgraph {meta['subgraph']}, loaded {expect_subgraph}"
-        )
+    if expect_subgraph is not None:
+        bad = subgraph_mismatch(meta["subgraph"] or {}, expect_subgraph)
+        if bad:
+            raise ValueError(
+                f"{path}: trained on a different subgraph ({', '.join(bad)} differ). "
+                "Use the subgraph files it was trained with (scripts/bundle_checkpoint.py)."
+            )
     leaves, treedef = jax.tree_util.tree_flatten_with_path(template)
     with np.load(path) as f:
         stored = {k for k in f.files if k != META_KEY}
