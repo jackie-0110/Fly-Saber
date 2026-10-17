@@ -1,4 +1,4 @@
-"""Export brain data for the front end into frontend/public/data/brain/.
+"""Export brain data (neurons, groups, eye columns) into frontend/public/data/brain/.
 
 Owner: Person 1. Usage: uv run python scripts/export_web.py
 Rerun after scripts/build_subgraph.py whenever the subgraph changes, then commit.
@@ -11,7 +11,9 @@ from pathlib import Path
 import pandas as pd
 
 from brain.config import SubgraphConfig, load_config
-from brain.connectome.metadata import web_neurons
+from brain.connectome.metadata import web_columns, web_neurons
+from brain.model.brain import eye_inputs
+from fly_saber.eye import EyeConfig
 
 OUT_DIR = Path("frontend/public/data/brain")
 
@@ -24,6 +26,10 @@ def main() -> None:
     neurons = pd.read_parquet(sub / "neurons.parquet")
     (OUT_DIR / "neurons.json").write_text(json.dumps(web_neurons(neurons), separators=(",", ":")))
     shutil.copyfile(sub / "groups.json", OUT_DIR / "groups.json")
+    eye = load_config("configs/eye.yaml", EyeConfig)
+    columns, inputs = eye_inputs(neurons)
+    table = web_columns(columns, inputs, eye.ommatidium_spacing_deg, eye.binocular_overlap_deg)
+    (OUT_DIR / "columns.json").write_text(json.dumps(table, separators=(",", ":")))
     for f in sorted(OUT_DIR.iterdir()):
         print(f"wrote {f} ({f.stat().st_size / 1e6:.2f} MB)")
 

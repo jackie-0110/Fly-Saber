@@ -8,7 +8,7 @@ Fill these in during the hour 0 contracts session (30 minutes, all three). Every
 | `render_state` format | Person 2 | 3 | Draft |
 | WebSocket protocol (both directions) | Person 2 | 3 | Draft |
 | `groups.json` and interventions schema | Person 1 | 2, 3 | groups done, interventions TODO |
-| Brain step function signature and checkpoint format | Person 1 | 2, 3 | step done, checkpoints TODO |
+| Brain step function signature and checkpoint format | Person 1 | 2, 3 | Done |
 | Activity stream format (quantized rates, cell-type means) | Person 1 | 3 | TODO |
 
 ## 1. Normalized map schema (Person 2)
@@ -207,7 +207,21 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 
 Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Center on `bounds_um` for the camera.
 
-**Eye input (to agree with Person 2):** the eye drives photoreceptors by `(side, hex1, hex2)`. About 170 to 180 of the 220 sampled columns per eye have a photoreceptor; for the rest, inject into that column's L1 and L2 with inverted sign (see DATA_NOTES).
+**Eye input:** the brain takes `eye` as `(2, n_columns)`, one value per kept eye column (437) in the order of `columns.json` below. Row 0 is luminance and drives R1 to R6; in columns with no traced R1 to R6 (most of them, see DATA_NOTES) it drives that column's L1 and L2 with inverted sign instead. Row 1 is color (red notes high, blue low, background 0.5) and drives R7 and R8. The env should render the eye at the column directions in `columns.json`, so its `obs` is exactly this array.
+
+**`columns.json`** (`frontend/public/data/brain/columns.json`, 10 KB): struct of arrays, position `i` is column `i` (`eye[:, i]`).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `n_columns` | int | 437 (217 left, 220 right) |
+| `side` | string[] | `L` or `R` |
+| `hex1`, `hex2` | int[] | MaleCNS column coordinates (even numbers only: every 2nd column is kept) |
+| `azimuth_deg`, `elevation_deg` | float[] | viewing direction, `fly_saber/eye.py` convention: azimuth positive to the fly's right, elevation positive up |
+| `luminance_input` | int[] | 0 a traced R1-R6 takes luminance, 1 the L1/L2 fallback does (index into `luminance_inputs`) |
+| `spacing_deg`, `kept_spacing_deg` | float | 5 between neighboring real columns (from `configs/eye.yaml`); 10 between kept columns |
+
+Angles: hex1 and hex2 are axial hex coordinates with axes 120 degrees apart. **+hex1 points up and forward, +hex2 up and backward**, the same in both eyes (fit to lamina soma positions, which map the eye directly). So forward = (sqrt(3)/2) * 5 * (hex1 - hex2) and up = 0.5 * 5 * (hex1 + hex2) degrees, then each eye is shifted so its most frontal column is 10 degrees past the midline (`binocular_overlap_deg`) and its vertical midpoint is the equator. Result: each eye spans about -129 to +10 degrees azimuth (mirrored for the right eye) and -80 to +80 degrees elevation. The optic chiasm flips front and back between lamina and medulla, but the hex coordinates name columns, and the connectome wiring already carries the flip, so **the renderer must not flip anything**. The absolute angles are an idealized lattice; the orientation is measured. Kept columns are 10 degrees apart, so the acceptance angle should be about 10 degrees, or the fly sees gaps.
+
 
 **Interventions** (`brain/model/interventions.py`): a `NamedTuple` pytree passed into every step, so the server can change it live without recompiling.
 
@@ -224,17 +238,17 @@ Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, group
 `brain/model/brain.py`, configured by `configs/model.yaml`:
 
 ```python
-graph, columns, n = load_graph(cfg)          # columns: eye column table, one row per column
+graph, columns, n = load_graph(cfg)  # columns: eye column table, one row per column
 params = init_params(key, graph, cfg, n)
-step = make_step(graph, cfg, n)              # pure function: jit it, vmap it over envs
-v = init_state(n)                            # reset at episode start
+step = make_step(graph, cfg, n)  # pure function: jit it, vmap it over envs
+v = init_state(n)  # reset at episode start
 v, out = step(params, v, eye, interventions, key)
 logits_per_head = split_heads(out.logits, cfg.action_heads)
 ```
 
 | Argument / output | Shape | Meaning |
 |---|---|---|
-| `eye` | (n_columns,) float in [0, 1] | luminance per eye column, in the order of the `columns` table (sorted by side, hex1, hex2; 437 columns, about 220 per eye) |
+| `eye` | (2, n_columns) float in [0, 1] | row 0 luminance, row 1 color, per eye column in `columns.json` order (437 columns) |
 | `v` | (N,) | membrane potentials; carry between frames, reset per episode |
 | `key` | PRNGKey | for noise; pass a fresh one per frame |
 | `out.logits` | (sum of `action_heads`,) | `[13, 5, 13, 5]`: red position (12 cells + idle), red direction (4 + no_cut), blue position, blue direction |
@@ -245,7 +259,19 @@ One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs
 
 Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
 
-Checkpoint format: TODO (with `training/checkpoints.py`).
+**Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
+
+```python
+from training.checkpoints import save_checkpoint, load_checkpoint, subgraph_fingerprint
+fp = subgraph_fingerprint(model_cfg.subgraph_dir)
+save_checkpoint(path, params, variant="real", stage="bc", step=i,
+                configs={"model": model_cfg, "train": bc_cfg}, subgraph=fp, metrics=row)
+params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expect_subgraph=fp)
+```
+
+- Arrays are keyed by pytree path (`.log_tau`, `.readout_w`, ...); a `__meta__` entry holds JSON: `format_version`, `variant`, `stage` (`bc` or `ppo`), `step`, `config_hash` (12 hex chars over all `configs`), `configs`, `subgraph` (neuron, edge, synapse counts), `metrics`.
+- Loading takes a template pytree (any policy: brain `Params`, MLP, stub) and raises if keys or shapes differ, or if the checkpoint was trained on a different subgraph. Writes are atomic, so the server never reads a half-written file.
+- About 0.7 MB for the brain.
 
 ## 6. Activity stream (Person 1)
 
