@@ -1,13 +1,13 @@
 # Results (Person 1)
 
 Behavior cloning runs on HiPerGator (one NVIDIA L4 each). One folder per run:
-`runs/<variant>/<run_name>/seed<n>/` with `bc_log.json` (a row every 50 updates),
+`bc/<variant>/<run_name>/seed<n>/` with `bc_log.json` (a row every 50 updates),
 `config.json`, and `eval_bc_<update>.json` (greedy play on held-out and training songs,
 256 windows of 10 s, same windows for every brain; `scripts/eval_checkpoints.py`).
 
 Settings: 5 s windows, 256 games per update, readout fitted on expert play before training,
 brain learning rate 1e-4 (readout-only runs: 0, brain frozen), notes at a fixed 7 m/s.
-Seed 1 runs stopped at 600 updates. `runs/real/seed0/` is the first run (64 games, 10 s
+Seed 1 runs stopped at 600 updates. `bc/real/seed0/` is the first run (64 games, 10 s
 windows, brain learning rate 1e-5, 500 updates).
 
 | Brain | Seed | Held-out songs | Training songs |

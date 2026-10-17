@@ -1,0 +1,33 @@
+{
+ "checkpoint": "checkpoints/rewired_layered/fast/seed0/bc_1000.npz",
+ "meta": {
+  "update": 1000,
+  "loss": 1.8418656587600708,
+  "head_accuracy": [
+   0.7969,
+   0.9677,
+   0.7798,
+   0.9619
+  ],
+  "hit_rate": 0.46925795053003533,
+  "bombs": 2
+ },
+ "heldout": {
+  "untouched": {
+   "hit_rate": 0.5180553932452963,
+   "hits": 4433,
+   "misses": 3975,
+   "bad_cuts": 149,
+   "bombs": 11
+  }
+ },
+ "train": {
+  "untouched": {
+   "hit_rate": 0.4622387053270398,
+   "hits": 4113,
+   "misses": 4527,
+   "bad_cuts": 258,
+   "bombs": 16
+  }
+ }
+}

@@ -1,0 +1,83 @@
+{
+ "model": {
+  "subgraph_dir": "data/processed/malecns_subgraph",
+  "frame_ms": 33.333,
+  "substeps": 4,
+  "tau_init_ms": 20.0,
+  "tau_min_ms": 10.0,
+  "bias_init": 0.5,
+  "activation": "relu_sat",
+  "in_weight_scale": 0.9,
+  "input_scale": 1.0,
+  "action_heads": [
+   13,
+   5,
+   13,
+   5
+  ],
+  "modulation_gain": {
+   "octopamine": 1.0,
+   "dopamine": 1.0,
+   "serotonin": -1.0
+  },
+  "modulation_max_log_gain": 1.0,
+  "rate_max": 10.0,
+  "remat": true,
+  "readout_norm": true,
+  "calibration_stimuli": 64,
+  "calibration_frames": 90,
+  "readout_std_floor": 0.1,
+  "readout_clip": 5.0,
+  "freeze_brain": true,
+  "live_baseline": true,
+  "baseline_frames": 45
+ },
+ "saber": {
+  "lane_spacing_m": 1.2,
+  "layer_spacing_m": 1.1,
+  "block_size_m": 1.0,
+  "eye_distance_m": 1.0,
+  "bright_luminance": 1.0,
+  "dim_luminance": 0.25,
+  "bomb_luminance": 0.0,
+  "red_chroma": 1.0,
+  "blue_chroma": 0.0,
+  "step_hz": 30,
+  "note_speed_mps": 7.0,
+  "timing_window_sec": 0.1,
+  "spawn_distance_m": 12.0,
+  "max_visible_notes": 16,
+  "two_sabers": true,
+  "score_direction": true,
+  "reward_hit": 1.0,
+  "reward_miss": -0.5,
+  "reward_bad_cut": -0.25,
+  "reward_bomb": -1.0,
+  "reward_empty_cut": -0.05
+ },
+ "eye": {
+  "ommatidium_spacing_deg": 5.0,
+  "acceptance_fwhm_deg": 10.0,
+  "lateral_extent_deg": 130.0,
+  "binocular_overlap_deg": 10.0,
+  "elevation_min_deg": -80.0,
+  "elevation_max_deg": 80.0,
+  "background_luminance": 0.5
+ },
+ "train": {
+  "maps_dir": "data/maps/training/normalized",
+  "split": "train",
+  "min_gap_sec": 0.0,
+  "window_sec": 5.0,
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "n_updates": 1000,
+  "log_every": 50,
+  "seed": 0,
+  "variant": "real",
+  "checkpoint_dir": "checkpoints",
+  "run_name": "readout_only",
+  "checkpoint_every": 50,
+  "brain_learning_rate": 0.0
+ }
+}
