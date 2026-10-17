@@ -1,0 +1,71 @@
+# Interactive brain controls for the UI (owner: Person 1). Exported to
+# frontend/public/data/brain/controls.json; the server turns UI state into
+# interventions with brain/model/controls.py. Groups are names from groups.json.
+
+# Brain sections a user can lesion (silence) or stimulate.
+sections:
+  - group: eye_left
+    label: Left eye
+    description: Photoreceptors and lamina of the left eye. Lesioning blinds that eye.
+  - group: eye_right
+    label: Right eye
+    description: Photoreceptors and lamina of the right eye. Lesioning blinds that eye.
+  - group: motion_detectors
+    label: Motion detectors (T4, T5)
+    description: Direction-selective neurons that report which way edges move. T4 sees bright edges, T5 dark ones.
+  - group: looming_detectors
+    label: Looming detectors (LPLC2, LC4, LPLC1, LPLC4)
+    description: Respond to objects rapidly approaching, like a block flying at the fly. They drive escape behavior.
+  - group: LC_all
+    label: Visual feature detectors (LC neurons)
+    description: Lobula columnar neurons. Each type is tuned to a visual feature and sends it to the central brain.
+  - group: lobula_plate_tangential
+    label: Wide-field motion cells (HS, VS)
+    description: Large cells that sense the fly's own turning from whole-scene motion.
+  - group: intermediates
+    label: Central brain relay
+    description: Central neurons that carry signals from the visual detectors to the descending neurons in this model.
+  - group: giant_fiber
+    label: Giant fiber (DNp01)
+    description: The escape command neuron that triggers a takeoff jump.
+  - group: DN_all
+    label: All descending neurons
+    description: The brain's motor commands to the body. Silencing them stops every action.
+  - group: octopamine
+    label: Octopamine neurons
+    description: The fly's arousal system, roughly its fight-or-flight signal.
+  - group: dopamine
+    label: Dopamine neurons
+    description: Signal reward, punishment, and motivation.
+  - group: serotonin
+    label: Serotonin neurons
+    description: Shape mood-like states such as aggression and quiescence.
+
+# Mood sliders, level -1 to 1 (0 is the unmodified brain). Each drives its group's
+# neurons with level * current, like optogenetics; modulation_gain in model.yaml sets
+# how strongly that changes their targets.
+moods:
+  - name: arousal
+    label: Arousal
+    group: octopamine
+    current: 1.0
+    low_label: Drowsy
+    high_label: Wired
+    description: Drives octopamine neurons, which turn up the gain of the circuits they reach.
+  - name: reward_drive
+    label: Reward drive
+    group: dopamine
+    current: 1.0
+    low_label: Apathetic
+    high_label: Eager
+    description: Drives dopamine neurons, which signal reward and motivation and raise their targets' gain.
+  - name: calm
+    label: Calm
+    group: serotonin
+    current: 1.0
+    low_label: Agitated
+    high_label: Calm
+    description: Drives serotonin neurons. In this model serotonin turns gain down, a stand-in for quiescence.
+
+max_stimulation: 5.0   # largest opto current a user can apply to a section
+max_noise: 0.5         # largest neural noise std (the "jitter" slider)

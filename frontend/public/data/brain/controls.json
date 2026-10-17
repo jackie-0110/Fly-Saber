@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "sections": [
+  {
+   "group": "eye_left",
+   "label": "Left eye",
+   "description": "Photoreceptors and lamina of the left eye. Lesioning blinds that eye.",
+   "n_neurons": 1529
+  },
+  {
+   "group": "eye_right",
+   "label": "Right eye",
+   "description": "Photoreceptors and lamina of the right eye. Lesioning blinds that eye.",
+   "n_neurons": 1693
+  },
+  {
+   "group": "motion_detectors",
+   "label": "Motion detectors (T4, T5)",
+   "description": "Direction-selective neurons that report which way edges move. T4 sees bright edges, T5 dark ones.",
+   "n_neurons": 3394
+  },
+  {
+   "group": "looming_detectors",
+   "label": "Looming detectors (LPLC2, LC4, LPLC1, LPLC4)",
+   "description": "Respond to objects rapidly approaching, like a block flying at the fly. They drive escape behavior.",
+   "n_neurons": 542
+  },
+  {
+   "group": "LC_all",
+   "label": "Visual feature detectors (LC neurons)",
+   "description": "Lobula columnar neurons. Each type is tuned to a visual feature and sends it to the central brain.",
+   "n_neurons": 4253
+  },
+  {
+   "group": "lobula_plate_tangential",
+   "label": "Wide-field motion cells (HS, VS)",
+   "description": "Large cells that sense the fly's own turning from whole-scene motion.",
+   "n_neurons": 42
+  },
+  {
+   "group": "intermediates",
+   "label": "Central brain relay",
+   "description": "Central neurons that carry signals from the visual detectors to the descending neurons in this model.",
+   "n_neurons": 2479
+  },
+  {
+   "group": "giant_fiber",
+   "label": "Giant fiber (DNp01)",
+   "description": "The escape command neuron that triggers a takeoff jump.",
+   "n_neurons": 2
+  },
+  {
+   "group": "DN_all",
+   "label": "All descending neurons",
+   "description": "The brain's motor commands to the body. Silencing them stops every action.",
+   "n_neurons": 1310
+  },
+  {
+   "group": "octopamine",
+   "label": "Octopamine neurons",
+   "description": "The fly's arousal system, roughly its fight-or-flight signal.",
+   "n_neurons": 31
+  },
+  {
+   "group": "dopamine",
+   "label": "Dopamine neurons",
+   "description": "Signal reward, punishment, and motivation.",
+   "n_neurons": 37
+  },
+  {
+   "group": "serotonin",
+   "label": "Serotonin neurons",
+   "description": "Shape mood-like states such as aggression and quiescence.",
+   "n_neurons": 12
+  }
+ ],
+ "moods": [
+  {
+   "name": "arousal",
+   "label": "Arousal",
+   "group": "octopamine",
+   "low_label": "Drowsy",
+   "high_label": "Wired",
+   "description": "Drives octopamine neurons, which turn up the gain of the circuits they reach.",
+   "min": -1.0,
+   "max": 1.0,
+   "default": 0.0
+  },
+  {
+   "name": "reward_drive",
+   "label": "Reward drive",
+   "group": "dopamine",
+   "low_label": "Apathetic",
+   "high_label": "Eager",
+   "description": "Drives dopamine neurons, which signal reward and motivation and raise their targets' gain.",
+   "min": -1.0,
+   "max": 1.0,
+   "default": 0.0
+  },
+  {
+   "name": "calm",
+   "label": "Calm",
+   "group": "serotonin",
+   "low_label": "Agitated",
+   "high_label": "Calm",
+   "description": "Drives serotonin neurons. In this model serotonin turns gain down, a stand-in for quiescence.",
+   "min": -1.0,
+   "max": 1.0,
+   "default": 0.0
+  }
+ ],
+ "stimulation": {
+  "min": 0.0,
+  "max": 5.0
+ },
+ "noise": {
+  "min": 0.0,
+  "max": 0.5,
+  "default": 0.0
+ }
+}

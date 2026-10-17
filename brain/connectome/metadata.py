@@ -11,7 +11,7 @@ import pandas as pd
 
 SCHEMA_VERSION = 1
 VOXEL_UM = 0.008  # MaleCNS coordinates are 8 nm voxels
-ROLES = ["columnar", "projection", "intermediate", "descending"]
+ROLES = ["columnar", "projection", "intermediate", "descending", "modulatory"]
 SIDES = ["L", "R", "M"]
 POSITION_SOURCES = ["soma", "partner", "type_mean"]
 
@@ -110,4 +110,36 @@ def web_columns(
         "azimuth_deg": angles["azimuth_deg"].tolist(),
         "elevation_deg": angles["elevation_deg"].tolist(),
         "luminance_input": [0 if i in lit else 1 for i in range(len(columns))],
+    }
+
+
+def web_controls(controls: Any, groups: dict[str, list[int]]) -> dict[str, Any]:
+    """Lesionable sections and mood sliders for the UI (a brain.model.controls.ControlsConfig)."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "sections": [
+            {
+                "group": s.group,
+                "label": s.label,
+                "description": s.description,
+                "n_neurons": len(groups[s.group]),
+            }
+            for s in controls.sections
+        ],
+        "moods": [
+            {
+                "name": m.name,
+                "label": m.label,
+                "group": m.group,
+                "low_label": m.low_label,
+                "high_label": m.high_label,
+                "description": m.description,
+                "min": -1.0,
+                "max": 1.0,
+                "default": 0.0,
+            }
+            for m in controls.moods
+        ],
+        "stimulation": {"min": 0.0, "max": controls.max_stimulation},
+        "noise": {"min": 0.0, "max": controls.max_noise, "default": 0.0},
     }

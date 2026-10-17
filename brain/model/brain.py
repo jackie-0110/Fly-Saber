@@ -10,6 +10,12 @@ and its sparsity is fixed. Trained: per-neuron time constant, bias, and output
 scale, plus one scale per (pre cell type, post cell type) pair. Actions and the
 value estimate are linear readouts of descending neuron rates only.
 
+Neuromodulation: modulatory neurons (octopamine, dopamine, serotonin) do not
+send fast synaptic current. Instead each neuron's rate is multiplied by
+exp(sum over transmitters of gain_nt * weighted mean (r_j - rest_j)) over the
+modulatory neurons j that synapse onto it. Modulatory neurons get no synaptic
+input here (mood sliders and opto drive them), so at rest the factor is 1.
+
 Usage:
     graph, columns, n = load_graph(cfg)
     params = init_params(key, graph, cfg, n)
@@ -49,6 +55,9 @@ class Graph(NamedTuple):
     input_column: Array  # (M,) int32 eye column feeding each input neuron
     input_channel: Array  # (M,) int32 0 luminance (R1-R6, fallback), 1 color (R7, R8)
     input_sign: Array  # (M,) float32 +1 photoreceptor, -1 lamina fallback
+    mod_pre: Array  # (K,) int32 modulatory neuron
+    mod_post: Array  # (K,) int32 neuron it modulates, sorted
+    mod_weight: Array  # (K,) float32 gain_nt * share of that transmitter's input to post
 
 
 class Params(NamedTuple):
@@ -84,7 +93,10 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
     d = Path(cfg.subgraph_dir)
     neurons = pd.read_parquet(d / "neurons.parquet")
     edges = pd.read_parquet(d / "edges.parquet")
-    edges = edges[edges["sign"] != 0]  # modulatory and unclear: no fast transmission
+    modulatory = (neurons["role"] == "modulatory").to_numpy()
+    mod = _modulation_edges(neurons, edges, modulatory, cfg.modulation_gain)
+    # Fast synapses: signed, and none into modulatory neurons (sliders drive those).
+    edges = edges[(edges["sign"] != 0) & ~modulatory[edges["post"]]]
 
     w = np.log1p(edges["weight"].to_numpy(dtype=np.float64))
     total_in = np.bincount(edges["post"], weights=w, minlength=len(neurons))
@@ -104,8 +116,30 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
         input_column=jnp.asarray(inputs["column"], dtype=jnp.int32),
         input_channel=jnp.asarray(inputs["channel"], dtype=jnp.int32),
         input_sign=jnp.asarray(inputs["sign"], dtype=jnp.float32),
+        mod_pre=jnp.asarray(mod["pre"], dtype=jnp.int32),
+        mod_post=jnp.asarray(mod["post"], dtype=jnp.int32),
+        mod_weight=jnp.asarray(mod["weight"], dtype=jnp.float32),
     )
     return graph, columns, len(neurons)
+
+
+def _modulation_edges(
+    neurons: pd.DataFrame, edges: pd.DataFrame, modulatory: np.ndarray, gain: dict[str, float]
+) -> pd.DataFrame:
+    """Modulatory synapses as (pre, post, weight), weight = gain_nt * share of post's nt input."""
+    empty = pd.DataFrame({"pre": [], "post": [], "weight": []})
+    if not modulatory.any() or not gain or "nt" not in neurons:
+        return empty
+    nt = neurons["nt"].to_numpy()
+    e = edges[modulatory[edges["pre"]] & ~modulatory[edges["post"]]].copy()
+    e["nt"] = nt[e["pre"]]
+    e = e[e["nt"].isin(list(gain))]
+    if e.empty:
+        return empty
+    w = np.log1p(e["weight"].to_numpy(dtype=np.float64))
+    share = w / e.assign(w=w).groupby(["post", "nt"])["w"].transform("sum").to_numpy()
+    e["weight"] = share * e["nt"].map(gain).to_numpy()
+    return e.sort_values(["post", "pre"])[["pre", "post", "weight"]]
 
 
 def eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -167,7 +201,11 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
     `eye` is (2, n_columns) in [0, 1]: row 0 luminance, row 1 color, columns ordered
     like load_graph's column table.
     """
-    act = {"relu": jax.nn.relu, "softplus": jax.nn.softplus}[cfg.activation]
+
+    def relu_sat(v: Array) -> Array:
+        return cfg.rate_max * jnp.tanh(jax.nn.relu(v) / cfg.rate_max)
+
+    act = {"relu": jax.nn.relu, "softplus": jax.nn.softplus, "relu_sat": relu_sat}[cfg.activation]
     dt = cfg.frame_ms / cfg.substeps
 
     def step(
@@ -182,9 +220,19 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
         )
         drive = eye_current + params.bias + iv.opto
         alpha = dt / (cfg.tau_min_ms + jnp.exp(params.log_tau))
+        rest = act(params.bias) * jnp.exp(params.log_out)  # modulatory rate with no input
+
+        def modulation(r: Array) -> Array:
+            delta = r[graph.mod_pre] - rest[graph.mod_pre]
+            log_gain = jax.ops.segment_sum(
+                graph.mod_weight * delta, graph.mod_post, n_neurons, indices_are_sorted=True
+            )
+            cap = cfg.modulation_max_log_gain
+            return jnp.exp(jnp.clip(log_gain, -cap, cap))
 
         def substep(v: Array, k: Array) -> tuple[Array, None]:
             r = act(v) * out_scale
+            r = r * modulation(r)
             syn = jax.ops.segment_sum(
                 efficacy * r[graph.pre], graph.post, n_neurons, indices_are_sorted=True
             )
@@ -192,7 +240,7 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
             return v + alpha * (-v + syn + drive + noise), None
 
         v, _ = jax.lax.scan(substep, v, jax.random.split(key, cfg.substeps))
-        rates = act(v) * iv.gain
+        rates = act(v) * iv.gain * modulation(act(v) * out_scale)
         dn = rates[graph.dn]
         out = StepOutput(
             logits=dn @ params.readout_w + params.readout_b,

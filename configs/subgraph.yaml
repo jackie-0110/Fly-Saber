@@ -35,6 +35,13 @@ descending_superclass: descending_neuron
 # min(synapses in from projection neurons, synapses out to DNs).
 max_intermediates: 2500
 
+# Neuromodulatory neurons (the mood system): for each transmitter, the neurons with the most
+# synapses onto the rest of the subgraph. Modulatory central neurons already picked as
+# intermediates move to this role. Driven by mood sliders in the model, see model.yaml.
+modulatory_nts: [octopamine, dopamine, serotonin]
+max_modulatory_per_nt: 60
+min_modulatory_synapses: 20
+
 # Hard cap. If exceeded, intermediates are pruned first; seeds are never pruned.
 max_neurons: 20000
 
