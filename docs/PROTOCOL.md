@@ -19,7 +19,7 @@ One JSON file per playable (song, difficulty): `data/maps/normalized/{map_id}.js
 {
   "schema_version": 1,
   "map_id": "3a2b1_hard",
-  "split": "train",                  // "train" | "heldout"; heldout gets the "unseen map" badge
+  "split": "train",                  // "train" | "heldout" | "community" (fetched on demand); heldout gets the "unseen map" badge
   "song": {
     "title": "Example Song",
     "artist": "Example Artist",
@@ -104,6 +104,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
+| `POST /api/community/{key}` | fetch BeatSaver map `key`'s charts (no audio) and normalize its Standard difficulties with `split: "community"`; returns their map ids, playable by `start` but not listed by `GET /api/maps`. 400 bad key, 404 unknown map, 422 a format the normalizer does not support, 502 BeatSaver unreachable |
 | `GET /api/explorer/{brain}` | `explorer.json` (Person 1) |
 | `GET /api/eye_lattice` | `{ "left": [[azimuth_deg, elevation_deg], ...], "right": [...] }`, the order used by eye images |
 

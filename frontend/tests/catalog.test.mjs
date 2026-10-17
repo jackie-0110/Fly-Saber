@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { loadCatalog, loadServerSong } from '../src/game/catalog.ts'
+import { loadCatalog, loadServerSong, withLiveCharts } from '../src/game/catalog.ts'
 
 const map = {
   schema_version: 1, map_id: 'abc12_hard', split: 'heldout',
@@ -49,4 +49,43 @@ test('catalog failures, HTML fallbacks and malformed entries are recoverable err
     mode = next
     await assert.rejects(loadCatalog(new AbortController().signal))
   }
+})
+
+function previewSong() {
+  const chart = (name, characteristic = 'Standard') => ({
+    schema_version: 1, map_id: `c0ffee_${name.toLowerCase()}`, characteristic,
+    difficulty: { name, note_speed_mps: 10, spawn_distance_m: 12 }, notes: [], walls: [], warnings: [],
+  })
+  return {
+    id: 'c0ffee', title: 'Community', subtitle: '', artist: 'A', mapper: 'M', bpm: 120,
+    sourceUrl: null, audio: new Blob(['audio']), cover: null,
+    charts: [chart('Hard'), chart('Hard', 'OneSaber'), chart('Expert')],
+  }
+}
+
+test('community songs swap in the server charts the brain plays and keep their own audio', async (t) => {
+  const calls = []
+  t.mock.method(globalThis, 'fetch', async (path, init) => {
+    calls.push(`${init?.method ?? 'GET'} ${path}`)
+    if (String(path).startsWith('/api/community/')) return Response.json(['c0ffee_hard'])
+    return Response.json({ ...map, map_id: 'c0ffee_hard', split: 'community' })
+  })
+  const before = previewSong()
+  const song = await withLiveCharts(before, 'c0ffee', new AbortController().signal)
+  assert.deepEqual(calls, ['POST /api/community/c0ffee', 'GET /api/maps/c0ffee_hard'])
+  assert.equal(song.audio, before.audio)
+  assert.equal(song.split, 'community')
+  const [hard, oneSaber, expert] = song.charts
+  assert.equal(hard.live, true)
+  assert.deepEqual(hard.notes, map.notes)
+  assert.equal(oneSaber.live, undefined)
+  assert.equal(expert.live, undefined)
+})
+
+test('a map the server cannot play stays a preview and says why', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () =>
+    Response.json({ detail: 'the fly cannot play this map yet: Info.dat version 4.0.0' }, { status: 422 }))
+  const song = await withLiveCharts(previewSong(), 'c0ffee', new AbortController().signal)
+  assert.ok(song.charts.every((c) => !c.live))
+  assert.match(song.charts[0].warnings[0], /Preview only.*Info.dat version 4/)
 })

@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from fly_saber.config import CONFIG_DIR
 from server.catalog import Catalog
+from server.community import CommunityMaps, MapImportError
 from server.protocol import Brain, Game, MapSummary
 from server.saber_sim import brain_sims, expert_sims
 from server.session import GAMES, LiveBrain, Session
@@ -77,6 +78,7 @@ def create_app(
     brains: list[LiveBrain] | None = None,
     frontend_dir: Path | None = None,
     max_sessions: int = MAX_SESSIONS,
+    community: CommunityMaps | None = None,
 ) -> FastAPI:
     """`brains` defaults to the expert alone. Past `max_sessions` running at once, `start`
     answers an error until one disconnects."""
@@ -84,7 +86,7 @@ def create_app(
     seats = asyncio.Semaphore(max_sessions)
     brains = brains or [LiveBrain(EXPERT, expert_sims())]
     by_id = {b.info.id: b for b in brains}
-    catalog = Catalog(maps_dir)
+    catalog = Catalog(maps_dir, community)
     warm_up(catalog, brains)
 
     @app.get("/api/games")
@@ -105,6 +107,15 @@ def create_app(
         if map_data is None:
             raise HTTPException(404, f"unknown map {map_id}")
         return map_data
+
+    @app.post("/api/community/{key}")
+    def import_community(key: str) -> list[str]:
+        """Fetch a BeatSaver map's charts so brains can play it; returns its map ids.
+        The browser keeps the audio it downloaded; none is served for these maps."""
+        try:
+            return catalog.community.fetch(key)
+        except MapImportError as error:
+            raise HTTPException(error.status, str(error)) from error
 
     @app.get("/api/maps/{map_id}/audio")
     def map_audio(map_id: str) -> FileResponse:
