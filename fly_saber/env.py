@@ -13,6 +13,7 @@ from typing import Any
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from fly_saber.eye import EyeConfig, Patches, lattice, render
 from fly_saber.maps.adapt import ANY_DIRECTION, NoteArrays
@@ -21,6 +22,9 @@ N_LANES = 4
 N_LAYERS = 3
 IDLE_CELL = N_LANES * N_LAYERS
 NO_CUT = 4
+# Observation channels.
+LUMINANCE = 0
+COLOR = 1
 
 # Indexed by sim direction (fly_saber.maps.adapt): 0 up, 1 down, 2 left, 3 right, 4 any.
 # Unit vector toward the side of the block where each cut starts; that half is drawn bright.
@@ -128,8 +132,16 @@ class SaberEnv:
     directions: jax.Array
 
     @classmethod
-    def create(cls, cfg: SaberConfig, eye_cfg: EyeConfig) -> "SaberEnv":
-        directions, _ = lattice(eye_cfg)
+    def create(
+        cls, cfg: SaberConfig, eye_cfg: EyeConfig, directions: np.ndarray | None = None
+    ) -> "SaberEnv":
+        """`directions` are the eye's (n, 2) viewing angles; the hex lattice by default.
+
+        Pass `column_directions` of the brain's column table so observations line up
+        with the brain's eye input.
+        """
+        if directions is None:
+            directions, _ = lattice(eye_cfg)
         return cls(cfg, eye_cfg, jnp.asarray(directions, dtype=jnp.float32))
 
     def time(self, state: SaberState) -> jax.Array:

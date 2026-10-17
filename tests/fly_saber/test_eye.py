@@ -2,10 +2,11 @@
 
 import jax.numpy as jnp
 import numpy as np
+import pytest
 
 from fly_saber.config import load_config
 from fly_saber.env import SaberConfig, block_patches
-from fly_saber.eye import EyeConfig, lattice, render
+from fly_saber.eye import EyeConfig, column_directions, lattice, render
 
 EYE = load_config(EyeConfig, "eye")
 SABER = load_config(SaberConfig, "saber")
@@ -45,3 +46,12 @@ def test_far_block_lights_fewer_ommatidia_than_near_block() -> None:
         return int((np.abs(luminance - EYE.background_luminance) > 0.02).sum())
 
     assert lit(view(0, distance=8.0)) < lit(view(0, distance=1.0))
+
+
+def test_column_directions_mirror_between_eyes_and_step_one_spacing_per_hex() -> None:
+    side = np.array(["L", "L", "R", "R"])
+    hex1, hex2 = np.array([2, 4, 2, 4]), np.array([2, 2, 2, 2])
+    directions = np.degrees(column_directions(side, hex1, hex2, EYE))
+    np.testing.assert_allclose(directions[2:], directions[:2] * np.array([-1.0, 1.0]))
+    step = np.linalg.norm(directions[1] - directions[0])
+    assert step == pytest.approx(2 * EYE.ommatidium_spacing_deg)

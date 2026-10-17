@@ -85,7 +85,8 @@ The front end already has the full map from REST and positions notes from the au
 
 - `reset(notes, speed_mps, start_sec, end_sec) -> (obs, state)`; `notes` from `fly_saber.maps.adapt.note_arrays`.
 - `step(state, action) -> (obs, state, reward, done, events)`.
-- `obs`: float32 `(2, n_ommatidia)`, values 0 to 1, lattice order of `fly_saber.eye.lattice` (left eye first). Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8.
+- `obs`: float32 `(2, n_eye)`, values 0 to 1. Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8 once the brain takes it.
+- Eye for training and live play: `training.brain_policy.build(model_cfg, saber_cfg, eye_cfg, key)` makes the env see through the brain's own eye columns, so `n_eye` is the 437 columns in `load_graph`'s column-table order and `obs[0]` is exactly the brain's `eye` argument. `BrainPolicy` wraps `make_step` in the `Policy` interface of `training/bc.py`. Without a brain, `SaberEnv.create` falls back to a synthetic hex lattice (`fly_saber.eye.lattice`, left eye first).
 - `action`: int32 `(n_sabers, 2)`, rows red then blue: `[cell, cut]`, cell 0 to 11 or 12 (idle), cut 0 up, 1 down, 2 left, 3 right, or 4 (no cut). That is a 13-way position head and a 5-way direction head per saber. `n_sabers` is 1 when `saber.yaml` sets `two_sabers: false`.
 - `fly_saber.experts.saber_expert(env, state)` returns the perfect action, for behavior cloning.
 
@@ -224,10 +225,10 @@ Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, group
 `brain/model/brain.py`, configured by `configs/model.yaml`:
 
 ```python
-graph, columns, n = load_graph(cfg)          # columns: eye column table, one row per column
+graph, columns, n = load_graph(cfg)  # columns: eye column table, one row per column
 params = init_params(key, graph, cfg, n)
-step = make_step(graph, cfg, n)              # pure function: jit it, vmap it over envs
-v = init_state(n)                            # reset at episode start
+step = make_step(graph, cfg, n)  # pure function: jit it, vmap it over envs
+v = init_state(n)  # reset at episode start
 v, out = step(params, v, eye, interventions, key)
 logits_per_head = split_heads(out.logits, cfg.action_heads)
 ```

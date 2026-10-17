@@ -1,8 +1,10 @@
 # saber.yaml (owner: Person 2). Loaded into a dataclass; no magic numbers in code.
-# Geometry in meters. The eye sits behind the hit plane, level with the middle layer.
-lane_spacing_m: 0.6
-layer_spacing_m: 0.55
-block_size_m: 0.5
+# Geometry in meters, as the fly sees it. The eye sits behind the hit plane, level with
+# the middle layer. Twice a human-scale grid so blocks stay resolvable at the brain's
+# 10 deg column spacing; the front end draws its own scale.
+lane_spacing_m: 1.2
+layer_spacing_m: 1.1
+block_size_m: 1.0
 eye_distance_m: 1.0
 
 # Cut direction encoding (README): the half of the block where the cut starts is bright.
