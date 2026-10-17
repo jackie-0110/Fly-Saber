@@ -1,13 +1,12 @@
 import { BackendStatus } from '@/components/backend-status'
 import { BrainPreview } from '@/components/brain-preview'
+import { FigureCaption } from '@/components/figure'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
 import { SessionReadouts } from '@/components/session-readouts'
-import { Separator } from '@/components/ui/separator'
 import { SongHeader } from '@/components/song-header'
-import './App.css'
-import './song-workspace.css'
+import './plate.css'
 
 export default function App() {
   return (
@@ -19,8 +18,7 @@ export default function App() {
           </span>
           Fly<span className="brand-word">Saber</span>
         </a>
-        <Separator orientation="vertical" className="header-divider" />
-        <span className="workspace-name">Neural simulation workspace</span>
+        <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
           <BackendStatus />
         </div>
@@ -36,6 +34,7 @@ export default function App() {
           <BrainPreview />
         </aside>
       </main>
+      <FigureCaption />
     </div>
   )
 }

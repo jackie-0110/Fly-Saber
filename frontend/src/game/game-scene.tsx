@@ -32,7 +32,7 @@ interface SceneProps {
 
 const CAPACITY = 1024
 const WALL_CAPACITY = 128
-const COLORS = ['#e6a08b', '#a4d9cf']
+const COLORS = ['#d861aa', '#5ac576']
 
 function faceTexture(color: string, cut: number) {
   const canvas = document.createElement('canvas')
@@ -175,7 +175,7 @@ function Track() {
           </mesh>
           <mesh position={[side * 3.4, -0.015, -32]}>
             <boxGeometry args={[0.035, 0.015, 88]} />
-            <meshBasicMaterial color={side < 0 ? '#b2796b' : '#7aaba3'} />
+            <meshBasicMaterial color={side < 0 ? '#b6508e' : '#47aa62'} />
           </mesh>
           {[-12, -30, -48, -66].map((z) => (
             <group key={z} position={[side * 5.2, 0, z]}>
@@ -185,7 +185,7 @@ function Track() {
               </mesh>
               <mesh position={[side * -0.19, 3.2, 0.19]}>
                 <boxGeometry args={[0.04, 4.7, 0.015]} />
-                <meshBasicMaterial color={side < 0 ? '#785b54' : '#4c7470'} />
+                <meshBasicMaterial color={side < 0 ? '#6f3758' : '#31623d'} />
               </mesh>
             </group>
           ))}
@@ -197,7 +197,7 @@ function Track() {
       </mesh>
       <mesh position={[0, -0.42, -20]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#141a1e" roughness={1} />
+        <meshStandardMaterial color="#0c1315" roughness={1} />
       </mesh>
     </group>
   )
@@ -387,8 +387,8 @@ export default function GameScene(props: SceneProps) {
       }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <color attach="background" args={['#171d22']} />
-      <fog attach="fog" args={['#171d22', 25, 100]} />
+      <color attach="background" args={['#10191b']} />
+      <fog attach="fog" args={['#10191b', 25, 100]} />
       <ambientLight intensity={0.9} />
       <hemisphereLight args={['#c2d8d4', '#1b2429', 1.6]} />
       <directionalLight position={[5, 12, 10]} intensity={2.3} color="#ffe7d5" />

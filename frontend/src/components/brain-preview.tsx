@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SessionOverview } from '@/components/session-overview'
+import { PanelLetter } from '@/components/figure'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cellTypeColor, filterNeuronIndices, loadBrainData } from '@/brain/data'
 import type { BrainData } from '@/brain/data'
@@ -190,9 +191,10 @@ export function BrainPreview() {
       </TabsContent>
       <TabsContent value="activity" className="activity-tab">
         <div className="brain-title">
+          <PanelLetter>b</PanelLetter>
           <div>
-            <Brain aria-hidden="true" />
             <h2>Fly brain neurons</h2>
+            <p>MaleCNS v1.0 subgraph · soma positions, µm</p>
           </div>
         </div>
         <div className="brain-filters">
@@ -386,7 +388,7 @@ export function BrainPreview() {
             className="type-swatch"
             style={{
               background:
-                selected === null || !asset ? '#a5d4cf' : cellTypeColor(asset.type[selected]),
+                selected === null || !asset ? 'var(--ink-3)' : cellTypeColor(asset.type[selected]),
             }}
           />
           <span>Color identifies cell type</span>

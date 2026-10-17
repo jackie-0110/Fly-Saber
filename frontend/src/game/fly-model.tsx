@@ -5,7 +5,7 @@ import { Quaternion, Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
 import { FlyMotionController } from './fly-motion'
 
-const COLORS = ['#e6a08b', '#a4d9cf']
+const COLORS = ['#d861aa', '#5ac576']
 
 function Segment({
   from,

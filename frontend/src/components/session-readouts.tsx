@@ -1,3 +1,4 @@
+import { PanelLetter } from '@/components/figure'
 import { useSession } from '@/game/session'
 
 export function SessionReadouts() {
@@ -7,23 +8,7 @@ export function SessionReadouts() {
   const status = useSession((s) => s.status)
   return (
     <section className="session-readouts" aria-label="Session readouts">
-      <div className="readout-block">
-        <h2>Performance</h2>
-        <div className="performance-values">
-          <div>
-            <strong>{score ? `${(score.accuracy * 100).toFixed(1)}%` : '--'}</strong>
-            <span>Accuracy</span>
-          </div>
-          <div>
-            <strong>{score?.combo ?? '--'}</strong>
-            <span>Combo</span>
-          </div>
-          <div>
-            <strong>{score?.score ?? '--'}</strong>
-            <span>Score</span>
-          </div>
-        </div>
-      </div>
+      <PanelLetter>d</PanelLetter>
       <div className="readout-block">
         <h2>Visual input</h2>
         <p className="readout-status">
@@ -51,6 +36,23 @@ export function SessionReadouts() {
             ? `${score.hits} hits · ${score.misses} misses${lastEvent ? ` · ${lastEvent.kind.replace('_', ' ')} #${lastEvent.note_id}` : ''}`
             : 'Saber actions will appear here.'}
         </span>
+      </div>
+      <div className="readout-block">
+        <h2>Performance</h2>
+        <div className="performance-values">
+          <div>
+            <strong>{score ? `${(score.accuracy * 100).toFixed(1)}%` : '--'}</strong>
+            <span>Accuracy</span>
+          </div>
+          <div>
+            <strong>{score?.combo ?? '--'}</strong>
+            <span>Combo</span>
+          </div>
+          <div>
+            <strong>{score?.score ?? '--'}</strong>
+            <span>Score</span>
+          </div>
+        </div>
       </div>
     </section>
   )
