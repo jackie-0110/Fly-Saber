@@ -1,0 +1,26 @@
+{
+ "checkpoint": "bc_1000.npz",
+ "source": "checkpoints/sign_shuffled/fast/seed0/bc_1000.npz",
+ "variant": "sign_shuffled",
+ "step": 1000,
+ "metrics": {
+  "update": 1000,
+  "loss": 2.1959006786346436,
+  "head_accuracy": [
+   0.7484,
+   0.9436,
+   0.7491,
+   0.9439
+  ],
+  "hit_rate": 0.1950530035335689,
+  "bombs": 2
+ },
+ "subgraph_fingerprint": {
+  "n_neurons": 19463,
+  "n_edges": 340922,
+  "n_synapses": 6175540,
+  "variant": "sign_shuffled",
+  "neurons_sha256": "d197716db5254ea0",
+  "edges_sha256": "a0f7c3964873cba9"
+ }
+}

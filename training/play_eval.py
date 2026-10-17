@@ -79,10 +79,15 @@ def load_trained(path: str | Path, subgraph_dir: str | Path | None = None) -> Tr
         path, template, expect_subgraph=subgraph_fingerprint(model_cfg.subgraph_dir)
     )
     rest = rest_state(params, graph, model_cfg, n)
+    baseline = None
     if model_cfg.readout_norm and model_cfg.live_baseline:
-        params = with_live_baseline(params, graph, model_cfg, n, rest)
+
+        def baseline(p: Params, iv: Interventions | None = None) -> Params:
+            return with_live_baseline(p, graph, model_cfg, n, rest, iv)
+
+        params = baseline(params)
     env = column_env(saber_cfg, eye_cfg, columns)
-    policy = BrainPolicy(make_step(graph, model_cfg, n), n, no_interventions(n), rest)
+    policy = BrainPolicy(make_step(graph, model_cfg, n), n, no_interventions(n), rest, baseline)
     groups = json.loads((Path(model_cfg.subgraph_dir) / "groups.json").read_text())
     return Trained(path, meta, env, policy, params, groups, n, train_cfg)
 
@@ -109,8 +114,13 @@ def play_conditions(
     n_windows: int,
     window_sec: float,
     seed: int = 1234,
+    rebaseline: bool = True,
 ) -> dict[str, dict[str, float]]:
-    """Hit rate and counts per condition on `split` songs (same windows for every condition)."""
+    """Hit rate and counts per condition on `split` songs (same windows for every condition).
+
+    With `rebaseline` the readout re-centers on each condition's resting brain, as the
+    server should do when the UI changes; without it, the untouched brain's baseline is kept.
+    """
     cfg = trained.train_cfg
     env = trained.env
     map_set, _ = load_map_set(Path(cfg.maps_dir), split, env.cfg.max_visible_notes, cfg.min_gap_sec)
@@ -121,8 +131,9 @@ def play_conditions(
     @jax.jit
     def play(iv: Interventions) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
         policy = dataclasses.replace(trained.policy, interventions=iv)
-        drives = jnp.ones(n_windows, bool)
-        m = rollout(env, policy, trained.params, episodes, k_play, n_steps, drives)
+        params = policy.prepare(trained.params, iv) if rebaseline else trained.params
+        drives = jnp.ones(n_windows, bool)  # the fly plays every window itself
+        m = rollout(env, policy, params, episodes, k_play, n_steps, drives)
         return m.hits, m.misses, m.bad_cuts, m.bombs
 
     results = {}

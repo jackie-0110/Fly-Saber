@@ -536,8 +536,8 @@ export function BrainPreview() {
           <li>
             <strong>Real-time Fly Saber</strong>
             <p>
-              Connect real-time inference to the song clock for fly saber actions, judged hits, and
-              scores. The chart preview and movable camera are ready to use.
+              Live songs connect the song clock to server saber actions, judged notes and scores.
+              Choose a server song and player in the Songs tab to start.
             </p>
           </li>
           <li>

@@ -4,8 +4,14 @@ import json
 import sys
 from pathlib import Path
 
+import jax
+import jax.numpy as jnp
+
 from brain.model.controls import ControlsConfig, Mood, Section
-from training.play_eval import conditions
+from tests.training.test_bc import IDLE_BIAS, bc_config
+from tests.training.test_brain_policy import EYE, SABER, model_config, write_subgraph
+from training.brain_policy import build
+from training.play_eval import Trained, conditions, play_conditions
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import plot_learning_curves  # noqa: E402
@@ -25,6 +31,29 @@ def test_conditions() -> None:
     assert full["arousal -1"] == {"mood": {"arousal": -1.0}}
     assert full["noise max"] == {"noise": 0.5}
     assert list(full)[0] == "untouched" and len(full) == 1 + 2 + 2 + 1
+
+
+def test_play_conditions_uses_policy_actions_for_every_window(tmp_path: Path) -> None:
+    cfg = bc_config(tmp_path)
+    subgraph = tmp_path / "subgraph"
+    subgraph.mkdir()
+    write_subgraph(subgraph)
+    env, policy, params = build(
+        model_config(subgraph, [13, 5, 13, 5]), SABER, EYE, jax.random.PRNGKey(0)
+    )
+    params = params._replace(readout_w=jnp.zeros_like(params.readout_w), readout_b=IDLE_BIAS)
+    trained = Trained(tmp_path / "test.npz", {}, env, policy, params, {"DN_all": [3]}, 4, cfg)
+    results = play_conditions(
+        trained,
+        CONTROLS,
+        {"untouched": {}, "lesioned": {"lesion": ["DN_all"]}},
+        "train",
+        n_windows=3,
+        window_sec=3.0,
+    )
+    # An idle policy misses every note; an expert-driven rollout would hit them.
+    for result in results.values():
+        assert result == {"hit_rate": 0.0, "hits": 0, "misses": 18, "bad_cuts": 0, "bombs": 0}
 
 
 def test_plot_writes_figure_and_table(tmp_path: Path) -> None:
