@@ -248,22 +248,35 @@ export function parseChart(value: unknown, options: ChartOptions): Chart {
     })
   }
   if (version === 2) {
+    function required(item: JsonObject, key: string) {
+      if (item[key] === undefined) throw new Error(`The legacy chart is missing ${key}.`)
+      return numeric(item[key])
+    }
     for (const n of list(data._notes, 'Notes')) {
-      if (![0, 1, 3].includes(numeric(n._type))) continue
-      addNote(n._time, n._lineIndex, n._lineLayer, n._type, n._cutDirection, n._type === 3)
+      const kind = required(n, '_type')
+      if (![0, 1, 3].includes(kind)) continue
+      addNote(
+        required(n, '_time'),
+        required(n, '_lineIndex'),
+        required(n, '_lineLayer'),
+        kind,
+        kind === 3 ? null : required(n, '_cutDirection'),
+        kind === 3,
+      )
     }
     for (const w of list(data._obstacles, 'Walls')) {
-      if (w._type !== 0 && w._type !== 1) {
+      const kind = required(w, '_type')
+      if (kind !== 0 && kind !== 1) {
         skipped++
         continue
       }
       addWall(
-        w._time,
-        w._duration,
-        w._lineIndex,
-        w._type === 1 ? 2 : 0,
-        w._width,
-        w._type === 1 ? 3 : 5,
+        required(w, '_time'),
+        required(w, '_duration'),
+        required(w, '_lineIndex'),
+        kind === 1 ? 2 : 0,
+        required(w, '_width'),
+        kind === 1 ? 3 : 5,
       )
     }
   } else {

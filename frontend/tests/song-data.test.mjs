@@ -87,6 +87,9 @@ test('a complete modern ZIP uses its sample timing and modern song/mapper metada
 test('malformed numbers and versions are rejected and off-grid notes are explicitly reported', () => {
   assert.throws(() => parseChart({ version: '9.0.0' }, options), /unsupported/)
   assert.throws(() => parseChart({ version: '3.0.0', colorNotes: [{ b: '2' }] }, options), /invalid number/)
+  assert.throws(() => parseChart({ _version: '2.0.0', _notes: [{}] }, options), /missing _type/)
+  assert.throws(() => parseChart({ _version: '2.0.0', _notes: [{ _type: 0 }] }, options), /missing _time/)
+  assert.throws(() => parseChart({ _version: '2.0.0', _notes: [{ _type: 0, _time: 1, _lineIndex: 1, _lineLayer: 0 }] }, options), /missing _cutDirection/)
   const chart = parseChart({ version: '3.0.0', colorNotes: [{ x: 10 }, {}] }, options)
   assert.equal(chart.notes.length, 1)
   assert.match(chart.warnings[0], /1 objects/)
