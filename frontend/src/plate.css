@@ -1,7 +1,7 @@
 /*
  * Fly Saber figure plate.
  * Paper sheet with hairline rules; panels a–d carry bold lowercase letters as in a
- * journal figure; the game and neuron views are dark-field insets. Tokens live in
+ * journal figure; the game and neuron views are brightfield insets. Tokens live in
  * index.css. Minimum type size is 11px.
  */
 
@@ -93,7 +93,7 @@
 
 /*
  * One grid for both columns: row 1 holds the song title and the inspector tabs,
- * row 2 the two dark-field views (always the same height), row 3 the tools for
+ * row 2 the two views (always the same height), row 3 the tools for
  * each view. Columns share rows through subgrid so the views start and end on
  * the same lines.
  */
@@ -115,7 +115,7 @@
   min-width: 0;
 }
 
-/* Corner label on each dark-field view, the way figure panels are lettered. */
+/* Corner label on each view, the way figure panels are lettered. */
 .inset-label {
   position: absolute;
   top: 14px;
@@ -282,7 +282,7 @@
   white-space: nowrap;
 }
 
-/* ---------- a: game inset (dark field) ---------- */
+/* ---------- a: game inset ---------- */
 
 .game-viewport {
   position: relative;
@@ -294,7 +294,7 @@
   border: 0;
   border-radius: 2px;
   background: var(--field);
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--rule);
   color: var(--field-ink);
 }
 .game-viewport:fullscreen {
@@ -308,7 +308,7 @@
   outline-offset: -3px;
 }
 .game-stage:focus-visible {
-  outline: 2px solid var(--signal-green-bright);
+  outline: 2px solid var(--focus);
 }
 .game-stage canvas {
   cursor: grab;
@@ -341,7 +341,7 @@
   padding: 4px 8px;
   border-radius: 2px;
   background: var(--field-2);
-  color: var(--signal-green-bright);
+  color: var(--focus);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
@@ -371,13 +371,13 @@
   pointer-events: auto;
   border: 0;
   border-radius: 2px;
-  background: var(--sheet);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
   font-size: var(--text-md);
   font-weight: 600;
 }
 .scene-empty button:hover {
-  background: var(--wash);
+  background: var(--ink-2);
 }
 
 .scene-bottomline {
@@ -488,8 +488,8 @@
   color: var(--field-ink-2);
 }
 .song-notice.is-error {
-  border-color: oklch(0.5 0.12 28);
-  color: oklch(0.86 0.07 28);
+  border-color: color-mix(in oklch, var(--signal-red) 45%, var(--sheet));
+  color: var(--signal-red);
 }
 
 .chart-warnings {
@@ -568,7 +568,7 @@
   cursor: pointer;
 }
 .fly-motion-preview :focus-visible {
-  outline: 2px solid var(--signal-green-bright);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -893,6 +893,7 @@
   overflow: hidden;
   border-radius: 2px;
   background: var(--field);
+  box-shadow: 0 0 0 1px var(--rule);
   color: var(--field-ink);
 }
 .brain-stage-3d {
@@ -1001,7 +1002,7 @@
   accent-color: var(--field-ink);
 }
 .brain-display-controls input:focus-visible {
-  outline: 2px solid var(--signal-green-bright);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
 .brain-stage-3d:fullscreen .inset-dock {

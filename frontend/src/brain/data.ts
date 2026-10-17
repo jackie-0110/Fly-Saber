@@ -135,5 +135,5 @@ export function filterNeuronIndices(data: BrainData, group: string, cellType: st
 }
 
 export function cellTypeColor(type: number): string {
-  return `hsl(${(type * 137.508 + 165) % 360}, 48%, 69%)`
+  return `hsl(${(type * 137.508 + 165) % 360}, 58%, 40%)`
 }

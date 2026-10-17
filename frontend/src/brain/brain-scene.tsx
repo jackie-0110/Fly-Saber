@@ -126,8 +126,8 @@ function NeuronCloud({
       </points>
       {selectedPosition && (
         <mesh position={selectedPosition} raycast={() => {}}>
-          <sphereGeometry args={[0.022, 12, 8]} />
-          <meshBasicMaterial color="#ffffff" wireframe depthTest={false} />
+          <sphereGeometry args={[0.03, 12, 8]} />
+          <meshBasicMaterial color="#162021" wireframe depthTest={false} />
         </mesh>
       )}
     </>

@@ -29,9 +29,9 @@
 
 /*
  * The workspace is set as a live figure plate: a printed sheet (paper, ink, hairline
- * rules) with the two WebGL views mounted as dark-field insets, the way micrographs
- * sit on a journal page. Green and magenta follow the confocal convention and carry
- * one meaning each everywhere: green is the right saber, magenta the left.
+ * rules) with the two WebGL views mounted as brightfield insets, a shade below the
+ * paper so they read as panels. Green and magenta follow the confocal convention and
+ * carry one meaning each everywhere: green is the right saber, magenta the left.
  */
 :root {
   /* Sheet */
@@ -44,18 +44,16 @@
   --ink-2: oklch(0.4 0.014 200);
   --ink-3: oklch(0.5 0.012 200);
 
-  /* Dark-field insets */
-  --field: oklch(0.205 0.014 215);
-  --field-2: oklch(0.255 0.016 215);
-  --field-rule: oklch(0.36 0.016 215);
-  --field-ink: oklch(0.94 0.01 165);
-  --field-ink-2: oklch(0.78 0.014 180);
+  /* Brightfield insets (the game scene background matches --field) */
+  --field: oklch(0.945 0.006 165);
+  --field-2: oklch(0.995 0.002 165);
+  --field-rule: oklch(0.86 0.008 165);
+  --field-ink: oklch(0.235 0.014 200);
+  --field-ink-2: oklch(0.45 0.012 200);
 
   /* Signals */
   --signal-green: oklch(0.5 0.13 150);
-  --signal-green-bright: oklch(0.8 0.19 150);
   --signal-magenta: oklch(0.52 0.19 345);
-  --signal-magenta-bright: oklch(0.7 0.2 345);
   --signal-amber: oklch(0.54 0.12 70);
   --signal-red: oklch(0.52 0.16 28);
   --focus: oklch(0.5 0.13 150);
