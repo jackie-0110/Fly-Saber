@@ -40,3 +40,10 @@ logs/
 
 # Demo checkpoints shipped with their exact subgraph (scripts/bundle_checkpoint.py)
 !bundles/**/*.npz
+
+# Downloaded Impeccable engines and per-machine hook state
+.agents/skills/*/scripts/bin/
+.github/skills/*/scripts/bin/
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
