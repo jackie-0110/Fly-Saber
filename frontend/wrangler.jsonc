@@ -1,0 +1,21 @@
+{
+  // Cloudflare Workers Builds: set the project's root directory to `frontend`.
+  // Production deploys run `npx wrangler deploy`, PR previews `npx wrangler versions upload`;
+  // both run the build below first, so the dashboard build command can stay empty.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flysaber",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "build": { "command": "npm run build" },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Everything else is served straight from the asset store without invoking the Worker.
+    "run_worker_first": ["/api/*", "/ws/*"],
+  },
+  // BACKEND_URL (FastAPI origin) is set in the dashboard or with `wrangler secret put`;
+  // keep_vars stops deploys from wiping dashboard-set variables.
+  "keep_vars": true,
+  "observability": { "enabled": true },
+}

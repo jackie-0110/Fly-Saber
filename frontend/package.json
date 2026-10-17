@@ -8,8 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
+    "cf:dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\" \"worker/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\" \"worker/**/*.ts\"",
     "test": "npm run test:unit && playwright test",
     "test:ui": "playwright test --ui",
     "test:unit": "node --experimental-strip-types --test tests/*.test.mjs"
@@ -41,6 +43,7 @@
     "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "wrangler": "^4.151.1"
   }
 }

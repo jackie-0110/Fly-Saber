@@ -36,6 +36,28 @@ the interactive runner. HTML/JUnit reports, screenshots, and failure traces appe
 in `playwright-report/` and `test-results/`. See [CONTRIBUTING.md](../CONTRIBUTING.md)
 for the full CI checks.
 
+## Deploy (Cloudflare Workers)
+
+`wrangler.jsonc` deploys the `flysaber` Worker: the Vite build is served as static
+assets with SPA fallback, and `/api/*` and `/ws/*` (including the session WebSocket)
+are proxied by `worker/index.ts` to the FastAPI server, so the browser stays on one
+origin and the backend needs no CORS.
+
+Workers Builds settings (Settings → Build): root directory `frontend`, build command
+empty (wrangler runs `npm run build` itself), deploy command `npx wrangler deploy`,
+non-production branch deploy command `npx wrangler versions upload`.
+
+Point the Worker at the backend once; deploys keep it:
+
+```bash
+npx wrangler secret put BACKEND_URL   # e.g. https://flysaber-api.example.com
+```
+
+Until it is set, `/api/*` returns 503 and the header shows "Backend disconnected".
+Test the Worker locally against a running server with
+`npm run cf:dev -- --var BACKEND_URL:http://localhost:8000`, or deploy manually with
+`npm run deploy`.
+
 ## Current behavior
 
 - Desktop windows use a viewport-height workspace with a brain sidebar around 30% of the width and a compact timeline. The brain fills the sidebar width, neuron metadata forms a compact grid below it, and session information has its own tab. Narrow screens stack the panels vertically.
