@@ -1,0 +1,25 @@
+{
+ "checkpoint": "bc_950.npz",
+ "source": "checkpoints/real/fast/seed0/bc_950.npz",
+ "variant": "real",
+ "step": 950,
+ "metrics": {
+  "update": 950,
+  "loss": 2.382662057876587,
+  "head_accuracy": [
+   0.7698,
+   0.9412,
+   0.7768,
+   0.9415
+  ],
+  "hit_rate": 0.312084384315524,
+  "bombs": 14
+ },
+ "subgraph_fingerprint": {
+  "n_neurons": 19463,
+  "n_edges": 340922,
+  "n_synapses": 6175540,
+  "neurons_sha256": "d197716db5254ea0",
+  "edges_sha256": "a0f7c3964873cba9"
+ }
+}

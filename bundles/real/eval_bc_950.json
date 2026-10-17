@@ -1,0 +1,299 @@
+{
+ "checkpoint": "checkpoints/real/fast/seed0/bc_950.npz",
+ "meta": {
+  "update": 950,
+  "loss": 2.382662057876587,
+  "head_accuracy": [
+   0.7698,
+   0.9412,
+   0.7768,
+   0.9415
+  ],
+  "hit_rate": 0.312084384315524,
+  "bombs": 14
+ },
+ "heldout": {
+  "untouched": {
+   "hit_rate": 0.32681040543707524,
+   "hits": 2789,
+   "misses": 5563,
+   "bad_cuts": 182,
+   "bombs": 54
+  },
+  "lesion eye_left": {
+   "hit_rate": 0.026451916294380436,
+   "hits": 225,
+   "misses": 8083,
+   "bad_cuts": 198,
+   "bombs": 2
+  },
+  "lesion eye_right": {
+   "hit_rate": 0.007171408417587585,
+   "hits": 61,
+   "misses": 8156,
+   "bad_cuts": 289,
+   "bombs": 8
+  },
+  "lesion motion_detectors": {
+   "hit_rate": 0.0019988242210464435,
+   "hits": 17,
+   "misses": 7584,
+   "bad_cuts": 904,
+   "bombs": 15
+  },
+  "lesion looming_detectors": {
+   "hit_rate": 0.03035294117647059,
+   "hits": 258,
+   "misses": 8165,
+   "bad_cuts": 77,
+   "bombs": 19
+  },
+  "lesion LC_all": {
+   "hit_rate": 0.0018823529411764706,
+   "hits": 16,
+   "misses": 8185,
+   "bad_cuts": 299,
+   "bombs": 5
+  },
+  "lesion lobula_plate_tangential": {
+   "hit_rate": 0.0031719924812030073,
+   "hits": 27,
+   "misses": 7108,
+   "bad_cuts": 1377,
+   "bombs": 25
+  },
+  "lesion intermediates": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8499,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "lesion giant_fiber": {
+   "hit_rate": 0.014465482770786782,
+   "hits": 123,
+   "misses": 8090,
+   "bad_cuts": 290,
+   "bombs": 23
+  },
+  "lesion DN_all": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8499,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "lesion octopamine": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8499,
+   "bad_cuts": 0,
+   "bombs": 2
+  },
+  "lesion dopamine": {
+   "hit_rate": 0.0010580766517752176,
+   "hits": 9,
+   "misses": 8204,
+   "bad_cuts": 293,
+   "bombs": 9
+  },
+  "lesion serotonin": {
+   "hit_rate": 0.019750764166470727,
+   "hits": 168,
+   "misses": 7538,
+   "bad_cuts": 800,
+   "bombs": 15
+  },
+  "arousal -1": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8499,
+   "bad_cuts": 0,
+   "bombs": 2
+  },
+  "arousal +1": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8452,
+   "bad_cuts": 47,
+   "bombs": 6
+  },
+  "reward_drive -1": {
+   "hit_rate": 0.0010580766517752176,
+   "hits": 9,
+   "misses": 8204,
+   "bad_cuts": 293,
+   "bombs": 9
+  },
+  "reward_drive +1": {
+   "hit_rate": 0.0130251114761793,
+   "hits": 111,
+   "misses": 6787,
+   "bad_cuts": 1624,
+   "bombs": 72
+  },
+  "calm -1": {
+   "hit_rate": 0.01951563602163179,
+   "hits": 166,
+   "misses": 7535,
+   "bad_cuts": 805,
+   "bombs": 16
+  },
+  "calm +1": {
+   "hit_rate": 0.00011753643629525152,
+   "hits": 1,
+   "misses": 7744,
+   "bad_cuts": 763,
+   "bombs": 55
+  },
+  "noise max": {
+   "hit_rate": 0.04503342324381377,
+   "hits": 384,
+   "misses": 5535,
+   "bad_cuts": 2608,
+   "bombs": 97
+  }
+ },
+ "train": {
+  "untouched": {
+   "hit_rate": 0.2907985133460975,
+   "hits": 2582,
+   "misses": 6025,
+   "bad_cuts": 272,
+   "bombs": 48
+  },
+  "lesion eye_left": {
+   "hit_rate": 0.030166082928482656,
+   "hits": 267,
+   "misses": 8366,
+   "bad_cuts": 218,
+   "bombs": 4
+  },
+  "lesion eye_right": {
+   "hit_rate": 0.008812563552141,
+   "hits": 78,
+   "misses": 8434,
+   "bad_cuts": 339,
+   "bombs": 9
+  },
+  "lesion motion_detectors": {
+   "hit_rate": 0.002031144211238998,
+   "hits": 18,
+   "misses": 7940,
+   "bad_cuts": 904,
+   "bombs": 9
+  },
+  "lesion looming_detectors": {
+   "hit_rate": 0.03772732407093641,
+   "hits": 334,
+   "misses": 8386,
+   "bad_cuts": 133,
+   "bombs": 15
+  },
+  "lesion LC_all": {
+   "hit_rate": 0.0020332090816672314,
+   "hits": 18,
+   "misses": 8401,
+   "bad_cuts": 434,
+   "bombs": 5
+  },
+  "lesion lobula_plate_tangential": {
+   "hit_rate": 0.004851083032490975,
+   "hits": 43,
+   "misses": 7394,
+   "bad_cuts": 1427,
+   "bombs": 8
+  },
+  "lesion intermediates": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8850,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "lesion giant_fiber": {
+   "hit_rate": 0.018853014224429893,
+   "hits": 167,
+   "misses": 8324,
+   "bad_cuts": 367,
+   "bombs": 18
+  },
+  "lesion DN_all": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8850,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "lesion octopamine": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8850,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "lesion dopamine": {
+   "hit_rate": 0.0023726132640379616,
+   "hits": 21,
+   "misses": 8475,
+   "bad_cuts": 355,
+   "bombs": 12
+  },
+  "lesion serotonin": {
+   "hit_rate": 0.025499266614013315,
+   "hits": 226,
+   "misses": 7855,
+   "bad_cuts": 782,
+   "bombs": 11
+  },
+  "arousal -1": {
+   "hit_rate": 0.0,
+   "hits": 0,
+   "misses": 8850,
+   "bad_cuts": 0,
+   "bombs": 0
+  },
+  "arousal +1": {
+   "hit_rate": 0.00011299435028248587,
+   "hits": 1,
+   "misses": 8787,
+   "bad_cuts": 62,
+   "bombs": 1
+  },
+  "reward_drive -1": {
+   "hit_rate": 0.0023726132640379616,
+   "hits": 21,
+   "misses": 8475,
+   "bad_cuts": 355,
+   "bombs": 12
+  },
+  "reward_drive +1": {
+   "hit_rate": 0.018725324309080655,
+   "hits": 166,
+   "misses": 7143,
+   "bad_cuts": 1556,
+   "bombs": 55
+  },
+  "calm -1": {
+   "hit_rate": 0.025386438000676973,
+   "hits": 225,
+   "misses": 7853,
+   "bad_cuts": 785,
+   "bombs": 11
+  },
+  "calm +1": {
+   "hit_rate": 0.00022578460149017836,
+   "hits": 2,
+   "misses": 8159,
+   "bad_cuts": 697,
+   "bombs": 44
+  },
+  "noise max": {
+   "hit_rate": 0.0465404552625648,
+   "hits": 413,
+   "misses": 5726,
+   "bad_cuts": 2735,
+   "bombs": 75
+  }
+ }
+}
