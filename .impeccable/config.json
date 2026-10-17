@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "space grotesk",
+        "createdAt": "2026-10-17T16:41:03.525Z",
+        "reason": "Agent: index.css imports this face for committed brand typography; the frontend deslop preserves the existing type system."
+      }
+    ]
+  }
+}

@@ -481,8 +481,7 @@ export function BrainPreview() {
         <SessionOverview />
       </TabsContent>
       <TabsContent value="details" className="inspector-prose">
-        <span className="eyebrow">ABOUT THIS VIEW</span>
-        <h2>Real neurons. Spatial context.</h2>
+        <h2>About the neuron view</h2>
         <p>
           This point cloud uses the supplied MaleCNS visual-to-motor subgraph. The few points below
           the main brain are ascending-neuron soma locations present in this export. It is a subset
@@ -523,9 +522,8 @@ export function BrainPreview() {
         </p>
       </TabsContent>
       <TabsContent value="next" className="inspector-prose">
-        <span className="eyebrow">IMPLEMENTATION ROADMAP</span>
-        <h2>Connect anatomy to activity.</h2>
-        <ol className="next-steps">
+        <h2>Planned features</h2>
+        <ul className="next-steps">
           <li>
             <strong>Receive neuron firing data</strong>
             <p>
@@ -544,7 +542,7 @@ export function BrainPreview() {
             <strong>Live experiments</strong>
             <p>Lesion controls, real versus scrambled wiring, and a recorded replay fallback.</p>
           </li>
-        </ol>
+        </ul>
       </TabsContent>
     </Tabs>
   )

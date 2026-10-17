@@ -175,8 +175,6 @@ export function GamePreview() {
         <div className="scene-title">
           <ScanLine aria-hidden="true" />
           <h2 id="game-heading">Game viewport</h2>
-          <span className="scene-divider" />
-          <span>Fly Saber</span>
           {sessionStatus !== 'idle' && (
             <span className="live-session-status" role="status">
               {sessionStatus === 'connecting'
@@ -189,15 +187,10 @@ export function GamePreview() {
       {motionPreview && <FlyMotionPreview />}
       {!motionPreview && !chart && !loading && cameraReady && (
         <div className="scene-empty">
-          <span className="eyebrow">READY WHEN YOU ARE</span>
-          <h2>
-            A new perspective
-            <br />
-            on every beat.
-          </h2>
-          <p>Load a song, explore its chart, and move through the music.</p>
-          <Button variant="outline" size="sm" onClick={openSongLibrary}>
-            Choose a song <Video aria-hidden="true" />
+          <h2>Choose a song to begin</h2>
+          <p>Watch the fly play a live song or explore a community chart.</p>
+          <Button size="sm" onClick={openSongLibrary}>
+            Choose a song
           </Button>
         </div>
       )}
