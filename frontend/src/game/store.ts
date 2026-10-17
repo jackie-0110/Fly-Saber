@@ -42,11 +42,6 @@ export function liveMapId(s: { song: Song | null; chart: Chart | null }): string
 
 let pending: AbortController | null = null
 let playAttempt = 0
-
-async function defaultBrain() {
-  const { brains } = await loadCatalog(AbortSignal.timeout(10000))
-  return (brains.find((b) => b.id === 'real') ?? brains[0])?.id ?? ''
-}
 export const transport = new AudioTransport((snapshot) => {
   usePlayer.setState(snapshot)
   if (!snapshot.playing) liveSession.pause()
@@ -63,6 +58,11 @@ export const liveSession = new SessionClient({
 function cancelSession() {
   playAttempt++
   liveSession.disconnect()
+}
+
+async function defaultBrain() {
+  const { brains } = await loadCatalog(AbortSignal.timeout(10000))
+  return (brains.find((b) => b.id === 'real') ?? brains[0])?.id ?? ''
 }
 
 async function loadSong(
@@ -165,14 +165,17 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     try {
       const mapId = liveMapId(get())
       if (mapId) {
-        if (!get().brain) set({ brain: await defaultBrain() })
-        if (attempt !== playAttempt) return
-        if (!get().brain)
-          throw new Error('Choose an available brain in the Songs tab, then press play.')
         await transport.unlock()
         if (attempt !== playAttempt) return
+        const brain = get().brain || (await defaultBrain())
+        if (attempt !== playAttempt) return
+        if (!brain)
+          throw new Error(
+            'The server has no brain to play this map. Retry when the backend is running.',
+          )
+        set({ brain })
         if (get().duration > 0 && transport.getTime() >= get().duration) liveSession.disconnect()
-        await liveSession.prepare(mapId, get().brain)
+        await liveSession.prepare(mapId, brain)
         if (attempt !== playAttempt) return
       }
       await transport.play()
