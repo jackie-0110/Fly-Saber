@@ -54,6 +54,11 @@ Dependabot proposes weekly updates for Actions, npm, uv, and Docker dependencies
 Review and merge those updates through the same tests. Never commit `.env`, raw
 connectomes, checkpoints, replays, or unlicensed audio.
 
+## Agent tooling
+
+The installed Impeccable skills and editor hooks are documented in
+[Agent tooling](docs/AGENT_TOOLING.md), including engine setup and local cache handling.
+
 ## Container delivery
 
 See [docs/CI_CD.md](docs/CI_CD.md) for image builds, release publishing, and deployment.

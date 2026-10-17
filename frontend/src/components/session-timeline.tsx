@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatTime } from '@/game/chart'
-import { usePlayer } from '@/game/store'
+import { liveMapId, usePlayer } from '@/game/store'
 import { useSession } from '@/game/session'
 
 export function SessionTimeline() {
@@ -11,7 +11,7 @@ export function SessionTimeline() {
   const duration = usePlayer((s) => s.duration)
   const playing = usePlayer((s) => s.playing)
   const chart = usePlayer((s) => s.chart)
-  const live = usePlayer((s) => !!s.song?.serverMapId)
+  const live = usePlayer((s) => !!liveMapId(s))
   const connecting = useSession((s) => s.status === 'connecting')
   const loading = usePlayer((s) => s.loading)
   const rate = usePlayer((s) => s.rate)

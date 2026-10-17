@@ -128,10 +128,10 @@ def test_audio_served_only_when_allowlisted(client: TestClient) -> None:
     assert client.get("/api/maps/zzz99_easy/audio").status_code == 404
 
 
-def start(ws: WebSocketTestSession, brains: list[str]) -> dict[str, Any]:
-    ws.send_json(
-        {"type": "start", "game": "saber", "brains": brains, "map_id": "abc12_hard", "seed": 7}
-    )
+def start(
+    ws: WebSocketTestSession, brains: list[str], map_id: str = "abc12_hard"
+) -> dict[str, Any]:
+    ws.send_json({"type": "start", "game": "saber", "brains": brains, "map_id": map_id, "seed": 7})
     ready: dict[str, Any] = ws.receive_json()
     return ready
 

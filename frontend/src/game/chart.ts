@@ -26,11 +26,13 @@ export interface Chart {
   notes: Note[]
   walls: Wall[]
   warnings: string[]
+  /** The server has this chart, so a brain can play it (community maps fetched on demand). */
+  live?: boolean
 }
 
 export interface Song {
   serverMapId?: string
-  split?: 'train' | 'heldout'
+  split?: 'train' | 'heldout' | 'community'
   attribution?: string
   id: string
   title: string

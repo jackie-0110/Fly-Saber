@@ -62,8 +62,7 @@ Test the Worker locally against a running server with
 
 - Desktop windows use a viewport-height workspace with a brain sidebar around 30% of the width and a compact timeline. The brain fills the sidebar width, neuron metadata forms a compact grid below it, and session information has its own tab. Narrow screens stack the panels vertically.
 - Song information appears above the viewport: title, artist, mapper, difficulty, initial BPM, decoded audio duration, note count, and a source link for community maps.
-- The Songs sidebar defaults to Live songs from `GET /api/maps` and players from `GET /api/brains`. Choose a song and player, then press play to open `/ws/session`. Mapper credit, license/attribution and held-out status are shown.
-- Community preview searches the unrestricted community catalog by song, artist, mapper, map ID, or map link. It supports pagination and loading a specific difficulty. Songs download directly to the browser; no fly backend is needed, and the server's demo allowlist is not used by this picker.
+- The Songs sidebar searches the unrestricted community catalog by song, artist, mapper, map ID, or map link. It supports pagination and loading a specific difficulty. Songs download directly to the browser; no fly backend is needed, and the server's demo allowlist is not used by this picker.
 - The true 3D game scene shows the track, directional notes, bombs, walls, and an articulated fly mesh with resting motion and independent saber reach/cut animations. Orbit, pan, zoom, overview, player view, reset, fly visibility, and fullscreen controls work. The game camera stays independent of the brain camera and playback time.
 - Play, pause, restart, scrub forward/backward, adjust speed, and change volume. Timeline bars show chart note density, not an audio waveform. Block positions derive directly from the audio clock; difficulty changes preserve song position. Scrubbing pauses audio while dragging and resumes on release only if it was playing.
 - The brain renders all 19,463 neurons and 340,922 directed connections (6,175,540 synapses) from the exact MaleCNS v1.0 visual-to-motor subgraph bundled with `bundles/real_fast/bc_950.npz`. This subset contains mostly brain locations and distant ascending-neuron somas. It does not include full neuron shapes or a continuous ventral nerve cord reconstruction.
@@ -83,15 +82,6 @@ The frontend owner's implementation lives in `frontend/`.
 The top-right badge checks the backend's real `GET /api/games` response on load and every five seconds after each check, with a four-second timeout. It reports checking, connected, or disconnected. This measures API reachability. Live playback has its own connecting, playing, paused, ended and error status; neuron activity remains separate. Vite proxies `/api` and `/ws` to the local backend on port 8000. Production hosting must route those paths to the backend as well. For a separate backend, build with `VITE_BACKEND_URL=https://your-backend.example` (REST, audio and WebSocket all use it); that server must permit the frontend origin. Empty/default uses the page origin.
 
 Live sessions wait up to 15 seconds for readiness before starting audio. Server errors and disconnects stop playback and clear stale motor/score state; pressing play reconnects. Community maps stay local and never start a fly session. Public-audio restriction for community preview (milestone D5) is still pending.
-
-To repeat the real integration check against FastAPI serving this build with staged allowlisted maps/audio:
-
-```bash
-FLY_SABER_INTEGRATION_URL=http://127.0.0.1:8000 npx playwright test live-integration --workers=1
-# Optional: FLY_SABER_INTEGRATION_BRAIN=real (default is expert)
-```
-
-This test opens an actual socket and verifies matching map IDs, score/event frames, clock messages, audio progress and pause on desktop/mobile. Regular `npm test` uses isolated REST/socket fixtures and skips this opt-in test.
 
 ## Brain assets and coordinates
 
