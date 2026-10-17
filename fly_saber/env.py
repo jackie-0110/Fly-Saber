@@ -48,6 +48,7 @@ class SaberConfig:
     red_chroma: float
     blue_chroma: float
     step_hz: int
+    note_speed_mps: float
     timing_window_sec: float
     spawn_distance_m: float
     max_visible_notes: int
