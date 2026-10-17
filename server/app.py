@@ -3,7 +3,8 @@
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
-from dataclasses import dataclass
+import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from server.protocol import Brain, Game, MapSummary
 from server.saber_sim import brain_sims, expert_sims
 from server.session import GAMES, LiveBrain, Session
 
+log = logging.getLogger(__name__)
 EXPERT = Brain(
     id="expert",
     label="Scripted expert",
@@ -25,26 +27,30 @@ EXPERT = Brain(
 )
 
 
-@dataclass(frozen=True)
-class BrainSpec:
-    id: str
-    label: str
-    description: str
-    checkpoint: str
+def brain_modes() -> list[Brain]:
+    """The demo's brain modes (Person 1, configs/brains.yaml), playable or not."""
+    raw = yaml.safe_load((CONFIG_DIR / "brains.yaml").read_text())
+    return [Brain(id=m["id"], label=m["label"], description=m["description"]) for m in raw["modes"]]
 
 
-def brain_specs() -> list[BrainSpec]:
-    raw = yaml.safe_load((CONFIG_DIR / "server.yaml").read_text())
-    return [BrainSpec(**b) for b in raw["brains"]]
-
-
-def serving_brains(specs: list[BrainSpec]) -> list[LiveBrain]:
-    """The expert, plus every brain whose checkpoint exists."""
+def serving_brains(modes: list[Brain], bundles_dir: Path) -> list[LiveBrain]:
+    """The expert, plus every mode with a trained bundle at bundles_dir/<id>/
+    (training/bundle.py). A bundle that fails to load is logged and left out."""
     brains = [LiveBrain(EXPERT, expert_sims())]
-    for spec in specs:
-        if Path(spec.checkpoint).is_file():
-            info = Brain(id=spec.id, label=spec.label, description=spec.description)
-            brains.append(LiveBrain(info, brain_sims(Path(spec.checkpoint))))
+    for mode in modes:
+        bundle = bundles_dir / mode.id
+        manifest = bundle / "MANIFEST.json"
+        if not manifest.is_file():
+            continue
+        checkpoint = json.loads(manifest.read_text())["checkpoint"]
+        if checkpoint is None:  # view-only mode: wiring to show, nothing to play
+            continue
+        try:
+            sims = brain_sims(bundle / checkpoint, bundle / "subgraph")
+        except (OSError, ValueError, KeyError) as error:
+            log.warning("not serving brain %s: %s", mode.id, error)
+            continue
+        brains.append(LiveBrain(mode, sims))
     return brains
 
 
@@ -114,6 +120,6 @@ def serve() -> FastAPI:
     """The production app, for `uvicorn server.app:serve --factory`."""
     frontend = Path("frontend/dist")
     return create_app(
-        brains=serving_brains(brain_specs()),
+        brains=serving_brains(brain_modes(), Path("bundles")),
         frontend_dir=frontend if frontend.is_dir() else None,
     )
