@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
 test('animation preview reaches different cells, freezes, and resumes without runtime errors', async ({
   page,
 }, testInfo) => {
+  // Software-rendered WebGL captures take several seconds on shared CI runners.
+  test.setTimeout(60_000)
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/?flyMotion=preview')
@@ -23,17 +25,19 @@ test('animation preview reaches different cells, freezes, and resumes without ru
   await page.waitForTimeout(250)
   await page.getByRole('button', { name: 'Pause preview', exact: true }).click()
   const canvas = page.locator('.game-stage canvas')
+  // Compare the same CSS pixels on desktop and high-DPI mobile devices.
+  const capture = () => canvas.screenshot({ scale: 'css' })
   await page.waitForTimeout(100)
-  let low = await canvas.screenshot()
+  let low = await capture()
   await expect
     .poll(
       async () => {
-        const next = await canvas.screenshot()
+        const next = await capture()
         const stable = next.equals(low)
         low = next
         return stable
       },
-      { timeout: 5000 },
+      { timeout: 20_000 },
     )
     .toBe(true)
   await page.getByRole('button', { name: 'Resume preview', exact: true }).click()
@@ -41,8 +45,8 @@ test('animation preview reaches different cells, freezes, and resumes without ru
   await page.waitForTimeout(250)
   await page.getByRole('button', { name: 'Pause preview', exact: true }).click()
   await page.waitForTimeout(100)
-  expect((await canvas.screenshot()).equals(low)).toBe(false)
-  await page.screenshot({ path: testInfo.outputPath('fly-animation-preview.png') })
+  expect((await capture()).equals(low)).toBe(false)
+  await page.screenshot({ path: testInfo.outputPath('fly-animation-preview.png'), scale: 'css' })
   await page.getByRole('button', { name: 'Resume preview', exact: true }).click()
   for (const move of ['2', '3', '4', '5', '6']) {
     await page.getByLabel('Preview movement', { exact: true }).selectOption(move)
