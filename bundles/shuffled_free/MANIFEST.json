@@ -1,0 +1,12 @@
+{
+ "checkpoint": null,
+ "variant": "shuffled_free",
+ "subgraph_fingerprint": {
+  "n_neurons": 19463,
+  "n_edges": 340922,
+  "n_synapses": 6175540,
+  "variant": "rewired",
+  "neurons_sha256": "d197716db5254ea0",
+  "edges_sha256": "5c89e4c096f101eb"
+ }
+}
