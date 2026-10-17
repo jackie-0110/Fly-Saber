@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from fly_saber.config import load_config
 from fly_saber.env import SaberConfig, SaberEnv
@@ -35,7 +36,11 @@ def warm_up(catalog: Catalog, make_sim: SimFactory) -> None:
             sim.step()
 
 
-def create_app(maps_dir: Path = Path("data/maps"), make_sim: SimFactory | None = None) -> FastAPI:
+def create_app(
+    maps_dir: Path = Path("data/maps"),
+    make_sim: SimFactory | None = None,
+    frontend_dir: Path | None = None,
+) -> FastAPI:
     app = FastAPI(title="FlyArcade")
     make_sim = make_sim or expert_sims()
     catalog = Catalog(maps_dir)
@@ -72,7 +77,11 @@ def create_app(maps_dir: Path = Path("data/maps"), make_sim: SimFactory | None =
         await websocket.accept()
         await Session(websocket, catalog, make_sim).run()
 
+    if frontend_dir is not None:
+        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
     return app
 
 
-app = create_app()
+_frontend = Path("frontend/dist")
+app = create_app(frontend_dir=_frontend if _frontend.is_dir() else None)

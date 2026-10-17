@@ -21,6 +21,19 @@ npm run preview
 
 `npm run format` formats the frontend source with Prettier; `npm run format:check` verifies it.
 
+Browser regression tests use Playwright on desktop and mobile Chromium:
+
+```bash
+npx playwright install --with-deps chromium
+npm run build
+npm test
+```
+
+Tests run against Vite's production preview on port 4173. `npm run test:ui` opens
+the interactive runner. HTML/JUnit reports, screenshots, and failure traces appear
+in `playwright-report/` and `test-results/`. See [CONTRIBUTING.md](../CONTRIBUTING.md)
+for the full CI checks.
+
 ## Preview behavior
 
 - Game and neural views are original static SVG illustrations, not live data or a recording.

@@ -8,8 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts"
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts playwright.config.ts \"e2e/**/*.ts\"",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -26,6 +28,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

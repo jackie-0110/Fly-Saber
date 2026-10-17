@@ -12,21 +12,26 @@ A simulated fruit fly brain, built from the real MaleCNS connectome, plays **Fly
 | Data | pandas, pyarrow, neuprint-python (MaleCNS), FlyWire Codex |
 | Server | FastAPI + WebSockets (uvicorn) |
 | Front end | React + Vite + TypeScript, three.js via @react-three/fiber and drei, Zustand, Tailwind |
-| Quality | ruff, mypy, pytest, ESLint, Prettier |
+| Quality | Ruff, mypy, pytest, Oxlint, Prettier, Playwright, GitHub Actions |
 | Deploy | Docker on Vultr |
 
 ## Team setup
 
-Prereqs: [`uv`](https://docs.astral.sh/uv/) and Node 20+.
+Prereqs: [`uv`](https://docs.astral.sh/uv/) and Node 22 (`nvm use`).
 
 ```bash
 git clone git@github.com:jackie-0110/Fly-Saber.git && cd Fly-Saber
-make setup          # uv sync (installs Python 3.11 + deps) and npm install in frontend/
+make setup          # install locked Python 3.11 and frontend dependencies
 cp .env.example .env  # add your neuPrint token, Gemini key if you need them
-make test lint      # should pass on a fresh clone
+cd frontend && npx playwright install --with-deps chromium && cd ..
+make check          # lint, type checks, Python and desktop/mobile browser tests
 ```
 
 Daily commands: `make serve` (API on :8000), `make frontend` (front end on :5173), `make test`, `make lint`, `make fmt`.
+
+Pull requests run Python/frontend checks and a Docker smoke test automatically.
+Version tags publish a tested image to GHCR. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the review workflow and [docs/CI_CD.md](docs/CI_CD.md) for releases and deployment.
 
 ## Layout
 
