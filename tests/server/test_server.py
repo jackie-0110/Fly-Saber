@@ -1,6 +1,9 @@
 """REST and WS /ws/session against a tiny fixture map and the real env played by the expert."""
 
 import json
+import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,8 +12,9 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
 from server.app import EXPERT, create_app
+from server.protocol import Brain, RenderState
 from server.saber_sim import expert_sims
-from server.session import LiveBrain
+from server.session import LiveBrain, Sim, StepOutput
 
 AUDIO_BYTES = b"OggS fixture"
 EXPERT_BRAIN = LiveBrain(EXPERT, expert_sims())
@@ -199,3 +203,59 @@ def test_bad_message_gets_error_and_socket_stays_open(
         ws.send_json(message)
         assert ws.receive_json()["type"] == "error"
         assert start(ws, ["expert"])["type"] == "ready"
+
+
+@dataclass
+class SlowSim:
+    """An expert sim whose every step blocks, like a big brain on a slow CPU."""
+
+    sim: Sim
+    step_sec: float
+
+    def reset(self, song_t: float) -> RenderState:
+        return self.sim.reset(song_t)
+
+    def step(self) -> StepOutput:
+        time.sleep(self.step_sec)
+        return self.sim.step()
+
+    def set_interventions(self, controls: Mapping[str, Any], eye: Mapping[str, Any]) -> None:
+        self.sim.set_interventions(controls, eye)
+
+
+class SlowSims:
+    n_neurons = 0
+    cell_types: list[str] = []
+
+    def __call__(self, map_data: dict[str, Any], seed: int) -> SlowSim:
+        return SlowSim(EXPERT_BRAIN.make_sim(map_data, seed), step_sec=0.5)
+
+
+def test_session_answers_while_its_sim_is_stepping(tmp_path: Path) -> None:
+    write_maps(tmp_path)
+    slow = LiveBrain(Brain(id="expert", label="Slow", description="test"), SlowSims())
+    with TestClient(create_app(tmp_path, [slow])).websocket_connect("/ws/session") as ws:
+        start(ws, ["expert"])
+        ws.send_json({"type": "play", "song_t": 0.0})
+        ws.send_json({"type": "clock", "song_t": 5.0})  # seconds of slow steps to catch up
+        time.sleep(0.2)
+        sent = time.monotonic()
+        ws.send_json({"type": "warp"})
+        assert ws.receive_json()["type"] == "error"
+        assert time.monotonic() - sent < 0.25
+
+
+def test_start_past_max_sessions_is_refused_until_one_leaves(tmp_path: Path) -> None:
+    write_maps(tmp_path)
+    client = TestClient(create_app(tmp_path, [EXPERT_BRAIN], max_sessions=1))
+    with client.websocket_connect("/ws/session") as second:
+        with client.websocket_connect("/ws/session") as first:
+            assert start(first, ["expert"])["type"] == "ready"
+            refused = start(second, ["expert"])
+            assert refused["type"] == "error"
+            assert "full" in refused["message"]
+        for _ in range(50):  # the first seat frees once the server sees the disconnect
+            if start(second, ["expert"])["type"] == "ready":
+                return
+            time.sleep(0.05)
+        pytest.fail("the seat was never freed")

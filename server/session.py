@@ -5,10 +5,11 @@ Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 
 import asyncio
 import uuid
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -36,6 +37,7 @@ from server.protocol import (
 )
 
 STEP_HZ = 30
+T = TypeVar("T")
 GAMES = [Game(id="saber", label="Fly Saber")]
 
 
@@ -89,11 +91,22 @@ class Session:
     """One WebSocket: start, play, clock, pause, reset; one or two slots (Versus)."""
 
     def __init__(
-        self, websocket: WebSocket, catalog: Catalog, brains: Mapping[str, LiveBrain]
+        self,
+        websocket: WebSocket,
+        catalog: Catalog,
+        brains: Mapping[str, LiveBrain],
+        seats: asyncio.Semaphore,
     ) -> None:
+        """`seats` is shared by all sessions: a session holds one from its first `start`
+        until it disconnects, so at most that many sessions run sims at once."""
         self.websocket = websocket
         self.catalog = catalog
         self.brains = brains
+        self.seats = seats
+        self.seated = False
+        # One thread per session: its sim work runs in order, off the event loop, and
+        # in parallel with other sessions (JAX releases the GIL while it computes).
+        self.worker = ThreadPoolExecutor(max_workers=1)
         self.session_id = uuid.uuid4().hex
         self.start: Start | None = None
         self.slots: list[SlotRun] = []
@@ -117,6 +130,9 @@ class Session:
             pass
         finally:
             await self.stop_ticker()
+            self.worker.shutdown(wait=False, cancel_futures=True)
+            if self.seated:
+                self.seats.release()
 
     async def handle(self, message: ClientMessage) -> None:
         match message:
@@ -151,14 +167,15 @@ class Session:
         if map_data is None:
             await self.send(Error(message=f"unknown map {start.map_id}"))
             return
+        if not self.seated:
+            if self.seats.locked():
+                await self.send(Error(message="the server is full; try again in a minute"))
+                return
+            await self.seats.acquire()
+            self.seated = True
         self.start = start
-        self.slots = []
         factories = [self.brains[b].make_sim for b in start.brains]
-        for make_sim in factories:
-            sim = make_sim(map_data, start.seed)
-            self.slots.append(SlotRun(sim, sim.reset(0.0)))
-        for slot, message in self.interventions.items():  # kept through reset
-            self.slots[slot].sim.set_interventions(message.interventions, message.eye.model_dump())
+        self.slots = await self.on_worker(self.make_slots, factories, map_data, start.seed)
         # Versus pairs brains on one subgraph, or a brain with the brainless expert.
         neural = max(factories, key=lambda f: f.n_neurons)
         await self.send(
@@ -178,18 +195,34 @@ class Session:
         if message.slot >= len(self.slots):
             await self.send(Error(message=f"no slot {message.slot} in this session"))
             return
+        sim = self.slots[message.slot].sim
         try:
-            sim = self.slots[message.slot].sim
-            sim.set_interventions(message.interventions, message.eye.model_dump())
+            await self.on_worker(
+                sim.set_interventions, message.interventions, message.eye.model_dump()
+            )
         except ValueError as error:
             await self.send(Error(message=str(error)))
             return
         self.interventions[message.slot] = message
 
-    async def play(self, song_t: float) -> None:
-        await self.stop_ticker()
+    def make_slots(
+        self, factories: list[SimFactory], map_data: dict[str, Any], seed: int
+    ) -> list[SlotRun]:
+        slots = []
+        for make_sim in factories:
+            sim = make_sim(map_data, seed)
+            slots.append(SlotRun(sim, sim.reset(0.0)))
+        for slot, message in self.interventions.items():  # kept through reset
+            slots[slot].sim.set_interventions(message.interventions, message.eye.model_dump())
+        return slots
+
+    def reset_slots(self, song_t: float) -> None:
         for run in self.slots:
             run.render_state, run.done = run.sim.reset(song_t), False
+
+    async def play(self, song_t: float) -> None:
+        await self.stop_ticker()
+        await self.on_worker(self.reset_slots, song_t)
         self.anchor_song_t, self.anchor_wall_t = song_t, self.now()
         self.paused = False
         self.ticker = asyncio.create_task(self.tick())
@@ -200,19 +233,26 @@ class Session:
         while not all(run.done for run in self.slots):
             next_tick += 1 / STEP_HZ
             await asyncio.sleep(max(0.0, next_tick - self.now()))
-            target = self.song_t()
-            for slot, run in enumerate(self.slots):
-                stepped = False
-                # Nearest step, not floor: ticks land on step boundaries and jitter either way.
-                while not run.done and run.render_state.t + 0.5 / STEP_HZ <= target:
-                    out = run.sim.step()
-                    run.render_state, run.done, stepped = out.render_state, out.done, True
-                    for e in out.events:
-                        await self.send(Event(slot=slot, t=e.t, kind=e.kind, note_id=e.note_id))
-                if stepped:
-                    await self.send(Frame(slot=slot, render_state=run.render_state))
-                    if run.done:
-                        await self.send(Ended(slot=slot, score=run.render_state.score))
+            for message in await self.on_worker(self.advance, self.song_t()):
+                await self.send(message)
+
+    def advance(self, target: float) -> list[Message]:
+        """Step each slot up to song time `target`; returns the messages to send."""
+        messages: list[Message] = []
+        for slot, run in enumerate(self.slots):
+            stepped = False
+            # Nearest step, not floor: ticks land on step boundaries and jitter either way.
+            while not run.done and run.render_state.t + 0.5 / STEP_HZ <= target:
+                out = run.sim.step()
+                run.render_state, run.done, stepped = out.render_state, out.done, True
+                messages += [
+                    Event(slot=slot, t=e.t, kind=e.kind, note_id=e.note_id) for e in out.events
+                ]
+            if stepped:
+                messages.append(Frame(slot=slot, render_state=run.render_state))
+                if run.done:
+                    messages.append(Ended(slot=slot, score=run.render_state.score))
+        return messages
 
     async def stop_ticker(self) -> None:
         if self.ticker is None:
@@ -221,6 +261,11 @@ class Session:
         with suppress(asyncio.CancelledError, WebSocketDisconnect):
             await self.ticker
         self.ticker = None
+
+    async def on_worker(self, fn: Callable[..., T], *args: Any) -> T:
+        """Run sim work on this session's thread. A cancelled caller does not stop it, but
+        later work still waits for it, so sims never change under a running step."""
+        return await asyncio.get_running_loop().run_in_executor(self.worker, fn, *args)
 
     def song_t(self) -> float:
         if self.paused:

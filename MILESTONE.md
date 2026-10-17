@@ -40,7 +40,7 @@ The first end-to-end moment. Everything else builds on it.
 - [ ] **D1. Hosting decision** (Person 2, with whoever set up Cloudflare). A Cloudflare project "flysaber" builds on every commit, configured outside the repo. The front end calls relative `/api` and `/ws` paths, so a front end hosted apart from the Python server needs a configurable backend URL. Default plan: one Vultr host serves both.
 - [ ] **D2. Image has its data** (Person 2). Mount or bake in `data/maps` (normalized maps, allowlisted audio), `bundles/`, and `frontend/dist`.
 - [ ] **D3. Domain and HTTPS** (Person 2; needs the team's Vultr and GoDaddy accounts).
-- [ ] **D4. Load** (Person 2). Brain steps (~10 ms on a laptop CPU, double in Versus) run inside the asyncio tick. Fine for one demo; cap sessions or move steps off the event loop before a public link.
+- [x] **D4. Load** (Person 2). Each session's sim work runs on its own thread, so the event loop never waits on JAX and sessions use separate cores. `MAX_SESSIONS` (default 2: two Versus sessions are 4 brain slots, about what a laptop CPU keeps at real time) caps concurrent sessions; set it to the host's capacity.
 - [ ] **D5. Allowlisted audio only on the public URL** (Person 3, spec 8.4): the in-browser BeatSaver search must not play non-allowlisted audio there.
 
 ## Risks to check
