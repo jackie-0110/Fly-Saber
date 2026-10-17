@@ -1,1 +1,5 @@
-# variants.yaml (owner: Person 1). Loaded into a dataclass; no magic numbers in code.
+# variants.yaml (owner: Person 1). Control brains built by scripts/build_variants.py into
+# {subgraph_dir}_{name}/. Train one with: model.subgraph_dir=data/processed/malecns_subgraph_rewired
+subgraph_dir: data/processed/malecns_subgraph
+variants: [rewired, sign_shuffled]
+seed: 0
