@@ -100,7 +100,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | Endpoint | Returns |
 |---|---|
 | `GET /api/games` | `[{ "id": "saber", "label": "Fly Saber" }]` |
-| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`: always `expert` (the scripted player), then each brain in `configs/server.yaml` (`real`, `rewired`) whose checkpoint file exists at startup |
+| `GET /api/brains` | `[{ "id": "real", "label": "Real fly brain", "description": "..." }]`: always `expert` (the scripted player), then each brain mode in `configs/brains.yaml` (section 4, Brain modes) whose `bundles/<id>/` holds a trained checkpoint at startup. View-only modes are not listed: they have nothing to play |
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
@@ -130,7 +130,7 @@ Server behaviour:
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
 - `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
 - Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
-- A served checkpoint loads with its own model config, so that config's `subgraph_dir` must hold the subgraph it was trained on; startup fails if the subgraph fingerprint differs.
+- Each served brain loads from its bundle (`training.play_eval.load_trained` with the bundle's `subgraph/`), never from a local subgraph build. A bundle that fails to load (missing file, fingerprint mismatch) is logged and left out of `/api/brains`; the server still starts.
 - The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
 
 #### Server to client
