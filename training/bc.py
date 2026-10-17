@@ -7,10 +7,11 @@ test stub. The env is driven by the expert's actions while the policy is scored
 against them, so every update sees fresh episodes and no dataset is stored.
 """
 
+import dataclasses
 import json
 import math
+import sys
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -33,7 +34,7 @@ from training.checkpoints import save_checkpoint, subgraph_fingerprint
 HEADS_PER_SABER = (IDLE_CELL + 1, NO_CUT + 1)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class BCConfig:
     maps_dir: str
     split: str
@@ -46,6 +47,10 @@ class BCConfig:
     seed: int
     variant: str
     checkpoint_dir: str
+    run_name: str = "default"
+    """Experiment name: checkpoints go to {checkpoint_dir}/{variant}/{run_name}/seed{seed}/."""
+    checkpoint_every: int = 50
+    """Save a checkpoint and the log every this many updates (0: only at the end)."""
     brain_learning_rate: float | None = None
     """Separate Adam rate for brain params (see make_optimizer); None uses learning_rate."""
 
@@ -63,7 +68,7 @@ class Policy(Protocol):
 
 
 @jax.tree_util.register_dataclass
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Metrics:
     loss: jax.Array
     """Mean summed cross-entropy over the heads, per live env step."""
@@ -220,9 +225,18 @@ def make_optimizer(cfg: BCConfig, params: Any) -> optax.GradientTransformation:
 
 
 def train(
-    env: SaberEnv, policy: Policy, params: Any, cfg: BCConfig
+    env: SaberEnv,
+    policy: Policy,
+    params: Any,
+    cfg: BCConfig,
+    on_checkpoint: Callable[[int, Any, list[dict[str, Any]]], None] | None = None,
 ) -> tuple[Any, list[dict[str, Any]]]:
-    """Clone the expert into `params`; returns them and one log row per `log_every` updates."""
+    """Clone the expert into `params`; returns them and one log row per `log_every` updates.
+
+    `on_checkpoint(update, params, log)` runs every `checkpoint_every` updates and at the end,
+    with params ready to run (live baseline applied).
+    """
+    prepare = getattr(policy, "prepare", lambda p: p)
     map_set, _ = load_map_set(
         Path(cfg.maps_dir), cfg.split, env.cfg.max_visible_notes, cfg.min_gap_sec
     )
@@ -246,35 +260,89 @@ def train(
             }
             log.append(row)
             print(row, flush=True)
-    return getattr(policy, "prepare", lambda p: p)(params), log
+        every = cfg.checkpoint_every
+        if on_checkpoint is not None and ((every and i % every == 0) or i == cfg.n_updates):
+            on_checkpoint(i, prepare(params), log)
+    return prepare(params), log
 
 
 def run(cfg: BCConfig, model_cfg: ModelConfig, saber_cfg: SaberConfig, eye_cfg: EyeConfig) -> Path:
     """Clone the expert into a fresh brain and save it; returns the checkpoint path."""
-    env, policy, params = build(model_cfg, saber_cfg, eye_cfg, jax.random.PRNGKey(cfg.seed))
-    params, log = train(env, policy, params, cfg)
-    run_dir = Path(cfg.checkpoint_dir) / cfg.variant / f"seed{cfg.seed}"
+    run_dir = Path(cfg.checkpoint_dir) / cfg.variant / cfg.run_name / f"seed{cfg.seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "bc_log.json").write_text(json.dumps(log, indent=1))
-    return save_checkpoint(
-        run_dir / f"bc_{cfg.n_updates}.npz",
-        params,
-        variant=cfg.variant,
-        stage="bc",
-        step=cfg.n_updates,
-        configs={"model": model_cfg, "saber": saber_cfg, "eye": eye_cfg, "train": cfg},
-        subgraph=subgraph_fingerprint(model_cfg.subgraph_dir),
-        metrics=log[-1],
+    configs: dict[str, Any] = {"model": model_cfg, "saber": saber_cfg, "eye": eye_cfg, "train": cfg}
+    (run_dir / "config.json").write_text(
+        json.dumps({k: dataclasses.asdict(v) for k, v in configs.items()}, indent=1)
     )
+    print(f"run dir {run_dir}", flush=True)
+    fingerprint = subgraph_fingerprint(model_cfg.subgraph_dir)
+    env, policy, params = build(model_cfg, saber_cfg, eye_cfg, jax.random.PRNGKey(cfg.seed))
+    saved: list[Path] = []
+
+    def save(update: int, params: Any, log: list[dict[str, Any]]) -> None:
+        (run_dir / "bc_log.json").write_text(json.dumps(log, indent=1))
+        saved.append(
+            save_checkpoint(
+                run_dir / f"bc_{update}.npz",
+                params,
+                variant=cfg.variant,
+                stage="bc",
+                step=update,
+                configs=configs,
+                subgraph=fingerprint,
+                metrics=log[-1] if log else {},
+            )
+        )
+
+    train(env, policy, params, cfg, on_checkpoint=save)
+    return saved[-1]
 
 
-def main() -> None:
-    path = run(
-        load_config(BCConfig, "train_bc"),
-        load_model_config(CONFIG_DIR / "model.yaml", ModelConfig),
-        load_config(SaberConfig, "saber"),
-        load_config(EyeConfig, "eye"),
+def apply_overrides(configs: dict[str, Any], args: list[str]) -> dict[str, Any]:
+    """Apply `key=value` overrides: bare keys go to the train config, `model.key` (or
+    `saber.`, `eye.`) to that config. Values are parsed to the field's current type."""
+    out = dict(configs)
+    for arg in args:
+        if "=" not in arg:
+            raise ValueError(f"override {arg!r} is not key=value")
+        key, raw = arg.split("=", 1)
+        section, _, field = key.rpartition(".")
+        section = section or "train"
+        if section not in out:
+            raise ValueError(f"unknown config {section!r} in {arg!r}")
+        cfg = out[section]
+        if field not in {f.name for f in dataclasses.fields(cfg)}:
+            raise ValueError(f"{section} has no field {field!r}")
+        current = getattr(cfg, field)
+        value: Any
+        if isinstance(current, bool):
+            if raw.lower() not in ("true", "false"):
+                raise ValueError(f"{key} must be true or false, got {raw!r}")
+            value = raw.lower() == "true"
+        elif isinstance(current, int):
+            value = int(raw)
+        elif isinstance(current, float) or current is None:
+            value = None if raw.lower() == "none" else float(raw)
+        else:
+            value = raw
+        out[section] = dataclasses.replace(cfg, **{field: value})
+    return out
+
+
+def main(args: list[str] | None = None) -> None:
+    """Usage: python -m training.bc [key=value ...], for example
+    run_name=fast window_sec=5 batch_size=256 brain_learning_rate=1e-4 model.freeze_brain=true
+    """
+    configs = apply_overrides(
+        {
+            "train": load_config(BCConfig, "train_bc"),
+            "model": load_model_config(CONFIG_DIR / "model.yaml", ModelConfig),
+            "saber": load_config(SaberConfig, "saber"),
+            "eye": load_config(EyeConfig, "eye"),
+        },
+        sys.argv[1:] if args is None else args,
     )
+    path = run(configs["train"], configs["model"], configs["saber"], configs["eye"])
     print(f"saved {path}")
 
 

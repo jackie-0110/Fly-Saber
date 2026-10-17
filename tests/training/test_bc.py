@@ -117,8 +117,70 @@ def test_run_saves_a_brain_checkpoint_that_loads_back(tmp_path: Path) -> None:
     graph, _, n_neurons = load_graph(model_cfg)
     template = init_brain_params(jax.random.PRNGKey(1), graph, model_cfg, n_neurons)
     _, meta = load_checkpoint(path, template, expect_subgraph=subgraph_fingerprint(subgraph))
-    assert path == tmp_path / "checkpoints" / "test" / "seed0" / "bc_2.npz"
+    run_dir = tmp_path / "checkpoints" / "test" / "default" / "seed0"
+    assert path == run_dir / "bc_2.npz"
     assert (meta["stage"], meta["step"]) == ("bc", 2)
+    assert (run_dir / "config.json").exists() and (run_dir / "bc_log.json").exists()
+
+
+def test_run_checkpoints_periodically_into_its_run_dir(tmp_path: Path) -> None:
+    import dataclasses
+
+    subgraph = tmp_path / "subgraph"
+    subgraph.mkdir()
+    write_subgraph(subgraph)
+    (subgraph / "meta.json").write_text(
+        json.dumps({"n_neurons": 4, "n_edges": 3, "n_synapses": 30})
+    )
+    model_cfg = model_config(subgraph, action_heads(SABER.n_sabers))
+    cfg = dataclasses.replace(
+        bc_config(tmp_path, n_updates=4), run_name="exp1", checkpoint_every=2, log_every=2
+    )
+    run(cfg, model_cfg, SABER, EYE)
+    run_dir = tmp_path / "checkpoints" / "test" / "exp1" / "seed0"
+    assert sorted(p.name for p in run_dir.glob("bc_*.npz")) == ["bc_2.npz", "bc_4.npz"]
+    assert [row["update"] for row in json.loads((run_dir / "bc_log.json").read_text())] == [2, 4]
+
+
+def test_apply_overrides() -> None:
+    import pytest
+
+    from brain.config import ModelConfig
+    from training.bc import BCConfig, apply_overrides
+
+    base: dict[str, Any] = {
+        "train": BCConfig("", "train", 0.0, 1.0, 1, 1e-2, 1, 1, 0, "real", ""),
+        "model": ModelConfig("", 33.3, 4, 20.0, 10.0, 0.5, "relu", 0.9, 1.0, [13, 5]),
+    }
+    out = apply_overrides(
+        base,
+        [
+            "run_name=fast",
+            "window_sec=5",
+            "batch_size=256",
+            "brain_learning_rate=1e-4",
+            "model.freeze_brain=true",
+            "model.subgraph_dir=data/x",
+        ],
+    )
+    t, m = out["train"], out["model"]
+    assert (t.run_name, t.window_sec, t.batch_size, t.brain_learning_rate) == (
+        "fast",
+        5.0,
+        256,
+        1e-4,
+    )
+    assert m.freeze_brain is True and m.subgraph_dir == "data/x"
+    assert base["train"].run_name == "default"  # originals untouched
+    for bad in (
+        ["nope=1"],
+        ["model.nope=1"],
+        ["x.y=1"],
+        ["batch_size"],
+        ["model.freeze_brain=yes"],
+    ):
+        with pytest.raises(ValueError):
+            apply_overrides(base, bad)
 
 
 def test_optimizer_never_moves_fixed_brain_buffers() -> None:

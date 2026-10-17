@@ -35,7 +35,10 @@ def config_hash(configs: dict[str, Any]) -> str:
 def subgraph_fingerprint(subgraph_dir: str | Path) -> dict[str, Any]:
     """Identity of the connectome a checkpoint was trained on, from its meta.json."""
     meta = json.loads((Path(subgraph_dir) / "meta.json").read_text())
-    return {k: meta[k] for k in ("n_neurons", "n_edges", "n_synapses")}
+    fingerprint = {k: meta[k] for k in ("n_neurons", "n_edges", "n_synapses")}
+    if meta.get("variant", "real") != "real":  # controls have the same counts
+        fingerprint["variant"] = meta["variant"]
+    return fingerprint
 
 
 def save_checkpoint(
