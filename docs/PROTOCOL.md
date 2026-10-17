@@ -336,6 +336,37 @@ params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expe
 - Loading takes a template pytree (any policy: brain `Params`, MLP, stub) and raises if keys or shapes differ, or if the checkpoint was trained on a different subgraph. Writes are atomic, so the server never reads a half-written file.
 - About 0.7 MB for the brain.
 
+### Running the trained fly in the server (Person 2)
+
+Everything a live session needs, in order. The bundle is `bundles/<id>/` (demo fly: `bundles/real_fast/`, or a brain mode from `scripts/export_brains.py`).
+
+```python
+from brain.model.controls import from_controls, load_controls
+from training.play_eval import load_trained
+
+fly = load_trained("bundles/real_fast/bc_950.npz", subgraph_dir="bundles/real_fast/subgraph")
+# fly.env (SaberEnv seeing through the brain's eye columns), fly.policy (BrainPolicy),
+# fly.params (trained, baseline applied), fly.groups, fly.n_neurons
+step = jax.jit(fly.policy.step)          # one 30 Hz frame; warm up once at startup (~11 s compile)
+v = fly.policy.init_carry()              # start of every song: the brain at rest, not zeros
+params = fly.params
+
+# On every set_interventions message:
+iv = from_controls(msg.interventions, fly.groups, load_controls(), fly.n_neurons)  # ValueError -> error
+params = fly.policy.prepare(fly.params, iv)   # re-center the readout on the modified brain
+policy_iv = iv
+
+# Every frame:
+v, out = step(params, v, obs, policy_iv, key)   # obs = env observation, (2, 437)
+action = greedy over split_heads(out.logits, [13, 5, 13, 5]) -> env.step
+# out.rates (N,) feeds the activity stream (section 6), neuron i = neurons.json index i
+```
+
+- **Always call `prepare(params, iv)` when interventions change.** Without it the readout keeps the untouched brain's baseline, and every control (even lesioning the 2 giant fibers) collapses play to 0 to 4% hits. With it, a lesion changes how vision drives the motor neurons. Cost: about 45 brain frames, once per change.
+- **Use the bundle's `subgraph/`, never a local rebuild.** HiPerGator's subgraph has 19,463 neurons; a local build had 19,462. `load_trained` refuses a mismatched subgraph.
+- Front-end data that matches: `frontend/public/data/brain/` (re-exported from HiPerGator in #30).
+- Versus: load two bundles (two `load_trained` calls), same `env`, same episode seed.
+
 ## 6. Activity stream (Person 1)
 
 Spec 13: uint8-quantized rates for all subgraph neurons at 15 Hz, per-cell-type means at 30 Hz. Pin the binary layout here.
