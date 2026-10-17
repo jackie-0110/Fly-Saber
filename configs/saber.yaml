@@ -9,3 +9,20 @@ eye_distance_m: 1.0
 bright_luminance: 1.0
 dim_luminance: 0.25
 bomb_luminance: 0.0
+red_chroma: 1.0               # color channel for R7/R8; background is the eye's background
+blue_chroma: 0.0
+
+# Timing and judging.
+step_hz: 30
+timing_window_sec: 0.1        # a cut counts within this many seconds of the note's time
+spawn_distance_m: 12.0        # notes are drawn once this close to the hit plane
+max_visible_notes: 16         # nearest notes rendered per frame
+two_sabers: true              # false: one saber hits both colors (fallback)
+score_direction: true         # false: curriculum stage 1, any cut direction counts
+
+# Rewards (spec 7.2).
+reward_hit: 1.0
+reward_miss: -0.5
+reward_bad_cut: -0.25         # right cell, wrong direction or wrong color
+reward_bomb: -1.0
+reward_empty_cut: -0.05       # cutting with no note in reach

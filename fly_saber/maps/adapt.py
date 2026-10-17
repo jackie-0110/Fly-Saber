@@ -8,6 +8,7 @@ from itertools import pairwise
 from typing import Any
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 
 ANY_DIRECTION = 4
@@ -15,6 +16,8 @@ ANY_DIRECTION = 4
 # Diagonals keep their vertical component; up and down cuts dominate real maps.
 SIM_DIRECTION = np.array([0, 1, 2, 3, 0, 0, 1, 1, ANY_DIRECTION])
 BOMB_COLOR = -1
+# Far past any song, so padded time_sec stays sorted for searchsorted.
+PAD_TIME_SEC = 1.0e6
 
 
 @jax.tree_util.register_dataclass
@@ -22,14 +25,14 @@ BOMB_COLOR = -1
 class NoteArrays:
     """One map's notes padded to a fixed length so many maps batch under vmap."""
 
-    time_sec: np.ndarray
-    lane: np.ndarray
-    layer: np.ndarray
-    color: np.ndarray
+    time_sec: jax.Array
+    lane: jax.Array
+    layer: jax.Array
+    color: jax.Array
     """0 red, 1 blue, -1 bomb."""
-    direction: np.ndarray
-    is_bomb: np.ndarray
-    valid: np.ndarray
+    direction: jax.Array
+    is_bomb: jax.Array
+    valid: jax.Array
     """False on padding rows."""
 
 
@@ -53,11 +56,11 @@ def note_arrays(notes: list[dict[str, Any]], max_notes: int) -> NoteArrays:
         raise ValueError(f"{len(notes)} notes exceed max_notes={max_notes}")
     pad = max_notes - len(notes)
 
-    def column(values: list[Any], dtype: type) -> np.ndarray:
-        return np.pad(np.array(values, dtype=dtype), (0, pad))
+    def column(values: list[Any], dtype: type, fill: Any = 0) -> jax.Array:
+        return jnp.asarray(np.pad(np.array(values, dtype=dtype), (0, pad), constant_values=fill))
 
     return NoteArrays(
-        time_sec=column([n["time_sec"] for n in notes], np.float32),
+        time_sec=column([n["time_sec"] for n in notes], np.float32, PAD_TIME_SEC),
         lane=column([n["lane"] for n in notes], np.int32),
         layer=column([n["layer"] for n in notes], np.int32),
         color=column([BOMB_COLOR if n["is_bomb"] else n["color"] for n in notes], np.int32),
