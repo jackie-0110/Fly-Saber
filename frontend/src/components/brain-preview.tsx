@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Expand,
   Minimize,
-  Orbit,
   RotateCcw,
   ZoomIn,
   ZoomOut,
@@ -14,9 +13,18 @@ import {
 import { Button } from '@/components/ui/button'
 import { SessionOverview } from '@/components/session-overview'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cellTypeColor, filterNeuronIndices, loadBrainData } from '@/brain/data'
-import type { BrainData } from '@/brain/data'
+import {
+  cellTypeColor,
+  filterEdgeIndices,
+  filterNeuronIndices,
+  loadBrainData,
+  loadBrainEdges,
+  neuronConnectionStats,
+} from '@/brain/data'
+import type { BrainData, BrainEdges } from '@/brain/data'
 import type { CameraAction } from '@/brain/brain-scene'
+import { MOVING_EDGE_LIMIT, SAMPLE_EDGE_LIMIT, sampleEdges } from '@/brain/rendering'
+import type { ConnectionDetail } from '@/brain/rendering'
 import { SongLibrary } from '@/components/song-library'
 import { usePlayer } from '@/game/store'
 
@@ -70,6 +78,12 @@ export function BrainPreview() {
   const [cameraReady, setCameraReady] = useState(false)
   const [pointSize, setPointSize] = useState(1.5)
   const [opacity, setOpacity] = useState(0.65)
+  const [detail, setDetail] = useState<ConnectionDetail>('sample')
+  const [edges, setEdges] = useState<BrainEdges | null>(null)
+  const [edgesError, setEdgesError] = useState('')
+  const [edgesAttempt, setEdgesAttempt] = useState(0)
+  const showConnections = detail !== 'off'
+  const [cameraMoving, setCameraMoving] = useState(false)
   const stageRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenError, setFullscreenError] = useState('')
@@ -114,9 +128,44 @@ export function BrainPreview() {
     return () => controller.abort()
   }, [attempt])
 
+  // Fetch the connection table only once connections are shown, after the neurons render.
+  const asset = data?.asset
+  const wantEdges = !!asset && showConnections && !edges
+  useEffect(() => {
+    if (!wantEdges || !asset) return
+    const controller = new AbortController()
+    loadBrainEdges(asset, controller.signal)
+      .then((loaded) => {
+        if (!controller.signal.aborted) setEdges(loaded)
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setEdgesError(cause instanceof Error ? cause.message : 'Could not load connections.')
+      })
+    return () => controller.abort()
+  }, [asset, wantEdges, edgesAttempt])
+
+  // `data` keeps its identity when edges arrive, so the camera is fitted only once.
+  const graph = useMemo(() => (data && edges ? { ...data, edges } : null), [data, edges])
   const indices = useMemo(
     () => (data ? filterNeuronIndices(data, group, cellType) : []),
     [data, group, cellType],
+  )
+  const filteredEdges = useMemo(
+    () => (graph && showConnections ? filterEdgeIndices(graph, indices, selected) : []),
+    [graph, indices, selected, showConnections],
+  )
+  // A selected neuron always shows every visible connection; sampling is for the overview.
+  const edgeIndices = useMemo(
+    () =>
+      detail === 'sample' && selected === null
+        ? sampleEdges(filteredEdges, SAMPLE_EDGE_LIMIT)
+        : filteredEdges,
+    [detail, filteredEdges, selected],
+  )
+  const connections = useMemo(
+    () => (graph && selected !== null ? neuronConnectionStats(graph, selected) : null),
+    [graph, selected],
   )
   const availableCellTypes = useMemo(() => {
     if (!data) return []
@@ -165,7 +214,6 @@ export function BrainPreview() {
       navigate.current?.(action[event.key])
     }
   }
-  const asset = data?.asset
   const fallback = (
     <SceneFallback
       message="The 3D view is unavailable. Your browser needs WebGL 2. You can still explore neuron metadata below."
@@ -236,7 +284,7 @@ export function BrainPreview() {
         <div className="neuron-count" role="status">
           {asset
             ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
-            : 'Loading authentic neuron coordinates…'}
+            : 'Loading neuron coordinates and connections…'}
           {(group || cellType) && (
             <Button
               variant="ghost"
@@ -256,7 +304,6 @@ export function BrainPreview() {
           tabIndex={0}
           role="region"
           aria-label="Interactive 3D fly neuron view"
-          aria-describedby="brain-camera-help"
           onKeyDown={onCameraKey}
         >
           {error ? (
@@ -268,7 +315,7 @@ export function BrainPreview() {
               }}
             />
           ) : !data ? (
-            <SceneFallback message="Loading neuron coordinates…" />
+            <SceneFallback message="Loading neuron coordinates and connections…" />
           ) : contextLost ? (
             fallback
           ) : (
@@ -276,13 +323,17 @@ export function BrainPreview() {
               <Suspense fallback={<SceneFallback message="Preparing the 3D view…" />}>
                 <BrainScene
                   data={data}
+                  edges={edges}
                   indices={indices}
+                  edgeIndices={edgeIndices}
+                  showConnections={showConnections}
                   selected={selected}
                   onSelect={setSelected}
                   onNavigateReady={onNavigateReady}
                   onFailure={onContextLost}
                   pointSize={pointSize}
                   opacity={opacity}
+                  onMotionChange={setCameraMoving}
                 />
               </Suspense>
             </SceneBoundary>
@@ -310,6 +361,19 @@ export function BrainPreview() {
             </div>
           </div>
           <div className="brain-display-controls">
+            <label>
+              Connections
+              <select
+                aria-label="Connection detail"
+                value={detail}
+                disabled={!data}
+                onChange={(event) => setDetail(event.target.value as ConnectionDetail)}
+              >
+                <option value="off">Off</option>
+                <option value="sample">Sample</option>
+                <option value="all">All</option>
+              </select>
+            </label>
             <label>
               Point size
               <input
@@ -383,11 +447,6 @@ export function BrainPreview() {
             <ZoomOut aria-hidden="true" />
           </Button>
         </div>
-        <p className="brain-camera-help" id="brain-camera-help">
-          <Orbit aria-hidden="true" />
-          Drag to orbit. Scroll or pinch to zoom. Right-drag or two fingers to pan. Focus the view:
-          arrow keys rotate, +/− zoom, Home resets.
-        </p>
         <div className="brain-color-legend">
           <span
             className="type-swatch"
@@ -398,6 +457,47 @@ export function BrainPreview() {
           />
           <span>Color identifies cell type</span>
           <span>Click a point to inspect</span>
+        </div>
+        <div className="brain-connection-summary" role="status">
+          <span>
+            {!data || !showConnections
+              ? showConnections
+                ? 'Loading connections…'
+                : 'Connections hidden'
+              : edgesError
+                ? edgesError
+                : !edges
+                  ? 'Loading connections…'
+                  : `${number.format(cameraMoving && detail === 'all' && selected === null ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT) : edgeIndices.length)} of ${number.format(edges.n_edges)} connections shown`}
+          </span>
+          {edgesError && showConnections && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                setEdgesError('')
+                setEdgesAttempt((value) => value + 1)
+              }}
+            >
+              Retry connections
+            </Button>
+          )}
+          {edges && showConnections && selected !== null && (
+            <span>
+              <span style={{ color: '#8ec5ff' }}>Blue: incoming</span>
+              {' · '}
+              <span style={{ color: '#f0c987' }}>Gold: outgoing</span>
+            </span>
+          )}
+          {edges && showConnections && selected === null && (
+            <span>
+              {cameraMoving && detail === 'all' && edgeIndices.length > MOVING_EDGE_LIMIT
+                ? 'Movement preview; full detail returns when still.'
+                : detail === 'sample' && filteredEdges.length > SAMPLE_EDGE_LIMIT
+                  ? 'Evenly spaced sample; choose All to draw every connection.'
+                  : 'Select a neuron to trace its connections.'}
+            </span>
+          )}
         </div>
         <div className="neuron-inspector">
           <div className="neuron-selection-heading">
@@ -453,6 +553,24 @@ export function BrainPreview() {
                 <dt>Class</dt>
                 <dd>{asset.superclasses[asset.superclass[selected]].replaceAll('_', ' ')}</dd>
               </div>
+              {connections && (
+                <>
+                  <div>
+                    <dt>Incoming</dt>
+                    <dd>
+                      {number.format(connections.incoming)} connections /{' '}
+                      {number.format(connections.incomingSynapses)} synapses
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Outgoing</dt>
+                    <dd>
+                      {number.format(connections.outgoing)} connections /{' '}
+                      {number.format(connections.outgoingSynapses)} synapses
+                    </dd>
+                  </div>
+                </>
+              )}
               <div>
                 <dt>Position (µm)</dt>
                 <dd>
@@ -483,9 +601,24 @@ export function BrainPreview() {
       <TabsContent value="details" className="inspector-prose">
         <h2>About the neuron view</h2>
         <p>
-          This point cloud uses the supplied MaleCNS visual-to-motor subgraph. The few points below
-          the main brain are ascending-neuron soma locations present in this export. It is a subset
-          of the source connectome.
+          This view uses the supplied MaleCNS visual-to-motor subgraph. The few points below the
+          main brain are ascending-neuron soma locations present in this export. It is a subset of
+          the source connectome.
+        </p>
+        <p>
+          Connections come from the exact graph bundled with the trained real fly model (bc_950,
+          training update 950). Lines join presynaptic to postsynaptic neuron locations; they do not
+          trace axon paths. By default the overview draws an evenly spaced sample of 20,000 real
+          connections; choose All to draw every connection. With All, camera movement draws the
+          sample at a lower pixel resolution and full detail returns when the camera settles.
+          Selected-neuron connections are always complete. Filters keep connections only when both
+          neurons are visible; selecting a neuron shows its visible incoming (blue) and outgoing
+          (gold) connections. Inspector totals include all its connections, including those hidden
+          by filters. Overlapping positions can hide individual lines.
+        </p>
+        <p>
+          Synapse counts describe anatomical connections, not learned weights or firing activity.
+          Training keeps the wiring fixed and adjusts neuron and cell-type-pair parameters.
         </p>
         <p>
           Points summarize neuron locations, not their full branching shapes. Some positions are
@@ -501,6 +634,14 @@ export function BrainPreview() {
           <div>
             <dt>Neuron count</dt>
             <dd>{asset ? number.format(asset.n_neurons) : 'Not loaded'}</dd>
+          </div>
+          <div>
+            <dt>Directed connections</dt>
+            <dd>{edges ? number.format(edges.n_edges) : 'Not loaded'}</dd>
+          </div>
+          <div>
+            <dt>Synapses</dt>
+            <dd>{edges ? number.format(edges.n_synapses) : 'Not loaded'}</dd>
           </div>
           <div>
             <dt>Cell types</dt>

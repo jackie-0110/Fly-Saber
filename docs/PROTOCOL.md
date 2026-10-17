@@ -19,7 +19,7 @@ One JSON file per playable (song, difficulty): `data/maps/normalized/{map_id}.js
 {
   "schema_version": 1,
   "map_id": "3a2b1_hard",
-  "split": "train",                  // "train" | "heldout"; heldout gets the "unseen map" badge
+  "split": "train",                  // "train" | "heldout" | "community" (fetched on demand); heldout gets the "unseen map" badge
   "song": {
     "title": "Example Song",
     "artist": "Example Artist",
@@ -104,6 +104,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
+| `POST /api/community/{key}` | fetch BeatSaver map `key`'s charts (no audio) and normalize its Standard difficulties with `split: "community"`; returns their map ids, playable by `start` but not listed by `GET /api/maps`. 400 bad key, 404 unknown map, 422 a format the normalizer does not support, 502 BeatSaver unreachable |
 | `GET /api/explorer/{brain}` | `explorer.json` (Person 1) |
 | `GET /api/eye_lattice` | `{ "left": [[azimuth_deg, elevation_deg], ...], "right": [...] }`, the order used by eye images |
 
@@ -191,7 +192,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 ### Front end copies: `frontend/public/data/brain/`
 
-Committed to git so the front end needs no Python or data download. Regenerate with `make subgraph export-web` and commit. The browser loads `fetch("/data/brain/neurons.json")` and `fetch("/data/brain/groups.json")`.
+Committed to git so the front end needs no Python or data download. For the bundled trained model, regenerate with `uv run python scripts/export_web.py --bundle bundles/real_fast` and commit. This checks the manifest's content hashes and checkpoint subgraph metadata. For a newly built subgraph use `make subgraph export-web` (or pass `--subgraph-dir`). The browser loads `neurons.json` and `groups.json` under `/data/brain/`, then `edges.json` once connections are shown.
 
 **`groups.json`**: identical to the one above.
 
@@ -200,7 +201,7 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | int | 1 |
-| `n_neurons` | int | N (19,462) |
+| `n_neurons` | int | N (19,463 in the trained real_fast bundle) |
 | `cell_types` | string[] | sorted unique types. **Cell-type id = index in this list**, the same list and order as `ready.cell_types` and activity kind 2 |
 | `superclasses`, `roles`, `sides`, `nts`, `position_sources` | string[] | lookup tables for the coded arrays below |
 | `bounds_um` | `{min: [x,y,z], max: [x,y,z]}` | bounding box of all positions, micrometers |
@@ -212,6 +213,21 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | `position_source` | int[N] | 0 soma, 1 copied from strongest partner, 2 mean of its cell type (no position in the data) |
 
 Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Center on `bounds_um` for the camera.
+
+**`edges.json`**: the complete directed anatomical table in parquet row order, without sampling. Schema version 1, struct of arrays:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version`, `source` | int, string | 1 and source parquet path |
+| `n_neurons`, `n_edges`, `n_synapses` | int | N, E, and sum of anatomical synapse counts (19,463 / 340,922 / 6,175,540 in real_fast) |
+| `body_id` | int[N] | Exact ordered neuron IDs, must match `neurons.json` before using endpoints |
+| `pre`, `post` | int[E] | Directed endpoints: backend neuron indices, not body IDs |
+| `weight` | int[E] | Anatomical synapse count, not normalized or learned efficacy |
+| `sign` | int[E] | Source neuron's sign: +1 excitatory, -1 inhibitory, 0 modulatory or unclear |
+
+This includes the entire bundled anatomy, including connections omitted from the model's fast-synapse graph. Training keeps topology fixed and learns per-neuron and cell-type-pair parameters. The browser draws straight segments between displayed neuron positions, preserving all indices and coordinates. Filters require both endpoints to be visible; selection restricts lines to incident connections, colored blue for incoming and gold for outgoing. Inspector totals include edges outside the active filters. No firing activity is inferred from connectivity. The separate per-mode files under Brain modes below contain only strongest-edge samples and are not used for this complete view.
+
+The browser fetches `edges.json` after `neurons.json` and `groups.json`, and only while connections are shown. By default the overview draws an evenly spaced sample of 20,000 filtered edges; choosing All draws every one. Rendering reuses neuron positions through a 16-bit index buffer (32-bit for more than 65,536 neurons). With All, every filtered edge stays resident on the GPU, and during camera motion unselected views draw at most 20,000 evenly distributed actual edges using a prefix of that same index buffer; the displayed connection count reflects this preview. The complete draw range and original pixel resolution return once motion and damping settle. Selected-neuron connections are never sampled. The exported anatomy, filters, and inspector totals remain complete.
 
 **Eye input:** the brain takes `eye` as `(2, n_columns)`, one value per kept eye column (437) in the order of `columns.json` below. Row 0 is luminance and drives R1 to R6; in columns with no traced R1 to R6 (most of them, see DATA_NOTES) it drives that column's L1 and L2 with inverted sign instead. Row 1 is color (red notes high, blue low, background 0.5) and drives R7 and R8. The env should render the eye at the column directions in `columns.json`, so its `obs` is exactly this array.
 

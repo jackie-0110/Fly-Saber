@@ -46,20 +46,22 @@ export async function loadCatalog(signal: AbortSignal) {
   return { maps: maps as ServerMap[], brains: brains as BrainOption[] }
 }
 
-export async function loadServerSong(mapId: string, signal: AbortSignal): Promise<Song> {
-  const path = `/api/maps/${encodeURIComponent(mapId)}`
-  const raw = (await backendJson(path, signal)) as Chart & {
-    split: 'train' | 'heldout'
-    song: {
-      title: string
-      artist: string
-      mapper: string
-      bpm: number
-      attribution: string | null
-      license: string | null
-      source_url: string | null
-    }
+type ServerChart = Chart & {
+  split: 'train' | 'heldout' | 'community'
+  song: {
+    title: string
+    artist: string
+    mapper: string
+    bpm: number
+    attribution: string | null
+    license: string | null
+    source_url: string | null
   }
+}
+
+/** Fetch and validate one normalized map; the chart a brain plays on the server. */
+async function loadServerChart(mapId: string, signal: AbortSignal): Promise<ServerChart> {
+  const raw = (await backendJson(`/api/maps/${encodeURIComponent(mapId)}`, signal)) as ServerChart
   if (
     !raw ||
     raw.schema_version !== 1 ||
@@ -68,7 +70,7 @@ export async function loadServerSong(mapId: string, signal: AbortSignal): Promis
     !raw.difficulty ||
     !Array.isArray(raw.notes) ||
     !Array.isArray(raw.walls) ||
-    !['train', 'heldout'].includes(raw.split) ||
+    !['train', 'heldout', 'community'].includes(raw.split) ||
     ![raw.song.title, raw.song.artist, raw.song.mapper, raw.difficulty.name].every(
       (s) => typeof s === 'string',
     ) ||
@@ -114,7 +116,12 @@ export async function loadServerSong(mapId: string, signal: AbortSignal): Promis
     )
   )
     throw new Error('The server map has invalid notes or walls. Choose another song.')
-  const response = await fetch(backendUrl(`${path}/audio`), {
+  return raw
+}
+
+export async function loadServerSong(mapId: string, signal: AbortSignal): Promise<Song> {
+  const raw = await loadServerChart(mapId, signal)
+  const response = await fetch(backendUrl(`/api/maps/${encodeURIComponent(mapId)}/audio`), {
     signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
   })
   if (!response.ok)
@@ -136,5 +143,59 @@ export async function loadServerSong(mapId: string, signal: AbortSignal): Promis
     serverMapId: mapId,
     split: raw.split,
     attribution: raw.song.attribution ?? raw.song.license ?? undefined,
+  }
+}
+
+/**
+ * Ask the server to fetch a community map's charts so a brain can play them, and swap in
+ * the server's Standard charts: the brain is judged on those, so the scene must show them.
+ * The audio stays the copy the browser downloaded. If the server cannot play the map, the
+ * song stays a preview and each chart says why.
+ */
+export async function withLiveCharts(song: Song, key: string, signal: AbortSignal): Promise<Song> {
+  let charts: ServerChart[]
+  try {
+    const response = await fetch(backendUrl(`/api/community/${encodeURIComponent(key)}`), {
+      method: 'POST',
+      signal: AbortSignal.any([signal, AbortSignal.timeout(60000)]),
+    })
+    const body: unknown = await response.json().catch(() => null)
+    if (!response.ok)
+      throw new Error(
+        body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string'
+          ? body.detail
+          : `the server returned ${response.status}`,
+      )
+    if (
+      !Array.isArray(body) ||
+      !body.every((id) => typeof id === 'string' && /^[a-z0-9]+_[a-z0-9]+$/.test(id))
+    )
+      throw new Error('the server returned an invalid map list')
+    charts = await Promise.all(body.map((id: string) => loadServerChart(id, signal)))
+  } catch (cause) {
+    signal.throwIfAborted()
+    const reason = cause instanceof Error ? cause.message : 'the server is unavailable'
+    for (const chart of song.charts)
+      chart.warnings.push(`Preview only, the fly can’t play this map: ${reason}.`)
+    return song
+  }
+  const live = new Map(charts.map((c) => [c.difficulty.name, c]))
+  return {
+    ...song,
+    split: 'community',
+    charts: song.charts.map((chart) => {
+      const server = chart.characteristic === 'Standard' && live.get(chart.difficulty.name)
+      if (!server) return chart
+      return {
+        schema_version: 1,
+        map_id: server.map_id,
+        characteristic: 'Standard',
+        difficulty: server.difficulty,
+        notes: server.notes,
+        walls: server.walls,
+        warnings: chart.warnings,
+        live: true,
+      }
+    }),
   }
 }
