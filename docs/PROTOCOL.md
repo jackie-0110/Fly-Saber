@@ -89,6 +89,7 @@ The front end already has the full map from REST and positions notes from the au
 - Eye for training and live play: `training.brain_policy.build(model_cfg, saber_cfg, eye_cfg, key)` makes the env see through the brain's own eye columns (angles from `brain.connectome.metadata.column_angles`, the same as `columns.json`), so `n_eye` is the 437 columns in `load_graph`'s column-table order and `obs` is exactly the brain's `eye` argument. `BrainPolicy` wraps `make_step` in the `Policy` interface of `training/bc.py`. Without a brain, `SaberEnv.create` falls back to a synthetic hex lattice (`fly_saber.eye.lattice`, left eye first).
 - `action`: int32 `(n_sabers, 2)`, rows red then blue: `[cell, cut]`, cell 0 to 11 or 12 (idle), cut 0 up, 1 down, 2 left, 3 right, or 4 (no cut). That is a 13-way position head and a 5-way direction head per saber. `n_sabers` is 1 when `saber.yaml` sets `two_sabers: false`.
 - `fly_saber.experts.saber_expert(env, state)` returns the perfect action, for behavior cloning.
+- Eye controls (spec 7.1) live in `state.eye` (`fly_saber.eye.EyeControls`) and change between frames with no recompile: `fly_saber.env.set_eye_controls(state, blind_left=1.0)` returns the new state. Fields: `blind_left`, `blind_right` (0 to 1, contrast that eye loses), `blur_deg` (added to the acceptance FWHM), `facet_dropout` (0 to 1, fraction of columns, the same columns for a given `seed`), `noise` (luminance std, fresh each frame), `seed`. Lost columns read as background 0.5. Which eye a column belongs to comes from the brain's column `side` (`SaberEnv.left_eye`), not from the sign of its azimuth, because the eyes overlap past the midline.
 
 A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb hit) or when it passes the hit plane (miss).
 
@@ -99,7 +100,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | Endpoint | Returns |
 |---|---|
 | `GET /api/games` | `[{ "id": "saber", "label": "Fly Saber" }]` |
-| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`, one per variant in `variants.yaml` that has a checkpoint |
+| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`: always `expert` (the scripted player), then each brain in `configs/server.yaml` (`real`, `rewired`) whose checkpoint file exists at startup |
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
@@ -128,13 +129,15 @@ Server behaviour:
 - Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
 - `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
+- Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
+- A served checkpoint loads with its own model config, so that config's `subgraph_dir` must hold the subgraph it was trained on; startup fails if the subgraph fingerprint differs.
 - The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
 
 #### Server to client
 
 | `type` | Fields | Rate |
 |---|---|---|
-| `ready` | `session_id`, `game`, `map_id`, `slots: [{slot, brain}]`, `step_hz`, `n_neurons`, `cell_types: string[]` | once per `start` / `reset` |
+| `ready` | `session_id`, `game`, `map_id`, `slots: [{slot, brain}]`, `step_hz`, `n_neurons`, `cell_types: string[]` | once per `start` / `reset`. `n_neurons` and `cell_types` are the slots' brain subgraph (same list and order as `neurons.json`); 0 and `[]` when every slot is `expert` |
 | `frame` | `slot`, `render_state` (section 2) | 30 Hz per slot |
 | `event` | `slot`, `t`, `kind`, `note_id` | as they happen |
 | `ended` | `slot`, `score` (same shape as `render_state.score`) | end of song |
@@ -256,6 +259,23 @@ Lesion wins over stimulation and mood for neurons in both. Any group in `groups.
 **How moods work:** a mood level drives its modulatory group like opto. Each neuron those modulatory neurons synapse onto has its output multiplied by exp(gain * change in their rate from rest), with `modulation_gain` per transmitter in `configs/model.yaml` (octopamine +1, dopamine +1, serotonin -1, an assumption) and capped at e. At level 0 the factor is exactly 1, so moods never need retraining. -1 silences the group (same as lesioning it). Targets are mostly central relay neurons, visual projection neurons (LC9, LC14), and DNs; in this data the modulatory neurons do not synapse directly onto T4/T5.
 
 **Effect on motor output before training** (`uv run python scripts/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
+
+### Brain modes (`scripts/export_brains.py`, `configs/brains.yaml`)
+
+Four brains the demo can switch between, all with the **same neurons** (one `neurons.json`), different wiring:
+
+| `id` | What | Playable |
+|---|---|---|
+| `real` | The fly's own wiring | yes |
+| `shuffled_layers` | Same layer-to-layer connection counts, random partners within each layer pair | yes |
+| `shuffled_signs` | Real wiring, excitation and inhibition scrambled | yes |
+| `shuffled_free` | Partners from anywhere: 1,068 direct eye-to-motor connections versus 1 | view only (no checkpoint) |
+
+Run on HiPerGator (it needs the checkpoints and their subgraphs). It writes:
+
+- **`bundles/<id>/`** for the server: `bc_<n>.npz` plus `subgraph/` (exact training files), `MANIFEST.json` (`checkpoint` is null for view-only). The server's `GET /api/brains` should list these, and load each from its bundle.
+- **`frontend/public/data/brains/index.json`**: `{schema_version, modes: [{id, label, description, playable, bundle, play, wiring}]}`. `play` is `{heldout, train}` hit rates (from `eval_<ckpt>.json`) or null. `wiring` has `direct_eye_to_motor_connections`, `eye_to_motor_synapses_median`, `eye_to_motor_synapses_histogram` (synapses: motor neuron count), `motor_neurons_unreachable_from_eye`, `connections_shared_with_real` (0 to 1), `excitatory_neuron_fraction`.
+- **`frontend/public/data/brains/<id>.json`**: `{id, sign: int[N], edges_columns: ["pre","post","weight","sign"], edges: [[pre, post, weight, sign], ...]}`. `sign` replaces `neurons.json`'s `sign` for that mode (only `shuffled_signs` differs). `edges` is the strongest 60 connections of each layer-to-layer block (about 2,500), neuron indices into `neurons.json`, for drawing the wiring in 3D: in `shuffled_free` many lines run straight from the eyes to the motor neurons.
 
 ## 5. Brain step and checkpoints (Person 1)
 

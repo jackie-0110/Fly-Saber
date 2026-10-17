@@ -45,6 +45,19 @@ tail -f logs/fly-bc-<jobid>.out     # one row every 50 updates
 
 Each row: `loss` should fall; `head_accuracy` is [red position, red direction, blue position, blue direction]. Direction starts near 95% only because "no cut" is almost always right, so watch position accuracy and `hit_rate` (greedy play, fraction of notes hit). Output: `checkpoints/real/seed0/bc_2000.npz` and `bc_log.json`. Settings: `configs/train_bc.yaml`. GPU memory is about 2.5 GB per 64 envs.
 
+## Experiments in parallel
+
+```bash
+git pull                                              # this branch or main
+sbatch --export=ALL --job-name=fly-prep --cpus-per-task=2 --mem=8gb --time=00:20:00 \
+  --output=logs/%x-%j.out --wrap "source training/slurm/env.sh && uv run python scripts/build_variants.py"
+bash training/slurm/experiments.sh                    # after fly-prep finishes; 5 jobs, one L4 each
+```
+
+`experiments.sh` submits: `fast` (real wiring, brain lr 1e-4), `readout` (brain frozen), `rewired` and `signs` (control brains), `fast-s1` (second seed). Shared: 5 s windows, 256 games per update, 1000 updates, a checkpoint every 50. Results land in `checkpoints/<variant>/<run_name>/seed<seed>/` (`bc_50.npz`, `bc_100.npz`, ..., `bc_log.json`, `config.json`); logs in `logs/fly-<name>-<jobid>.out`.
+
+One-off runs take overrides: `sbatch --export=ALL training/slurm/bc.sbatch run_name=mytest window_sec=5 brain_learning_rate=1e-4 model.freeze_brain=true`. Bare keys set `configs/train_bc.yaml` fields; `model.`, `saber.`, `eye.` prefixes set those configs.
+
 ## Every time
 
 ```bash

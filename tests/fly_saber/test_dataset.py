@@ -62,3 +62,12 @@ def test_sample_episodes_stays_inside_each_song(tmp_path: Path) -> None:
     assert (np.asarray(episodes.start_sec) >= 0.0).all()
     assert (np.asarray(episodes.end_sec) <= 30.0).all()
     assert (np.asarray(episodes.speed_mps) == 7.0).all()
+
+
+def test_load_map_set_keeps_maps_up_to_a_difficulty_quantile(tmp_path: Path) -> None:
+    write_map(tmp_path, "aaa_easy", "train", [1.0, 3.0, 5.0])
+    write_map(tmp_path, "bbb_hard", "train", [1.0, 1.2, 1.4, 1.6, 1.8])
+
+    _, ids = load_map_set(tmp_path, "train", min_notes=1, difficulty_quantile=0.5)
+
+    assert ids == ["aaa_easy"]

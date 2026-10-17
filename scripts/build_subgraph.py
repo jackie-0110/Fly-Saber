@@ -1,4 +1,5 @@
-"""Build data/processed/{dataset}_subgraph: neurons, edges, groups, meta.
+"""Build data/processed/{dataset}_subgraph: neurons, edges, groups, meta. Refuses to
+replace an existing build without --force (checkpoints depend on its exact neuron order).
 
 Owner: Person 1. Usage: uv run python scripts/build_subgraph.py [configs/subgraph.yaml]
 """
@@ -14,9 +15,14 @@ from brain.connectome.load_malecns import load_edges, load_neurons
 from brain.connectome.subgraph import build_subgraph
 
 
-def main(config_path: str = "configs/subgraph.yaml") -> None:
+def main(config_path: str = "configs/subgraph.yaml", force: bool = False) -> None:
     cfg = load_config(config_path, SubgraphConfig)
     out = Path(cfg.out_dir)
+    if (out / "neurons.parquet").exists() and not force:
+        # Trained checkpoints, the server, and the front end all index neurons by this
+        # build. A rebuild can differ (it did across machines), so never replace it silently.
+        print(f"{out} already exists; keeping it (checkpoints were trained on it). Use --force.")
+        return
     out.mkdir(parents=True, exist_ok=True)
 
     print("loading neurons ...")
@@ -49,4 +55,5 @@ def main(config_path: str = "configs/subgraph.yaml") -> None:
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    paths = [a for a in sys.argv[1:] if a != "--force"]
+    main(paths[0] if paths else "configs/subgraph.yaml", force="--force" in sys.argv[1:])

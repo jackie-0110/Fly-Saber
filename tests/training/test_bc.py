@@ -1,11 +1,13 @@
 """Behavior cloning against the scripted expert, with a linear policy as the brain."""
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 
 from brain.model.brain import init_params as init_brain_params
@@ -15,7 +17,7 @@ from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
 from fly_saber.eye import EyeConfig
 from fly_saber.maps.dataset import load_map_set
 from tests.training.test_brain_policy import model_config, write_subgraph
-from training.bc import BCConfig, action_heads, make_steps, run
+from training.bc import BCConfig, Stage, action_heads, make_steps, run, train
 from training.checkpoints import load_checkpoint, subgraph_fingerprint
 
 SABER = load_config(SaberConfig, "saber")
@@ -76,11 +78,19 @@ def bc_config(tmp_path: Path, **overrides: Any) -> BCConfig:
     return BCConfig(**{**values, **overrides})
 
 
-def setup(tmp_path: Path) -> tuple[Any, Any]:
+IDLE_BIAS = (
+    jnp.zeros(sum(HEADS))
+    .at[jnp.array([IDLE_CELL, 13 + NO_CUT, 18 + IDLE_CELL, 31 + NO_CUT])]
+    .set(10.0)
+)
+
+
+def setup(tmp_path: Path, env: SaberEnv = ENV, dagger_fraction: float = 0.0) -> tuple[Any, Any]:
     cfg = bc_config(tmp_path)
-    map_set, _ = load_map_set(tmp_path, "train", ENV.cfg.max_visible_notes)
+    map_set, _ = load_map_set(tmp_path, "train", env.cfg.max_visible_notes)
     optimizer = optax.adam(cfg.learning_rate)
-    return make_steps(ENV, LinearPolicy(), map_set, cfg, optimizer), optimizer
+    steps = make_steps(env, LinearPolicy(), map_set, cfg, optimizer, dagger_fraction)
+    return steps, optimizer
 
 
 def test_bc_lowers_the_loss(tmp_path: Path) -> None:
@@ -96,12 +106,54 @@ def test_bc_lowers_the_loss(tmp_path: Path) -> None:
 
 def test_evaluate_moves_the_env_with_the_policy(tmp_path: Path) -> None:
     (_, evaluate), _ = setup(tmp_path)
-    idle = jnp.zeros(sum(HEADS)).at[
-        jnp.array([IDLE_CELL, 13 + NO_CUT, 18 + IDLE_CELL, 31 + NO_CUT])
-    ]
-    played = evaluate(init_params(idle.set(10.0)), jax.random.PRNGKey(0))
+    played = evaluate(init_params(IDLE_BIAS), jax.random.PRNGKey(0))
     assert int(played.hits) == 0
     assert int(played.misses) == 4 * 6
+
+
+def test_dagger_lets_the_policy_drive_while_scoring_against_the_expert(tmp_path: Path) -> None:
+    params = init_params(IDLE_BIAS)
+    for fraction, hits in ((0.0, 4 * 6), (1.0, 0)):
+        (update, _), optimizer = setup(tmp_path, dagger_fraction=fraction)
+        _, _, metrics = update(params, optimizer.init(params), jax.random.PRNGKey(0))
+        assert int(metrics.hits) == hits
+        assert float(metrics.loss) > 1.0
+
+
+def test_position_only_scoring_trains_when_to_cut_but_not_which_way(tmp_path: Path) -> None:
+    def direction_bias(score_direction: bool) -> np.ndarray:
+        env = SaberEnv.create(dataclasses.replace(SABER, score_direction=score_direction), EYE)
+        (update, _), optimizer = setup(tmp_path, env)
+        params = init_params()
+        new, _, _ = update(params, optimizer.init(params), jax.random.PRNGKey(0))
+        return np.asarray(new["b"])[13:18]
+
+    position_only = direction_bias(False)
+    np.testing.assert_allclose(position_only[:NO_CUT], position_only[0])
+    assert position_only[NO_CUT] != position_only[0]
+    assert np.ptp(direction_bias(True)[:NO_CUT]) > 0
+
+
+def test_train_runs_the_curriculum_stages_in_order(tmp_path: Path) -> None:
+    stages = (
+        Stage(0.5, score_direction=False, difficulty_quantile=1.0, speed_scale=0.5),
+        Stage(0.5, score_direction=True, difficulty_quantile=1.0, dagger_fraction=0.5),
+    )
+    cfg = bc_config(tmp_path, n_updates=4, curriculum=stages)
+    _, log = train(ENV, LinearPolicy(), init_params(), cfg)
+    assert [row["stage"] for row in log] == [0, 0, 1, 1]
+
+
+def test_curriculum_config_loads_from_yaml_and_can_be_switched_off() -> None:
+    import pytest
+
+    from training.bc import apply_overrides
+
+    cfg = load_config(BCConfig, "train_bc")
+    assert cfg.curriculum and all(isinstance(s, Stage) for s in cfg.curriculum)
+    assert apply_overrides({"train": cfg}, ["curriculum=none"])["train"].curriculum == ()
+    with pytest.raises(ValueError, match="fractions"):
+        dataclasses.replace(cfg, curriculum=(Stage(0.5, True, 1.0),))
 
 
 def test_run_saves_a_brain_checkpoint_that_loads_back(tmp_path: Path) -> None:
@@ -117,8 +169,70 @@ def test_run_saves_a_brain_checkpoint_that_loads_back(tmp_path: Path) -> None:
     graph, _, n_neurons = load_graph(model_cfg)
     template = init_brain_params(jax.random.PRNGKey(1), graph, model_cfg, n_neurons)
     _, meta = load_checkpoint(path, template, expect_subgraph=subgraph_fingerprint(subgraph))
-    assert path == tmp_path / "checkpoints" / "test" / "seed0" / "bc_2.npz"
+    run_dir = tmp_path / "checkpoints" / "test" / "default" / "seed0"
+    assert path == run_dir / "bc_2.npz"
     assert (meta["stage"], meta["step"]) == ("bc", 2)
+    assert (run_dir / "config.json").exists() and (run_dir / "bc_log.json").exists()
+
+
+def test_run_checkpoints_periodically_into_its_run_dir(tmp_path: Path) -> None:
+    import dataclasses
+
+    subgraph = tmp_path / "subgraph"
+    subgraph.mkdir()
+    write_subgraph(subgraph)
+    (subgraph / "meta.json").write_text(
+        json.dumps({"n_neurons": 4, "n_edges": 3, "n_synapses": 30})
+    )
+    model_cfg = model_config(subgraph, action_heads(SABER.n_sabers))
+    cfg = dataclasses.replace(
+        bc_config(tmp_path, n_updates=4), run_name="exp1", checkpoint_every=2, log_every=2
+    )
+    run(cfg, model_cfg, SABER, EYE)
+    run_dir = tmp_path / "checkpoints" / "test" / "exp1" / "seed0"
+    assert sorted(p.name for p in run_dir.glob("bc_*.npz")) == ["bc_2.npz", "bc_4.npz"]
+    assert [row["update"] for row in json.loads((run_dir / "bc_log.json").read_text())] == [2, 4]
+
+
+def test_apply_overrides() -> None:
+    import pytest
+
+    from brain.config import ModelConfig
+    from training.bc import BCConfig, apply_overrides
+
+    base: dict[str, Any] = {
+        "train": BCConfig("", "train", 0.0, 1.0, 1, 1e-2, 1, 1, 0, "real", ""),
+        "model": ModelConfig("", 33.3, 4, 20.0, 10.0, 0.5, "relu", 0.9, 1.0, [13, 5]),
+    }
+    out = apply_overrides(
+        base,
+        [
+            "run_name=fast",
+            "window_sec=5",
+            "batch_size=256",
+            "brain_learning_rate=1e-4",
+            "model.freeze_brain=true",
+            "model.subgraph_dir=data/x",
+        ],
+    )
+    t, m = out["train"], out["model"]
+    assert (t.run_name, t.window_sec, t.batch_size, t.brain_learning_rate) == (
+        "fast",
+        5.0,
+        256,
+        1e-4,
+    )
+    assert m.freeze_brain is True and m.subgraph_dir == "data/x"
+    assert base["train"].run_name == "default"  # originals untouched
+    for bad in (
+        ["nope=1"],
+        ["model.nope=1"],
+        ["x.y=1"],
+        ["batch_size"],
+        ["model.freeze_brain=yes"],
+    ):
+        with pytest.raises(ValueError):
+            apply_overrides(base, bad)
 
 
 def test_optimizer_never_moves_fixed_brain_buffers() -> None:

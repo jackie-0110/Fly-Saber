@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
-FROM node:22-bookworm-slim AS frontend
+FROM node:25-bookworm-slim AS frontend
 WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.11-slim-bookworm AS python-builder
+FROM python:3.14-slim-bookworm AS python-builder
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY training/ training/
 COPY server/ server/
 RUN uv sync --locked --no-dev
 
-FROM python:3.11-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -37,4 +37,4 @@ USER fly_saber
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/games', timeout=3)"]
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "server.app:serve", "--factory", "--host", "0.0.0.0", "--port", "8000"]

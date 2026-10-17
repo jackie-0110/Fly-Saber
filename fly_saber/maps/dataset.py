@@ -9,8 +9,9 @@ from pathlib import Path
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
-from fly_saber.maps.adapt import NoteArrays, note_arrays, thin_notes
+from fly_saber.maps.adapt import NoteArrays, difficulty, note_arrays, thin_notes
 
 
 @jax.tree_util.register_dataclass
@@ -34,17 +35,26 @@ class Episodes:
 
 
 def load_map_set(
-    normalized_dir: Path, split: str, min_notes: int, min_gap_sec: float = 0.0
+    normalized_dir: Path,
+    split: str,
+    min_notes: int,
+    min_gap_sec: float = 0.0,
+    difficulty_quantile: float = 1.0,
 ) -> tuple[MapSet, list[str]]:
     """Load every `split` map, thinned to `min_gap_sec`; also returns their map ids.
 
     `min_notes` is the smallest padded length, normally the env's `max_visible_notes`.
+    Keeps maps whose difficulty score, after thinning, is at most that quantile of the split's.
     """
     maps = [json.loads(p.read_text()) for p in sorted(normalized_dir.glob("*.json"))]
     maps = [m for m in maps if m["split"] == split]
     if not maps:
         raise ValueError(f"no {split} maps in {normalized_dir}")
     notes = [thin_notes(m["notes"], min_gap_sec) for m in maps]
+    scores = [difficulty(n)["score"] for n in notes]
+    limit = np.quantile(scores, difficulty_quantile)
+    maps = [m for m, score in zip(maps, scores, strict=True) if score <= limit]
+    notes = [n for n, score in zip(notes, scores, strict=True) if score <= limit]
     max_notes = max(min_notes, *(len(n) for n in notes))
     arrays = [note_arrays(n, max_notes) for n in notes]
     map_set = MapSet(

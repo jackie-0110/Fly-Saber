@@ -5,19 +5,19 @@
    "group": "eye_left",
    "label": "Left eye",
    "description": "Photoreceptors and lamina of the left eye. Lesioning blinds that eye.",
-   "n_neurons": 1529
+   "n_neurons": 1526
   },
   {
    "group": "eye_right",
    "label": "Right eye",
    "description": "Photoreceptors and lamina of the right eye. Lesioning blinds that eye.",
-   "n_neurons": 1693
+   "n_neurons": 1699
   },
   {
    "group": "motion_detectors",
    "label": "Motion detectors (T4, T5)",
    "description": "Direction-selective neurons that report which way edges move. T4 sees bright edges, T5 dark ones.",
-   "n_neurons": 3394
+   "n_neurons": 3383
   },
   {
    "group": "looming_detectors",

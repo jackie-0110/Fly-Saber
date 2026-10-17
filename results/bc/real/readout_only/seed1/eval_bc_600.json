@@ -1,0 +1,33 @@
+{
+ "checkpoint": "checkpoints/real/readout_only/seed1/bc_600.npz",
+ "meta": {
+  "update": 600,
+  "loss": 3.051189422607422,
+  "head_accuracy": [
+   0.6794,
+   0.9424,
+   0.7005,
+   0.9406
+  ],
+  "hit_rate": 0.29048063462435836,
+  "bombs": 7
+ },
+ "heldout": {
+  "untouched": {
+   "hit_rate": 0.31739894551845343,
+   "hits": 2709,
+   "misses": 5588,
+   "bad_cuts": 238,
+   "bombs": 51
+  }
+ },
+ "train": {
+  "untouched": {
+   "hit_rate": 0.2830762301542619,
+   "hits": 2514,
+   "misses": 6032,
+   "bad_cuts": 335,
+   "bombs": 42
+  }
+ }
+}

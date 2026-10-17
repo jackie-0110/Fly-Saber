@@ -8,10 +8,12 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
-from server.app import create_app, expert_sims
+from server.app import EXPERT, create_app
+from server.saber_sim import expert_sims
+from server.session import LiveBrain
 
 AUDIO_BYTES = b"OggS fixture"
-SIMS = expert_sims()
+EXPERT_BRAIN = LiveBrain(EXPERT, expert_sims())
 
 
 def make_map(map_id: str) -> dict[str, Any]:
@@ -52,8 +54,8 @@ def make_map(map_id: str) -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def client(tmp_path: Path) -> TestClient:
+def write_maps(tmp_path: Path) -> None:
+    """Two fixture maps; only abc12_hard has allowlisted audio."""
     (tmp_path / "normalized").mkdir()
     (tmp_path / "audio").mkdir()
     for map_id in ("abc12_hard", "zzz99_easy"):
@@ -71,7 +73,12 @@ def client(tmp_path: Path) -> TestClient:
         }
     ]
     (tmp_path / "demo_allowlist.json").write_text(json.dumps(allowlist))
-    return TestClient(create_app(tmp_path, SIMS))
+
+
+@pytest.fixture
+def client(tmp_path: Path) -> TestClient:
+    write_maps(tmp_path)
+    return TestClient(create_app(tmp_path, [EXPERT_BRAIN]))
 
 
 def test_games(client: TestClient) -> None:

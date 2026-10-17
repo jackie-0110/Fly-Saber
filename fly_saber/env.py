@@ -15,7 +15,15 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from fly_saber.eye import EyeConfig, Patches, lattice, render
+from fly_saber.eye import (
+    EyeConfig,
+    EyeControls,
+    Patches,
+    apply_eye_controls,
+    eye_controls,
+    lattice,
+    render,
+)
 from fly_saber.maps.adapt import ANY_DIRECTION, NoteArrays
 
 N_LANES = 4
@@ -85,6 +93,13 @@ class SaberState:
     bombs: jax.Array
     combo: jax.Array
     max_combo: jax.Array
+    eye: EyeControls
+    """Replace live with `set_eye_controls`."""
+
+
+def set_eye_controls(state: SaberState, **values: Any) -> SaberState:
+    """`state` with the named `EyeControls` fields replaced; takes effect from the next frame."""
+    return dataclasses.replace(state, eye=eye_controls(state.eye, **values))
 
 
 def block_patches(
@@ -128,25 +143,45 @@ class SaberEnv:
     cfg: SaberConfig
     eye_cfg: EyeConfig
     directions: jax.Array
+    left_eye: jax.Array
+    """(n,) bool, which eye each direction belongs to."""
 
     @classmethod
     def create(
-        cls, cfg: SaberConfig, eye_cfg: EyeConfig, directions: np.ndarray | None = None
+        cls,
+        cfg: SaberConfig,
+        eye_cfg: EyeConfig,
+        directions: np.ndarray | None = None,
+        left_eye: np.ndarray | None = None,
     ) -> "SaberEnv":
         """`directions` are the eye's (n, 2) viewing angles; the hex lattice by default.
 
-        Pass the brain's eye column angles (training/brain_policy.py) so observations
-        line up with the brain's eye input.
+        Pass the brain's eye column angles and sides (training/brain_policy.py) so
+        observations line up with the brain's eye input. The side is not the sign of
+        the azimuth: each eye sees `binocular_overlap_deg` past the midline.
         """
-        if directions is None:
-            directions, _ = lattice(eye_cfg)
-        return cls(cfg, eye_cfg, jnp.asarray(directions, dtype=jnp.float32))
+        if (directions is None) != (left_eye is None):
+            raise ValueError("pass directions and left_eye together")
+        if directions is None or left_eye is None:
+            directions, n_left = lattice(eye_cfg)
+            left_eye = np.arange(len(directions)) < n_left
+        return cls(
+            cfg,
+            eye_cfg,
+            jnp.asarray(directions, dtype=jnp.float32),
+            jnp.asarray(left_eye, dtype=bool),
+        )
 
     def time(self, state: SaberState) -> jax.Array:
         return state.start_sec + state.step / self.cfg.step_hz
 
     def reset(
-        self, notes: NoteArrays, speed_mps: jax.Array, start_sec: jax.Array, end_sec: jax.Array
+        self,
+        notes: NoteArrays,
+        speed_mps: jax.Array,
+        start_sec: jax.Array,
+        end_sec: jax.Array,
+        eye: EyeControls | None = None,
     ) -> tuple[jax.Array, SaberState]:
         """Start at `start_sec` with notes outside [start_sec, end_sec) already judged.
 
@@ -175,6 +210,7 @@ class SaberEnv:
             bombs=zero,
             combo=zero,
             max_combo=zero,
+            eye=eye_controls() if eye is None else eye,
         )
         return self.observe(state), state
 
@@ -275,12 +311,14 @@ class SaberEnv:
         color = dataclasses.replace(
             patches, luminance=jnp.where(shown, jnp.concatenate([chroma, chroma]), background)
         )
-        return jnp.stack(
+        blur = state.eye.blur_deg
+        image = jnp.stack(
             [
-                render(self.directions, luminance, self.eye_cfg),
-                render(self.directions, color, self.eye_cfg),
+                render(self.directions, luminance, self.eye_cfg, blur),
+                render(self.directions, color, self.eye_cfg, blur),
             ]
         )
+        return apply_eye_controls(image, state.eye, self.left_eye, state.step, background)
 
     def render_state(self, state: SaberState) -> dict[str, Any]:
         """The `render_state` contract (docs/PROTOCOL.md section 2) for one unbatched state."""
