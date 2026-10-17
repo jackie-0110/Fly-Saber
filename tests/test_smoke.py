@@ -1,7 +1,10 @@
-"""Smoke test: the package imports."""
+"""Smoke test: every top-level package imports."""
 
-import flyarcade
+import importlib
+
+import pytest
 
 
-def test_import() -> None:
-    assert flyarcade.__doc__
+@pytest.mark.parametrize("name", ["brain", "fly_saber", "training", "server"])
+def test_import(name: str) -> None:
+    assert importlib.import_module(name).__doc__
