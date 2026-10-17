@@ -27,7 +27,7 @@ export function SongLibrary() {
           aria-pressed={source === 'community'}
           onClick={() => setSource('community')}
         >
-          Community
+          Community preview
         </Button>
       </div>
       {source === 'live' ? active && <LiveSongs /> : <CommunitySongLibrary />}
