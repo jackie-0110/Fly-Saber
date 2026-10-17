@@ -118,6 +118,7 @@ class LevelInfo:
     title: str
     artist: str
     mapper: str
+    song_filename: str
     bpm: float
     beatmaps: list[Beatmap]
     """Standard difficulties only."""
@@ -143,6 +144,7 @@ def read_info_v2(info: dict[str, Any]) -> LevelInfo:
         info["_songName"],
         info["_songAuthorName"],
         info["_levelAuthorName"],
+        info["_songFilename"],
         float(info["_beatsPerMinute"]),
         beatmaps,
         None,
@@ -168,10 +170,22 @@ def read_info_v4(info: dict[str, Any], level_dir: Path) -> LevelInfo:
         info["song"]["title"],
         info["song"]["author"],
         ", ".join(mappers),
+        audio["songFilename"],
         float(audio["bpm"]),
         beatmaps,
         sample_clock(load_dat(level_dir / audio["audioDataFilename"])),
     )
+
+
+def read_info(level_dir: Path) -> LevelInfo:
+    """Read a level's Info.dat, v2 or v4."""
+    info = load_info(level_dir)
+    version = format_major_version(info)
+    if version == 2:
+        return read_info_v2(info)
+    if version == 4:
+        return read_info_v4(info, level_dir)
+    raise UnsupportedMapError(f"Info.dat version {version}")
 
 
 def normalize_chart(
@@ -245,15 +259,7 @@ def normalize_level(
 
     `allowed` is the level's allowlist entry; without one the map ships no audio.
     """
-    info = load_info(level_dir)
-    version = format_major_version(info)
-    if version == 2:
-        level = read_info_v2(info)
-    elif version == 4:
-        level = read_info_v4(info, level_dir)
-    else:
-        raise UnsupportedMapError(f"Info.dat version {info.get('version') or info.get('_version')}")
-
+    level = read_info(level_dir)
     maps = []
     for beatmap in level.beatmaps:
         dat = load_dat(level_dir / beatmap.filename)

@@ -23,6 +23,7 @@ INFO = {
     "_version": "2.0.0",
     "_songName": "Fixture",
     "_songAuthorName": "Artist",
+    "_songFilename": "song.ogg",
     "_levelAuthorName": "Mapper",
     "_beatsPerMinute": 120,
     "_songTimeOffset": 0,
@@ -163,15 +164,18 @@ def test_v2_bpm_changes_are_rejected(tmp_path: Path) -> None:
         normalize(write_level(tmp_path / "v2", easy))
 
 
-def test_v4_audio_regions_set_the_tempo() -> None:
-    clock = sample_clock(
-        {
-            "songFrequency": 100,
-            "bpmData": [{"ei": 200, "eb": 4}, {"si": 200, "ei": 300, "sb": 4, "eb": 8}],
-        }
-    )
-    assert clock(2) == pytest.approx(1.0)
-    assert clock(6) == pytest.approx(2.5)
+def test_v4_audio_regions_set_the_note_times(tmp_path: Path) -> None:
+    easy = {
+        "version": "4.0.0",
+        "colorNotes": [{"b": 2}, {"b": 4}, {"b": 6}],
+        "colorNotesData": [{}],
+    }
+    audio = {
+        "songFrequency": 100,
+        "bpmData": [{"ei": 200, "eb": 4}, {"si": 200, "ei": 300, "sb": 4, "eb": 8}],
+    }
+    normalized = normalize(write_level(tmp_path / "v4", easy, INFO_V4, audio))
+    assert [n["time_sec"] for n in normalized["notes"]] == [1.0, 2.0, 2.5]
 
 
 def test_gapped_v4_audio_regions_are_rejected() -> None:

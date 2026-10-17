@@ -11,7 +11,7 @@ import httpx
 
 from fly_saber.maps.allowlist import AllowlistEntry, load_allowlist
 from fly_saber.maps.beatsaver_client import download_level, make_client, map_metadata
-from fly_saber.maps.normalize import load_info, normalize_level
+from fly_saber.maps.normalize import normalize_level, read_info
 
 RAW_DIR = Path("data/maps/raw")
 NORMALIZED_DIR = Path("data/maps/normalized")
@@ -32,9 +32,7 @@ def stage_level(client: httpx.Client, entry: AllowlistEntry) -> list[str]:
     for normalized in maps:
         (NORMALIZED_DIR / f"{normalized['map_id']}.json").write_text(json.dumps(normalized))
     # The .egg files BeatSaver ships are plain Ogg Vorbis.
-    shutil.copyfile(
-        level_dir / load_info(level_dir)["_songFilename"], AUDIO_DIR / f"{entry.key}.ogg"
-    )
+    shutil.copyfile(level_dir / read_info(level_dir).song_filename, AUDIO_DIR / f"{entry.key}.ogg")
     return [m["map_id"] for m in maps]
 
 

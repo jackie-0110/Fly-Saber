@@ -82,7 +82,7 @@ class CommunityMaps:
                 duration_sec=float(meta["metadata"]["duration"]),
                 allowed=None,
             )
-        except (ValueError, KeyError, StopIteration) as error:
+        except (ValueError, KeyError, StopIteration, TypeError) as error:
             # UnsupportedMapError is a ValueError: legacy offsets, rotating charts, unknown formats.
             raise MapImportError(422, f"the fly cannot play this map yet: {error}") from error
         if not maps:

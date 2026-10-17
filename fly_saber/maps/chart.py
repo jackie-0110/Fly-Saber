@@ -1,4 +1,4 @@
-"""Version-independent chart in beat time, produced by the v2 and v3 parsers.
+"""Version-independent chart in beat time, produced by the v2, v3 and v4 parsers.
 
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
