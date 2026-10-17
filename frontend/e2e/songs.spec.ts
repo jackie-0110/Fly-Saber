@@ -211,6 +211,15 @@ test('search failure, empty results, and retry have usable recovery states', asy
   fail = false
   await page.getByRole('button', { name: 'Retry search', exact: true }).click()
   await expect(page.getByText('No maps found.', { exact: false })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Song sort order', exact: true }).selectOption('Latest')
+  await page.getByRole('textbox', { name: 'Search songs', exact: true }).fill('Test Artist')
+  const request = page.waitForRequest(
+    (request) =>
+      request.url().includes('/search/text/') &&
+      new URL(request.url()).searchParams.get('q') === 'Test Artist',
+  )
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  expect(new URL((await request).url()).searchParams.get('sortOrder')).toBe('Latest')
 })
 
 test('cancelling a pending song download retains the previous track and position', async ({

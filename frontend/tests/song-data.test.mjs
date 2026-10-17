@@ -67,7 +67,8 @@ test('audio timing accepts both supported sample-region schemas and rejects disc
 test('a complete modern ZIP uses its sample timing and modern song/mapper metadata', async () => {
   const modern = { version: '4.0.0', song: { title: 'Sample Regions', author: 'Fixture Artist' },
     audio: { songFilename: 'song.wav', audioDataFilename: 'AudioData.dat', bpm: 120 },
-    difficultyBeatmaps: [{ characteristic: 'Standard', difficulty: 'Hard', beatmapDataFilename: 'Hard.dat',
+    difficultyBeatmaps: [{ characteristic: 'Lightshow', difficulty: 'ExpertPlus', beatmapAuthors: { mappers: ['Lightshow Author'] } },
+      { characteristic: 'Standard', difficulty: 'Hard', beatmapDataFilename: 'Hard.dat',
       noteJumpMovementSpeed: 12, beatmapAuthors: { mappers: ['Modern Mapper'] } }],
   }
   const audio = { version: '4.0.0', songFrequency: 100, bpmData: [

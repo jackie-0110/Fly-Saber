@@ -105,7 +105,7 @@ export function SongLibrary() {
         className="song-search"
         onSubmit={(event) => {
           event.preventDefault()
-          void search(query, query.trim() && sort === 'Latest' ? 'Relevance' : sort)
+          void search(query, sort)
         }}
       >
         <div className="song-search-input">
@@ -206,7 +206,13 @@ export function SongLibrary() {
         </section>
       )}
       <div className="library-section-label">
-        <span>{lastQuery.query ? 'SEARCH RESULTS' : 'LATEST COMMUNITY MAPS'}</span>
+        <span>
+          {lastQuery.query
+            ? 'SEARCH RESULTS'
+            : lastQuery.sort === 'Rating'
+              ? 'TOP RATED MAPS'
+              : 'LATEST COMMUNITY MAPS'}
+        </span>
         <span>{results.length ? `${results.length} maps` : ''}</span>
       </div>
       {error && (

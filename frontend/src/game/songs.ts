@@ -277,6 +277,7 @@ export async function importSong(
         })),
       )
   const charts: Chart[] = []
+  const mapperNames = new Set<string>()
   const failures: string[] = []
   for (const entry of entries) {
     if (!supportedModes.includes(entry.characteristic)) continue
@@ -304,6 +305,12 @@ export async function importSong(
         chart.warnings.push(
           `Map extensions (${required.filter((v) => typeof v === 'string').join(', ')}) are not applied.`,
         )
+      if (modern) {
+        const authors = object(d.beatmapAuthors ?? {}).mappers
+        if (Array.isArray(authors))
+          for (const name of authors)
+            if (typeof name === 'string' && name.trim()) mapperNames.add(name.trim())
+      }
       charts.push(chart)
     } catch (cause) {
       failures.push(`${name}: ${cause instanceof Error ? cause.message : 'Could not read chart.'}`)
@@ -322,16 +329,13 @@ export async function importSong(
   if (failures.length)
     for (const chart of charts)
       chart.warnings.push(`Some difficulties could not be loaded: ${failures.join(' ')}`)
-  const authors = modern ? object(entries[0]?.data.beatmapAuthors ?? {}) : null
   return {
     id,
     title: string(modern ? songMeta.title : info._songName, 'Untitled song'),
     subtitle: string(modern ? songMeta.subTitle : info._songSubName),
     artist: string(modern ? songMeta.author : info._songAuthorName, 'Unknown artist'),
     mapper: modern
-      ? Array.isArray(authors?.mappers)
-        ? authors.mappers.filter((v) => typeof v === 'string').join(', ')
-        : 'Unknown mapper'
+      ? [...mapperNames].join(', ') || 'Unknown mapper'
       : string(info._levelAuthorName, 'Unknown mapper'),
     bpm,
     sourceUrl,
