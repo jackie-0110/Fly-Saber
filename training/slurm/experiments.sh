@@ -12,6 +12,7 @@ mkdir -p logs
 COMMON="window_sec=5 batch_size=256 n_updates=1000 checkpoint_every=50 $*"
 FAST="brain_learning_rate=0.0001"
 REWIRED="variant=rewired model.subgraph_dir=data/processed/malecns_subgraph_rewired"
+LAYERED="variant=rewired_layered model.subgraph_dir=data/processed/malecns_subgraph_rewired_layered"
 SIGNS="variant=sign_shuffled model.subgraph_dir=data/processed/malecns_subgraph_sign_shuffled"
 
 submit() {  # job name, then overrides
@@ -23,7 +24,10 @@ submit() {  # job name, then overrides
 submit fast run_name=fast $FAST $COMMON
 # 2. Real wiring, readout only: does training the brain itself help?
 submit readout run_name=readout_only brain_learning_rate=0.0 model.freeze_brain=true $COMMON
-# 3. Rewired control (same degrees, scrambled partners): does the real wiring matter?
+# 3. Rewired control, shuffled within layers (eye -> lamina -> ... -> DN kept): the fair
+#    test of whether the real wiring matters.
+submit layered run_name=fast $FAST $LAYERED $COMMON
+# 3b. Unconstrained rewiring: wires the eyes straight into the DNs (1,068 direct edges vs 1).
 submit rewired run_name=fast $FAST $REWIRED $COMMON
 # 4. Sign-shuffled control (real wiring, excitatory/inhibitory labels scrambled).
 submit signs run_name=fast $FAST $SIGNS $COMMON

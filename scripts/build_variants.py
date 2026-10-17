@@ -1,4 +1,4 @@
-"""Build control brains (rewired, sign_shuffled) next to the real subgraph.
+"""Build control brains (rewired, rewired_layered, sign_shuffled) next to the real subgraph.
 
 Owner: Person 1. Usage: uv run python scripts/build_variants.py
 Writes data/processed/malecns_subgraph_<name>/ with the same neurons and groups.
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from brain.config import load_config
-from brain.connectome.variants import rewire, shuffle_signs
+from brain.connectome.variants import rewire, rewire_layered, shuffle_signs
 
 
 @dataclass(frozen=True)
@@ -33,6 +33,10 @@ def main() -> None:
         rng = np.random.default_rng(cfg.seed)
         if name == "rewired":
             v_neurons, v_edges = neurons, rewire(edges, rng)
+        elif name == "rewired_layered":
+            v_edges, stats = rewire_layered(edges, neurons, rng)
+            v_neurons = neurons
+            print(f"  {name}: {stats['blocks']} blocks, {stats['kept_edges']} edges kept as is")
         elif name == "sign_shuffled":
             v_neurons, v_edges = shuffle_signs(neurons, edges, rng)
         else:
