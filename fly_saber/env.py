@@ -8,12 +8,12 @@ from dataclasses import dataclass
 import jax
 import jax.numpy as jnp
 
-from flyarcade.sim.eye import Patches
+from fly_saber.eye import Patches
 
 N_LANES = 4
 N_LAYERS = 3
 
-# Indexed by sim direction (flyarcade.maps.adapt): 0 up, 1 down, 2 left, 3 right, 4 any.
+# Indexed by sim direction (fly_saber.maps.adapt): 0 up, 1 down, 2 left, 3 right, 4 any.
 # Unit vector toward the side of the block where each cut starts; that half is drawn bright.
 CUT_START_SIDE = jnp.array([[0.0, -1.0], [0.0, 1.0], [1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]])
 

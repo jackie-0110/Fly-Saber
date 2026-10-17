@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
-from flyarcade.server.app import create_app
+from server.app import create_app
 
 AUDIO_BYTES = b"OggS fixture"
 

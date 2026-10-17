@@ -1,1 +1,43 @@
-# subgraph.yaml (owner: Person 1). Loaded into a dataclass; no magic numbers in code.
+# Visual-to-motor subgraph extraction (owner: Person 1). See docs/DATA_NOTES.md.
+dataset: malecns
+raw_dir: data/raw/malecns
+out_dir: data/processed/malecns_subgraph
+
+# Edges below this synapse count are dropped.
+min_synapses: 5
+
+# Keep a hex column if both coordinates are divisible by column_stride (2 keeps about 1/4).
+column_stride: 2
+
+# Columnar optic lobe types, kept only in sampled columns (regex, full match on `type`).
+columnar_types:
+  - "R1-R6"
+  - "R7.*"
+  - "R8.*"
+  - "L[1-5]"
+  - "Mi(1|4|9)"
+  - "Tm(1|2|3|4|9)"
+  - "T4[a-d]"
+  - "T5[a-d]"
+
+# Visual projection neurons, all kept: looming, motion, and object detectors.
+projection_types:
+  - "LC\\d+.*"
+  - "LPLC\\d+"
+  - "LLPC\\d+"
+  - "HS.*"
+  - "VS.*"
+
+# Every neuron with this superclass is kept (the motor output).
+descending_superclass: descending_neuron
+
+# Central brain bridge neurons between projection neurons and DNs, ranked by
+# min(synapses in from projection neurons, synapses out to DNs).
+max_intermediates: 2500
+
+# Hard cap. If exceeded, intermediates are pruned first; seeds are never pruned.
+max_neurons: 20000
+
+# Superclasses allowed to inherit a hex column from their strongest columnar partner.
+hex_inherit_superclasses: [ol_intrinsic, ol_sensory]
+hex_inherit_passes: 2

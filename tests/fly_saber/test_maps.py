@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from flyarcade.maps.allowlist import AllowlistEntry
-from flyarcade.maps.chart import BpmChange, UnsupportedMapError
-from flyarcade.maps.normalize import beats_to_seconds, normalize_level, spawn_distance_m
+from fly_saber.maps.allowlist import AllowlistEntry
+from fly_saber.maps.chart import BpmChange, UnsupportedMapError
+from fly_saber.maps.normalize import beats_to_seconds, normalize_level, spawn_distance_m
 
 ALLOWED = AllowlistEntry(
     key="abc", title="Fixture", artist="Artist", license="CC BY 4.0", song_url="u", split="train"

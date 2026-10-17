@@ -5,7 +5,7 @@ Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
 
 from typing import Any
 
-from flyarcade.maps.chart import Chart, ChartNote, ChartWall, UnsupportedMapError
+from fly_saber.maps.chart import Chart, ChartNote, ChartWall, UnsupportedMapError
 
 BOMB_TYPE = 3
 COLOR_TYPES = (0, 1)

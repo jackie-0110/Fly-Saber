@@ -9,9 +9,9 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
 
-from flyarcade.server.catalog import Catalog
-from flyarcade.server.protocol import Brain, Game, MapSummary
-from flyarcade.server.session import BRAINS, GAMES, FakeSaberSim, Session, SimFactory
+from server.catalog import Catalog
+from server.protocol import Brain, Game, MapSummary
+from server.session import BRAINS, GAMES, FakeSaberSim, Session, SimFactory
 
 
 def create_app(maps_dir: Path = Path("data/maps"), make_sim: SimFactory = FakeSaberSim) -> FastAPI:

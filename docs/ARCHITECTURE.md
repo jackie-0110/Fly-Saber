@@ -1,6 +1,6 @@
 # Architecture
 
-Connectome subgraph (Person 1) -> brain model (Person 1) <- fly eye + Fly Saber env (Person 2) -> server (Person 2) -> web front end (Person 3).
+`brain/` connectome subgraph and model (Person 1) <- `fly_saber/` fly eye and env (Person 2), trained by `training/` -> `server/` (Person 2) -> `frontend/` (Person 3).
 
 Fill in with a diagram once the M2 end-to-end path works.
 

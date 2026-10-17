@@ -19,8 +19,8 @@ replays/
 *.npz
 
 # Web
-web/node_modules/
-web/dist/
+frontend/node_modules/
+frontend/dist/
 
 # Secrets
 .env

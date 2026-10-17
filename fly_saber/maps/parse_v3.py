@@ -5,7 +5,7 @@ Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
 
 from typing import Any
 
-from flyarcade.maps.chart import BpmChange, Chart, ChartNote, ChartWall
+from fly_saber.maps.chart import BpmChange, Chart, ChartNote, ChartWall
 
 
 def parse(dat: dict[str, Any]) -> Chart:

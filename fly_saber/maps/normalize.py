@@ -8,9 +8,9 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from flyarcade.maps import parse_v2, parse_v3
-from flyarcade.maps.allowlist import AllowlistEntry
-from flyarcade.maps.chart import BpmChange, Chart, UnsupportedMapError
+from fly_saber.maps import parse_v2, parse_v3
+from fly_saber.maps.allowlist import AllowlistEntry
+from fly_saber.maps.chart import BpmChange, Chart, UnsupportedMapError
 
 SCHEMA_VERSION = 1
 N_LANES = 4

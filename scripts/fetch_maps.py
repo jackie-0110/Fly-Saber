@@ -9,9 +9,9 @@ from pathlib import Path
 
 import httpx
 
-from flyarcade.maps.allowlist import AllowlistEntry, load_allowlist
-from flyarcade.maps.beatsaver_client import download_level, make_client, map_metadata
-from flyarcade.maps.normalize import load_info, normalize_level
+from fly_saber.maps.allowlist import AllowlistEntry, load_allowlist
+from fly_saber.maps.beatsaver_client import download_level, make_client, map_metadata
+from fly_saber.maps.normalize import load_info, normalize_level
 
 RAW_DIR = Path("data/maps/raw")
 NORMALIZED_DIR = Path("data/maps/normalized")

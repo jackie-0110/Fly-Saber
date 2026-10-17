@@ -1,8 +1,8 @@
-.PHONY: setup data subgraph maps train-bc train-ppo serve web test lint fmt
+.PHONY: setup data subgraph maps train-bc train-ppo serve frontend test lint fmt
 
 setup:
 	uv sync
-	cd web && npm install
+	cd frontend && npm install
 
 data:
 	uv run python scripts/fetch_data.py
@@ -14,16 +14,16 @@ maps:
 	uv run python scripts/fetch_maps.py
 
 train-bc:
-	uv run python -m flyarcade.train.bc
+	uv run python -m training.bc
 
 train-ppo:
-	uv run python -m flyarcade.train.ppo
+	uv run python -m training.ppo
 
 serve:
-	uv run uvicorn flyarcade.server.app:app --reload --port 8000
+	uv run uvicorn server.app:app --reload --port 8000
 
-web:
-	cd web && npm run dev
+frontend:
+	cd frontend && npm run dev
 
 test:
 	uv run pytest
@@ -32,7 +32,7 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy
-	cd web && npm run lint
+	cd frontend && npm run lint
 
 fmt:
 	uv run ruff check --fix .

@@ -15,9 +15,9 @@ from typing import Any, Literal, Protocol
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from flyarcade.maps.adapt import ANY_DIRECTION, SIM_DIRECTION
-from flyarcade.server.catalog import Catalog
-from flyarcade.server.protocol import (
+from fly_saber.maps.adapt import ANY_DIRECTION, SIM_DIRECTION
+from server.catalog import Catalog
+from server.protocol import (
     Brain,
     ClientMessage,
     Clock,

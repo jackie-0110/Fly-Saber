@@ -3,9 +3,9 @@
 import jax.numpy as jnp
 import numpy as np
 
-from flyarcade.config import load_config
-from flyarcade.sim.eye import EyeConfig, lattice, render
-from flyarcade.sim.saber import SaberConfig, block_patches
+from fly_saber.config import load_config
+from fly_saber.env import SaberConfig, block_patches
+from fly_saber.eye import EyeConfig, lattice, render
 
 EYE = load_config(EyeConfig, "eye")
 SABER = load_config(SaberConfig, "saber")

@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from flyarcade.maps.adapt import difficulty, note_arrays, thin_notes
+from fly_saber.maps.adapt import difficulty, note_arrays, thin_notes
 
 
 def note(

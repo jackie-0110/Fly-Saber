@@ -8,8 +8,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from flyarcade.maps.allowlist import load_allowlist
-from flyarcade.server.protocol import MapSummary
+from fly_saber.maps.allowlist import load_allowlist
+from server.protocol import MapSummary
 
 # Also keeps request paths from escaping the maps directory.
 MAP_ID_PATTERN = re.compile(r"[a-z0-9]+_[a-z0-9]+")
