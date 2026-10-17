@@ -9,3 +9,5 @@ learning_rate: 0.001
 n_updates: 2000
 log_every: 50             # also runs a greedy evaluation rollout
 seed: 0
+variant: real              # label for checkpoints/{variant}/seed{seed}/
+checkpoint_dir: checkpoints
