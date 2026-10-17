@@ -1,4 +1,3 @@
-import { Crosshair, Eye, Gauge } from 'lucide-react'
 import { useSession } from '@/game/session'
 
 export function SessionReadouts() {
@@ -9,41 +8,31 @@ export function SessionReadouts() {
   return (
     <section className="session-readouts" aria-label="Session readouts">
       <div className="readout-block">
-        <h2>
-          <Gauge aria-hidden="true" />
-          Performance
-        </h2>
+        <h2>Performance</h2>
         <div className="performance-values">
           <div>
             <strong>{score ? `${(score.accuracy * 100).toFixed(1)}%` : '--'}</strong>
-            <span>ACCURACY</span>
+            <span>Accuracy</span>
           </div>
           <div>
             <strong>{score?.combo ?? '--'}</strong>
-            <span>COMBO</span>
+            <span>Combo</span>
           </div>
           <div>
             <strong>{score?.score ?? '--'}</strong>
-            <span>SCORE</span>
+            <span>Score</span>
           </div>
         </div>
       </div>
       <div className="readout-block">
-        <h2>
-          <Eye aria-hidden="true" />
-          Visual input
-        </h2>
+        <h2>Visual input</h2>
         <p className="readout-status">
           <span className="status-dot" />
           Awaiting fly's-eye stream
         </p>
-        <span className="readout-caption">Two eyes. One view of the world.</span>
       </div>
       <div className="readout-block">
-        <h2>
-          <Crosshair aria-hidden="true" />
-          Motor output
-        </h2>
+        <h2>Motor output</h2>
         <p className="readout-status">
           <span className="status-dot" />
           {sabers.length

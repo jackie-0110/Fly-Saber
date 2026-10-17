@@ -94,7 +94,13 @@ function CommunitySongLibrary() {
       void search('', 'Latest')
     }
   }, [active, search])
-  useEffect(() => () => request.current?.abort(), [])
+  useEffect(
+    () => () => {
+      request.current?.abort()
+      initial.current = false
+    },
+    [],
+  )
 
   function choose(result: SongResult, name?: string, characteristic?: string) {
     if (loaded?.id === result.id) {
@@ -111,11 +117,7 @@ function CommunitySongLibrary() {
   return (
     <div className="song-library">
       <div className="library-heading">
-        <div>
-          <span className="eyebrow">SONG LIBRARY</span>
-          <h2>Find your next track.</h2>
-        </div>
-        <Music2 aria-hidden="true" />
+        <h2>Community maps</h2>
       </div>
       <p className="library-intro">Browse community maps and choose a track to explore.</p>
       <form
@@ -161,10 +163,10 @@ function CommunitySongLibrary() {
       <div className="library-section-label">
         <span>
           {lastQuery.query
-            ? 'SEARCH RESULTS'
+            ? 'Search results'
             : lastQuery.sort === 'Rating'
-              ? 'TOP RATED MAPS'
-              : 'LATEST COMMUNITY MAPS'}
+              ? 'Top rated maps'
+              : 'Latest community maps'}
         </span>
         <span>{results.length ? `${results.length} maps` : ''}</span>
       </div>

@@ -9,10 +9,12 @@ export function SongHeader() {
   const duration = usePlayer((s) => s.duration)
   return (
     <section className="song-header" aria-label="Selected song information">
-      <div className="current-song-cover">
-        <Music2 aria-hidden="true" />
-        {coverUrl && <img src={coverUrl} alt="" />}
-      </div>
+      {song && (
+        <div className="current-song-cover">
+          <Music2 aria-hidden="true" />
+          {coverUrl && <img src={coverUrl} alt="" />}
+        </div>
+      )}
       <div className="current-song-copy">
         <div className="current-song-title">
           <h1>{song?.title ?? 'No song selected'}</h1>

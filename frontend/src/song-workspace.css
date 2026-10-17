@@ -1,15 +1,15 @@
 .observation-workspace {
-  grid-template-rows: auto minmax(460px, 1fr) 62px 132px;
+  grid-template-rows: auto minmax(460px, 1fr) 62px 112px;
 }
 .song-header {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
-  min-height: 84px;
+  min-height: 72px;
   padding: 14px 22px;
   border-bottom: 1px solid var(--line);
-  background: #282b2e;
+  background: var(--card);
 }
 .current-song-cover,
 .song-cover {
@@ -18,9 +18,9 @@
   place-items: center;
   flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid #4b5959;
-  border-radius: 6px;
-  background: linear-gradient(140deg, #3f5554, #293339);
+  border: 0;
+  border-radius: 4px;
+  background: #323c3e;
   color: #b6d5d0;
 }
 .current-song-cover {
@@ -55,9 +55,9 @@
   white-space: nowrap;
   color: #e5e8e6;
   font:
-    500 18px/1.4 'Space Grotesk',
+    500 18px/1.4 'DM Sans',
     sans-serif;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.02em;
 }
 .current-song-copy > p {
   color: #aab5b9;
@@ -71,7 +71,7 @@
   flex-wrap: wrap;
   gap: 3px 10px;
   color: #aab5b9;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   margin-top: 4px;
   overflow-wrap: anywhere;
@@ -93,6 +93,7 @@
   height: 12px;
 }
 .current-difficulty {
+  align-self: flex-start;
   padding: 2px 6px;
   border: 1px solid #586c68;
   border-radius: 4px;
@@ -121,36 +122,37 @@
 }
 .scene-empty {
   position: absolute;
-  top: 23%;
-  left: 26px;
-  width: min(300px, calc(100% - 52px));
+  top: 72px;
+  left: 24px;
+  width: min(300px, calc(100% - 48px));
   pointer-events: none;
 }
 .scene-empty h2 {
-  margin-top: 11px;
+  margin-top: 0;
   color: #e2e8e5;
   font:
-    400 clamp(22px, 2.5vw, 35px)/1.17 'Space Grotesk',
+    500 22px/1.3 'DM Sans',
     sans-serif;
-  letter-spacing: -1.1px;
-  text-shadow: 0 2px 20px #10171b;
+  letter-spacing: -0.02em;
+  text-shadow: none;
 }
 .scene-empty p {
-  max-width: 230px;
-  margin: 12px 0 17px;
+  max-width: 270px;
+  margin: 8px 0 18px;
   color: #b1c1c2;
-  font-size: 11px;
-  line-height: 1.8;
-  text-shadow: 0 1px 8px #10171b;
+  font-size: 12px;
+  line-height: 1.6;
+  text-shadow: none;
 }
 .scene-empty button {
   pointer-events: auto;
-  background: #283337ee;
-  border-color: #647875;
-  font-size: 11px;
+  background: var(--mint);
+  border-color: transparent;
+  font-size: 12px;
+  color: var(--primary-foreground);
 }
-.scene-empty button svg {
-  width: 14px;
+.scene-empty button:hover {
+  background: #c7e3dd;
 }
 .scene-bottomline {
   bottom: 36px;
@@ -166,15 +168,15 @@
   left: 24px;
   bottom: 12px;
   right: 24px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
   color: #a2b3b7;
   pointer-events: none;
 }
 .game-camera-help span {
   float: right;
-  font-size: 8px;
-  color: #809196;
+  font-size: 10px;
+  color: #a2b3b7;
 }
 .game-scene-fallback {
   position: absolute;
@@ -220,7 +222,7 @@
   background: #273638f5;
   color: #caddd6;
   font-size: 11px;
-  box-shadow: 0 4px 24px #10161960;
+  box-shadow: none;
 }
 .song-notice > svg {
   width: 15px;
@@ -385,7 +387,7 @@
   gap: 6px;
   color: #d4dfda;
   font:
-    10px ui-monospace,
+    11px ui-monospace,
     monospace;
 }
 .song-time span:last-child {
@@ -415,14 +417,14 @@
   justify-content: space-between;
 }
 .inspector-tabs [data-slot='tabs-trigger'] {
-  font-size: 10px;
+  font-size: 11px;
 }
 .songs-tab {
   flex: 1;
   min-height: 0;
   margin: 0;
   overflow-y: auto;
-  background: #23272a;
+  background: var(--card);
   scrollbar-width: thin;
   scrollbar-color: #53645f #23272a;
 }
@@ -432,9 +434,9 @@
 .song-library {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px;
   min-width: 0;
-  padding: 20px 16px;
+  padding: 20px 18px;
 }
 .library-heading {
   display: flex;
@@ -443,21 +445,16 @@
   gap: 12px;
 }
 .library-heading h2 {
-  margin-top: 8px;
+  margin-top: 0;
   color: #e4e9e5;
   font:
-    400 22px/1.2 'Space Grotesk',
+    500 20px/1.3 'DM Sans',
     sans-serif;
-  letter-spacing: -0.5px;
-}
-.library-heading > svg {
-  width: 23px;
-  height: 23px;
-  color: #a3c3b9;
+  letter-spacing: -0.02em;
 }
 .library-intro {
   margin-top: -5px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   color: #a8b7b8;
 }
@@ -472,9 +469,9 @@
   gap: 8px;
   height: 37px;
   padding: 0 10px;
-  border: 1px solid #576662;
+  border: 1px solid var(--line);
   border-radius: 5px;
-  background: #2b3436;
+  background: #2b3034;
 }
 .song-search-input:focus-within {
   outline: 2px solid #b6d5d0;
@@ -494,7 +491,7 @@
   outline: 0;
   background: transparent;
   font:
-    11px 'DM Sans',
+    12px 'DM Sans',
     sans-serif;
   color: #dce6df;
 }
@@ -521,13 +518,13 @@
   gap: 10px;
 }
 .song-search-actions select {
-  border: 1px solid #4b5a56;
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: #2b3233;
+  background: #2b3034;
   padding: 6px 8px;
   color: #b6c9c1;
   font:
-    10px 'DM Sans',
+    11px 'DM Sans',
     sans-serif;
 }
 .song-search-actions button {
@@ -545,35 +542,35 @@
   justify-content: space-between;
   gap: 10px;
   color: #9eafaa;
-  font-size: 8px;
-  letter-spacing: 1.15px;
+  font-size: 11px;
+  letter-spacing: 0;
 }
 .library-section-label > span:last-child:not(:first-child) {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0;
 }
 .song-results {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 }
 .song-card {
   min-width: 0;
-  border: 1px solid #45504f;
-  border-radius: 6px;
-  background: #2c3234;
-  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 .song-card.is-loaded {
-  border-color: #8ba99a;
-  background: #2e3b35;
+  border-color: transparent;
+  background: #b6d5d00a;
 }
 .song-card-main {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   width: 100%;
-  padding: 12px 12px 9px;
+  padding: 14px 4px 10px;
   text-align: left;
   border: 0;
   background: transparent;
@@ -604,7 +601,7 @@
 }
 .song-card-copy h3 {
   color: #e1e8e3;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -612,14 +609,14 @@
 .song-card-copy p {
   margin-top: 4px;
   color: #bccbc4;
-  font-size: 10px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 .song-card-copy small {
   display: block;
   margin-top: 4px;
   color: #9bafa6;
-  font-size: 9px;
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 .song-load-icon {
@@ -632,9 +629,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 12px 10px;
+  margin: 0 4px 12px;
   color: #a5b6af;
-  font-size: 9px;
+  font-size: 11px;
 }
 .song-card-meta a {
   display: inline-flex;
@@ -654,18 +651,18 @@
   gap: 5px;
 }
 .song-card > .difficulty-buttons {
-  border-top: 1px solid #45504f;
-  padding: 9px 12px;
-  background: #242b2b66;
+  border-top: 0;
+  padding: 0 4px 14px;
+  background: transparent;
 }
 .difficulty-buttons button {
-  padding: 4px 6px;
+  padding: 6px 8px;
   border: 1px solid #536c60;
   border-radius: 3px;
   background: #3a50423d;
   color: #c4d6cb;
   font:
-    9px/1.3 'DM Sans',
+    11px/1.3 'DM Sans',
     sans-serif;
   cursor: pointer;
 }
@@ -677,7 +674,8 @@
 }
 .difficulty-buttons button[aria-pressed='true'] {
   border-color: #c4dfd0;
-  box-shadow: 0 0 0 1px #bfd9cb;
+  outline: 1px solid #bfd9cb;
+  outline-offset: 1px;
 }
 [data-difficulty='Easy'] {
   --diff: #97caa9;
@@ -707,15 +705,15 @@
 .library-message {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 18px 14px;
-  border: 1px solid #4e5f56;
-  border-radius: 5px;
-  background: #2b3430;
-  text-align: center;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
   color: #bccfc3;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
 }
 .library-message > svg {
@@ -743,7 +741,7 @@
 }
 .library-footnote {
   color: #9caf9f;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .spin {
@@ -769,7 +767,7 @@
   }
   .current-song-meta {
     gap: 2px 8px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .game-camera-help span {
     display: none;
@@ -778,7 +776,7 @@
     display: none;
   }
   .song-library {
-    padding: 17px 13px;
+    padding: 20px 18px;
   }
   .library-heading h2 {
     font-size: 20px;
@@ -789,7 +787,7 @@
     grid-template-rows: auto 460px 65px auto;
   }
   .song-header {
-    min-height: 100px;
+    min-height: 72px;
     padding: 15px 16px;
   }
   .current-song-cover {
@@ -814,11 +812,11 @@
     padding-right: 8px;
   }
   .scene-empty {
-    left: 19px;
-    top: 25%;
+    left: 24px;
+    top: 72px;
   }
   .scene-empty h2 {
-    font-size: 28px;
+    font-size: 22px;
   }
   .scene-bottomline {
     bottom: 40px;
@@ -833,7 +831,7 @@
     margin-left: auto;
   }
   .game-camera-help {
-    font-size: 8px;
+    font-size: 10px;
     left: 18px;
     right: 15px;
     bottom: 15px;
@@ -858,13 +856,13 @@
   .song-time {
     flex-direction: column;
     gap: 4px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .song-volume {
     display: none;
   }
   .song-seek-ticks {
-    font-size: 7px;
+    font-size: 9px;
   }
   .song-seek-ticks span:nth-child(even) {
     display: none;
@@ -877,16 +875,16 @@
     overflow: visible;
   }
   .song-library {
-    padding: 22px 18px;
+    padding: 20px 18px;
   }
   .library-heading h2 {
-    font-size: 25px;
+    font-size: 20px;
   }
   .song-card-copy h3 {
     font-size: 13px;
   }
   .song-card-copy p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .song-search-input input {
     font-size: 16px;
@@ -902,7 +900,7 @@
     gap: 5px;
   }
   .inspector-tabs [data-slot='tabs-trigger'] {
-    font-size: 9px;
+    font-size: 11px;
   }
   .song-header {
     padding-inline: 12px;
@@ -985,18 +983,18 @@
 .library-sources {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 18px 0;
+  gap: 4px;
+  padding: 12px 18px;
 }
 .live-library h2 {
   font-size: 20px;
-  margin: 0 0 12px;
+  margin: 0;
 }
 .live-brain-picker {
   display: grid;
   gap: 8px;
-  margin-block: 18px 12px;
-  font-size: 14px;
+  margin-block: 4px;
+  font-size: 12px;
 }
 .live-brain-picker select {
   width: 100%;
@@ -1014,9 +1012,9 @@
   outline-offset: 2px;
 }
 .catalog-license {
-  padding: 0 12px 10px;
+  padding: 0 4px 14px;
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: #b2b9b7;
 }
 .song-attribution {
@@ -1041,5 +1039,80 @@
   .scene-title .live-session-status {
     max-width: 130px;
     overflow-wrap: anywhere;
+  }
+}
+
+.song-card + .song-card {
+  border-top: 1px solid var(--line);
+}
+.library-sources {
+  border-bottom: 1px solid var(--line);
+}
+.library-sources button {
+  font-size: 11px;
+  box-shadow: none;
+}
+.library-sources button[aria-pressed='true'] {
+  color: var(--mint);
+  background: #b6d5d012;
+}
+.live-library > p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #b8c6c4;
+}
+.live-library > button {
+  font-size: 12px;
+  color: var(--mint);
+}
+.live-library > [role='alert'] {
+  color: #edc7b8;
+}
+.performance-values strong,
+.song-time,
+.neuron-metadata dd,
+.current-song-meta {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 899px) {
+  .readout-block {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 6px 12px;
+    align-items: baseline;
+    padding: 14px 18px;
+  }
+  .readout-block:first-child {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .performance-values,
+  .readout-status {
+    margin-top: 0;
+  }
+  .performance-values {
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .readout-caption {
+    grid-column: 2;
+    margin-top: 0;
+  }
+  .brain-camera-controls button,
+  .neuron-selection-heading button {
+    min-height: 32px;
+    min-width: 32px;
+  }
+  .camera-toolbar button {
+    width: 32px;
+    height: 32px;
+  }
+  .scene-empty {
+    top: 66px;
+    left: 18px;
+    width: min(280px, calc(100% - 36px));
+  }
+  .game-camera-help span {
+    display: none;
   }
 }

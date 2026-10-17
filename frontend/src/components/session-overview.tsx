@@ -1,5 +1,3 @@
-import { Activity, SlidersHorizontal } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { usePlayer } from '@/game/store'
 import { useSession } from '@/game/session'
 
@@ -14,7 +12,6 @@ export function SessionOverview() {
       <section className="session-overview" aria-labelledby="overview-heading">
         <div className="inspector-section-heading">
           <h2 id="overview-heading">Session overview</h2>
-          <Activity aria-hidden="true" />
         </div>
         <dl className="overview-list">
           <div>
@@ -45,11 +42,6 @@ export function SessionOverview() {
         </dl>
       </section>
       {error && <p role="alert">{error}</p>}
-      <div className="intervention-placeholder">
-        <SlidersHorizontal aria-hidden="true" />
-        <span>Brain controls</span>
-        <Badge variant="outline">Coming later</Badge>
-      </div>
       <p className="inspector-footnote">
         Live songs use server actions and scores. Community maps run as local previews. Neuron
         firing awaits the activity stream.

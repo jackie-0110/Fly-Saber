@@ -10,7 +10,7 @@
   gap: 21px;
   padding: 0 22px;
   border-bottom: 1px solid var(--line);
-  background: #262729;
+  background: var(--card);
   flex-shrink: 0;
 }
 .brand {
@@ -21,7 +21,7 @@
   font-family: 'Space Grotesk', sans-serif;
   font-size: 21px;
   font-weight: 600;
-  letter-spacing: -0.8px;
+  letter-spacing: -0.03em;
   white-space: nowrap;
 }
 .brand > span:nth-child(2) {
@@ -69,14 +69,14 @@
   gap: 17px;
 }
 .backend-status {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
   color: #d2c4a8;
-  background: #34312a;
-  border-color: #51493b;
+  background: transparent;
+  border-color: transparent;
   gap: 7px;
   border-radius: 4px;
-  padding: 5px 9px;
+  padding: 4px 0;
 }
 .status-dot {
   display: inline-block;
@@ -94,16 +94,16 @@
 }
 .backend-status[data-state='connected'] {
   color: #c0ded2;
-  background: #263830;
-  border-color: #456859;
+  background: transparent;
+  border-color: transparent;
 }
 .backend-status[data-state='connected'] .status-dot {
   background: #91cbb0;
 }
 .backend-status[data-state='checking'] {
   color: #b9c3c7;
-  background: #2d3236;
-  border-color: #4b565e;
+  background: transparent;
+  border-color: transparent;
 }
 .backend-status[data-state='checking'] .status-dot {
   background: #a3b2ba;
@@ -154,11 +154,11 @@
   align-items: center;
   gap: 10px;
   color: #d5d8d9;
-  padding: 9px 12px;
-  background: #24282bde;
-  border: 1px solid #50585b7d;
-  border-radius: 5px;
-  backdrop-filter: blur(12px);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  backdrop-filter: none;
   font-size: 11px;
 }
 .scene-title > svg {
@@ -172,12 +172,6 @@
 }
 .scene-title > span:last-child {
   color: #9fa9aa;
-}
-.scene-divider {
-  width: 1px;
-  height: 12px;
-  background: #4d5556;
-  margin: 0 3px;
 }
 .scene-label {
   padding: 6px 8px;
@@ -259,11 +253,11 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: #252a2de6;
-  border: 1px solid #4d5558;
+  background: #232b2f;
+  border: 1px solid #455156;
   border-radius: 5px;
   color: #b6bfc1;
-  backdrop-filter: blur(12px);
+  backdrop-filter: none;
 }
 .camera-toolbar button {
   width: 29px;
@@ -309,7 +303,7 @@
   display: flex;
   align-items: center;
   border-top: 1px solid #414347;
-  background: #292a2d;
+  background: var(--card);
   padding: 8px 16px;
 }
 .timeline-controls {
@@ -398,7 +392,7 @@
 .session-readouts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  background: #242528;
+  background: var(--card);
   border-top: 1px solid #424448;
 }
 .readout-block {
@@ -412,8 +406,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #c7cbce;
-  font-size: 11px;
+  color: #d5dcdd;
+  font-size: 12px;
   font-weight: 500;
 }
 .readout-block h2 > svg {
@@ -438,14 +432,14 @@
 }
 .performance-values strong {
   font:
-    400 22px/1.2 'Space Grotesk',
+    500 20px/1.2 'DM Sans',
     sans-serif;
-  color: #aeb8be;
+  color: #d5dfdd;
 }
 .performance-values span {
-  font-size: 7px;
-  letter-spacing: 1px;
-  color: #8d989f;
+  font-size: 10px;
+  letter-spacing: 0;
+  color: #a8b6b8;
 }
 .readout-status {
   display: flex;
@@ -457,14 +451,14 @@
 }
 .readout-caption {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: #8d969e;
   margin-top: 8px;
 }
 .inspector {
   min-width: 0;
   border-left: 1px solid #45474c;
-  background: #292a2d;
+  background: var(--card);
   display: flex;
   flex-direction: column;
 }
@@ -476,7 +470,7 @@
   min-height: 458px;
 }
 .inspector-tabs {
-  background: #2c2d30;
+  background: var(--card);
   border-radius: 0;
   width: 100%;
   height: 49px;
@@ -540,7 +534,7 @@
   position: relative;
   min-height: 280px;
   flex: 1;
-  background: radial-gradient(ellipse at 50% 37%, #343a3c33, transparent 70%);
+  background: #1c2327;
 }
 .brain-art {
   position: absolute;
@@ -596,7 +590,7 @@
   height: 360px;
   min-height: 360px;
   flex: none;
-  background: radial-gradient(ellipse at 50% 45%, #303e40 0%, #20262a 60%, #1d2225 100%);
+  background: #1c2327;
 }
 .brain-stage-3d canvas {
   touch-action: none;
@@ -627,8 +621,8 @@
   pointer-events: auto;
 }
 .brain-stage-toolbar button {
-  background: #252d31e8;
-  border: 1px solid #536168;
+  background: #232b2f;
+  border: 0;
 }
 .brain-display-controls {
   position: absolute;
@@ -640,9 +634,9 @@
   flex-wrap: wrap;
   gap: 10px 16px;
   padding: 8px 10px;
-  border: 1px solid #445257;
+  border: 0;
   border-radius: 4px;
-  background: #20282ce8;
+  background: #232b2f;
   color: #bdcdcf;
   font-size: 10px;
 }
@@ -725,7 +719,7 @@
   gap: 7px;
   padding: 10px 19px;
   border-block: 1px solid #3c4248;
-  font-size: 9px;
+  font-size: 10px;
   color: #b3c0c4;
 }
 .brain-color-legend > span:last-child {
@@ -782,9 +776,9 @@
   gap: 8px;
   margin-top: auto;
   padding: 12px 19px;
-  border-top: 1px solid #49483f;
-  background: #302e29;
-  color: #d2c6ae;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: #b9b6aa;
   font-size: 10px;
   line-height: 1.7;
 }
@@ -913,25 +907,20 @@
   grid-template-columns: 90px minmax(0, 1fr);
 }
 .session-tab .inspector-footnote {
-  padding: 0 20px 20px;
+  padding: 16px 20px;
 }
 .inspector-prose h2 {
   font:
-    400 23px/1.3 'Space Grotesk',
+    500 20px/1.3 'DM Sans',
     sans-serif;
-  letter-spacing: -0.6px;
-  margin: 12px 0 19px;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
 }
 .inspector-prose p {
   font-size: 12px;
   line-height: 1.8;
   color: #aab3bb;
   margin-bottom: 16px;
-}
-.eyebrow {
-  font-size: 8px;
-  color: #9aa9b2;
-  letter-spacing: 1.6px;
 }
 .detail-list {
   margin-top: 25px;
@@ -950,13 +939,13 @@
   color: #b6c0c7;
 }
 .next-steps {
-  list-style: decimal-leading-zero;
-  padding-left: 25px;
+  list-style: disc;
+  padding-left: 17px;
   margin-top: 24px;
   color: #9caeb9;
 }
 .next-steps li {
-  padding-left: 7px;
+  padding-left: 3px;
 }
 .next-steps strong {
   font-size: 12px;
@@ -965,7 +954,7 @@
 }
 .next-steps p {
   margin-top: 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .inspector-prose .plan-reference {
   font-size: 10px;
@@ -976,7 +965,7 @@
 .session-overview {
   padding: 17px 19px 16px;
   border-top: 1px solid #42464b;
-  background: #2d2e31;
+  background: transparent;
 }
 .inspector-section-heading {
   display: flex;
@@ -1016,38 +1005,11 @@
 .overview-list .muted-value {
   color: #a3abb2;
 }
-.intervention-placeholder {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 17px 19px;
-  border-top: 1px solid #42464b;
-  color: #a2a9af;
-  font-size: 11px;
-}
-.intervention-placeholder > svg {
-  width: 14px;
-  height: 14px;
-}
-.intervention-placeholder > svg:last-child {
-  width: 12px;
-  margin-left: auto;
-  opacity: 0.5;
-}
-.intervention-placeholder [data-slot='badge'] {
-  border-color: #454a50;
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-size: 8px;
-  font-weight: 400;
-  color: #969fa6;
-  margin-left: 2px;
-}
 .inspector-footnote {
-  font-size: 9px;
-  color: #89959e;
+  font-size: 11px;
+  color: #a8b5bd;
   line-height: 1.8;
-  padding: 0 19px 17px;
+  padding: 16px 19px;
   overflow-wrap: anywhere;
 }
 .inspector-footnote code {
@@ -1077,18 +1039,14 @@
   .workspace-name {
     display: none;
   }
-  .secondary-divider {
+  .header-divider {
     display: none;
   }
   .workspace {
     grid-template-columns: minmax(0, 1fr) 310px;
   }
   .scene-title {
-    font-size: 10px;
-  }
-  .scene-title > span:last-child,
-  .scene-divider {
-    display: none;
+    font-size: 11px;
   }
   .timeline-controls {
     gap: 15px;
@@ -1100,10 +1058,10 @@
     padding-inline: 15px;
   }
   .readout-status {
-    font-size: 10px;
+    font-size: 11px;
   }
   .readout-caption {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.7;
   }
   .performance-values {
@@ -1146,8 +1104,8 @@
     gap: 5px;
   }
   .backend-status {
-    font-size: 8px;
-    padding: 5px 7px;
+    font-size: 11px;
+    padding: 4px 0;
   }
   .game-name {
     gap: 6px;
@@ -1178,11 +1136,11 @@
     right: 15px;
   }
   .scene-title {
-    padding: 8px 9px;
+    padding: 0;
     gap: 7px;
   }
   .scene-title h2 {
-    font-size: 10px;
+    font-size: 11px;
   }
   .scene-label {
     font-size: 6px;
@@ -1240,14 +1198,14 @@
     margin-top: 13px;
   }
   .performance-values span {
-    font-size: 8px;
+    font-size: 10px;
   }
   .readout-status {
     margin-top: 14px;
     font-size: 11px;
   }
   .readout-caption {
-    font-size: 10px;
+    font-size: 11px;
   }
   .readout-block h2 {
     font-size: 12px;
@@ -1288,7 +1246,7 @@
     grid-template-columns: 115px minmax(0, 1fr);
   }
   .inspector-footnote {
-    font-size: 10px;
+    font-size: 11px;
   }
   .inspector-footnote code {
     font-size: 9px;
@@ -1332,11 +1290,11 @@
   }
   .readout-status {
     margin-top: 10px;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
   }
   .readout-caption {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.5;
   }
   .inspector,
@@ -1396,7 +1354,7 @@
     bottom: 8px;
     gap: 6px 12px;
     padding: 6px 8px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .brain-display-controls input {
     width: 54px;
@@ -1408,12 +1366,12 @@
   }
   .brain-camera-controls button {
     padding-inline: 5px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .brain-camera-help {
     grid-area: help;
     padding: 6px 12px 8px;
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.5;
   }
   .brain-color-legend {
@@ -1435,14 +1393,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px 16px;
     padding-top: 8px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .neuron-metadata > div {
     display: block;
   }
   .neuron-metadata dt {
     margin-bottom: 2px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .neuron-metadata > div:last-child {
     grid-column: 1 / -1;
@@ -1454,7 +1412,7 @@
     grid-area: note;
     margin: 0;
     padding: 6px 14px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .inspector-prose {
     min-height: 0;
@@ -1476,15 +1434,10 @@
     grid-template-columns: 74px minmax(0, 1fr);
     gap: 6px;
   }
-  .intervention-placeholder {
-    flex-shrink: 0;
-    padding: 8px 14px;
-    font-size: 10px;
-  }
   .inspector-footnote {
     flex-shrink: 0;
-    padding: 0 14px 8px;
-    font-size: 9px;
+    padding: 16px 19px;
+    font-size: 11px;
     line-height: 1.4;
   }
 }
@@ -1521,12 +1474,6 @@
     gap: 5px 12px;
     margin-top: 6px;
   }
-  .intervention-placeholder {
-    padding-block: 6px;
-  }
-  .inspector-footnote {
-    padding-bottom: 6px;
-  }
 }
 @media (max-width: 380px) {
   .app-header {
@@ -1542,7 +1489,7 @@
     margin-left: 1px;
   }
   .backend-status {
-    font-size: 7px;
+    font-size: 11px;
   }
   .brand-mark {
     width: 22px;

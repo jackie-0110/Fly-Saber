@@ -37,12 +37,14 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #566368 #202124;
   --mint: #b6d5d0;
   --muted: #a0a8af;
-  --line: #41454b;
+  --line: #393f44;
   --background: #202124;
   --foreground: #e2e4e6;
-  --card: #292a2d;
+  --card: #25282b;
   --popover: #33373b;
   --primary: #b6d5d0;
   --primary-foreground: #242b2d;
@@ -103,4 +105,12 @@ button svg {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+input,
+textarea {
+  caret-color: var(--mint);
+}
+a {
+  text-underline-offset: 3px;
 }
