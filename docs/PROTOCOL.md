@@ -263,9 +263,18 @@ Untrained the network is stable and responsive: about 97% of neurons tonically a
 
 ```python
 from training.checkpoints import save_checkpoint, load_checkpoint, subgraph_fingerprint
+
 fp = subgraph_fingerprint(model_cfg.subgraph_dir)
-save_checkpoint(path, params, variant="real", stage="bc", step=i,
-                configs={"model": model_cfg, "train": bc_cfg}, subgraph=fp, metrics=row)
+save_checkpoint(
+    path,
+    params,
+    variant="real",
+    stage="bc",
+    step=i,
+    configs={"model": model_cfg, "train": bc_cfg},
+    subgraph=fp,
+    metrics=row,
+)
 params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expect_subgraph=fp)
 ```
 
