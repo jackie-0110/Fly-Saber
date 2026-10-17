@@ -1,1 +1,11 @@
 # saber.yaml (owner: Person 2). Loaded into a dataclass; no magic numbers in code.
+# Geometry in meters. The eye sits behind the hit plane, level with the middle layer.
+lane_spacing_m: 0.6
+layer_spacing_m: 0.55
+block_size_m: 0.5
+eye_distance_m: 1.0
+
+# Cut direction encoding (README): the half of the block where the cut starts is bright.
+bright_luminance: 1.0
+dim_luminance: 0.25
+bomb_luminance: 0.0
