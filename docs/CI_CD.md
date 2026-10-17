@@ -62,10 +62,16 @@ bash scripts/deploy_vultr.sh
 
 The script builds the image (trained brains included), downloads the allowlisted demo
 songs into the Docker volume `fly-saber-maps` on first run, starts the container with
-`--restart unless-stopped` on port 8000, and waits until `/api/games` answers. Then:
+`--restart unless-stopped` on port 80, and waits until `/api/games` answers. Then:
 
-1. Open TCP 8000 in the Vultr firewall group (or `ufw allow 8000`).
-2. In Cloudflare, set the `flysaber` Worker secret `BACKEND_URL=http://<server ip>:8000`.
+1. Open TCP 80 in the Vultr firewall group (or `ufw allow 80/tcp`).
+2. In Cloudflare, set the `flysaber` Worker secret `BACKEND_URL=http://<server ip>`, with
+   no port. Deployed Workers ignore non-standard ports in `fetch()`, so a backend on
+   `:8000` is fetched on port 80 and the site shows "Backend disconnected".
+
+Or run everything from your laptop, including the Worker secret and an end-to-end check:
+`bash scripts/go_live.sh` (defaults: server `64.177.52.103`, site
+`flysaber.jackie-courtney.com`; see the header of the script for overrides).
 
 To update: `git pull && bash scripts/deploy_vultr.sh` (songs are kept). Logs:
 `docker logs -f fly-saber`. Never rebuild the brain subgraph on the server; the

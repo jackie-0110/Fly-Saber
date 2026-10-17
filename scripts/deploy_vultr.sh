@@ -3,14 +3,18 @@
 # Owner: Person 1. Run on the server, from the repo root, as a user that can run docker:
 #   bash scripts/deploy_vultr.sh
 # Safe to rerun after `git pull`: rebuilds the image and restarts the container, keeping
-# the downloaded songs. Then set the Cloudflare secret BACKEND_URL=http://<server ip>:8000.
+# the downloaded songs. Then set the Cloudflare secret BACKEND_URL=http://<server ip>, or run
+# scripts/go_live.sh from your laptop to do all of this plus the Worker secret.
+#
+# Port 80 by default: deployed Cloudflare Workers ignore non-standard ports in fetch(), so a
+# backend on :8000 is unreachable through the Worker. PORT=8000 still works for direct use.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 IMAGE=fly-saber
 CONTAINER=fly-saber
 SONGS=fly-saber-maps   # Docker volume for data/maps: normalized charts and licensed audio
-PORT=${PORT:-8000}
+PORT=${PORT:-80}
 
 echo "== building image (a few minutes the first time)"
 docker build -f docker/Dockerfile -t "$IMAGE" .
@@ -33,9 +37,11 @@ docker run -d --name "$CONTAINER" --restart unless-stopped \
 echo "== waiting for it to answer"
 for _ in $(seq 1 60); do
     if curl -fsS "http://127.0.0.1:$PORT/api/games" >/dev/null 2>&1; then
-        echo "up: http://$(curl -fsS -4 ifconfig.me 2>/dev/null || echo '<server ip>'):$PORT"
+        address="http://$(curl -fsS -4 ifconfig.me 2>/dev/null || echo '<server ip>')"
+        [ "$PORT" = 80 ] || address="$address:$PORT"
+        echo "up: $address"
         echo "songs: $(curl -fsS "http://127.0.0.1:$PORT/api/maps" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))') playable maps"
-        echo "next: in Cloudflare, set the flysaber Worker secret BACKEND_URL to that address"
+        echo "next: set the flysaber Worker secret BACKEND_URL=$address (scripts/go_live.sh does it)"
         exit 0
     fi
     sleep 2
