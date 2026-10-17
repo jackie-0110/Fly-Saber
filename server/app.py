@@ -3,8 +3,10 @@
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
+import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,9 @@ from server.saber_sim import brain_sims, expert_sims
 from server.session import GAMES, LiveBrain, Session
 
 log = logging.getLogger(__name__)
+# Two Versus sessions are four brain slots, about what a laptop CPU steps in real time.
+# Size it to the host with the MAX_SESSIONS environment variable.
+MAX_SESSIONS = 2
 EXPERT = Brain(
     id="expert",
     label="Scripted expert",
@@ -71,9 +76,12 @@ def create_app(
     maps_dir: Path = Path("data/maps"),
     brains: list[LiveBrain] | None = None,
     frontend_dir: Path | None = None,
+    max_sessions: int = MAX_SESSIONS,
 ) -> FastAPI:
-    """`brains` defaults to the expert alone."""
+    """`brains` defaults to the expert alone. Past `max_sessions` running at once, `start`
+    answers an error until one disconnects."""
     app = FastAPI(title="Fly Saber")
+    seats = asyncio.Semaphore(max_sessions)
     brains = brains or [LiveBrain(EXPERT, expert_sims())]
     by_id = {b.info.id: b for b in brains}
     catalog = Catalog(maps_dir)
@@ -108,7 +116,7 @@ def create_app(
     @app.websocket("/ws/session")
     async def session(websocket: WebSocket) -> None:
         await websocket.accept()
-        await Session(websocket, catalog, by_id).run()
+        await Session(websocket, catalog, by_id, seats).run()
 
     if frontend_dir is not None:
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
@@ -122,4 +130,5 @@ def serve() -> FastAPI:
     return create_app(
         brains=serving_brains(brain_modes(), Path("bundles")),
         frontend_dir=frontend if frontend.is_dir() else None,
+        max_sessions=int(os.environ.get("MAX_SESSIONS", MAX_SESSIONS)),
     )

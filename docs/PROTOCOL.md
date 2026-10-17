@@ -128,6 +128,7 @@ Server behaviour:
 
 - Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
+- The server runs at most `MAX_SESSIONS` sessions at once (environment variable, default 2). A session takes a seat at its first successful `start` and holds it until the socket closes. A `start` while every seat is taken gets `error` ("the server is full"); the client can retry. A `start` on a socket that already has a seat always succeeds.
 - `set_interventions` replaces that slot's brain and eye controls (it does not add to the previous message). They last through `play` and `reset`; a new `start` clears them. It answers `error` (and changes nothing) for a slot the session does not have, a slot playing `expert` (no brain or eyes to change), unknown groups or moods, and out-of-range eye values. Send it before or after `play`. There is no reply on success.
 - `human_action` and `narrate` answer `error` until they are implemented.
 - Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
