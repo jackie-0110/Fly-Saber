@@ -62,6 +62,24 @@ def web_neurons(neurons: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def web_edges(neurons: pd.DataFrame, edges: pd.DataFrame, source: str) -> dict[str, Any]:
+    """Complete directed anatomy, in parquet row order; weights are synapse counts.
+
+    Body IDs bind the endpoints to the exact neuron ordering, including when two
+    subgraphs happen to have the same number of neurons. These are anatomical
+    connections, not the normalized or learned efficacies used by the rate model.
+    """
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "source": source,
+        "n_neurons": len(neurons),
+        "n_edges": len(edges),
+        "n_synapses": int(edges["weight"].sum()),
+        "body_id": neurons["body_id"].astype(int).tolist(),
+        **{field: edges[field].astype(int).tolist() for field in ("pre", "post", "weight", "sign")},
+    }
+
+
 def column_angles(
     columns: pd.DataFrame, spacing_deg: float, binocular_overlap_deg: float
 ) -> pd.DataFrame:
