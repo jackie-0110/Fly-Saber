@@ -183,6 +183,30 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 **`meta.json`**: counts, sign totals, and the config used.
 
+### Front end copies: `frontend/public/data/brain/`
+
+Committed to git so the front end needs no Python or data download. Regenerate with `make subgraph export-web` and commit. The browser loads `fetch("/data/brain/neurons.json")` and `fetch("/data/brain/groups.json")`.
+
+**`groups.json`**: identical to the one above.
+
+**`neurons.json`**: struct of arrays. Position `i` in every per-neuron array is neuron index `i`, the same index used by groups, interventions, and the activity stream.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | int | 1 |
+| `n_neurons` | int | N (19,403) |
+| `cell_types` | string[] | sorted unique types. **Cell-type id = index in this list**, the same list and order as `ready.cell_types` and activity kind 2 |
+| `superclasses`, `roles`, `sides`, `nts`, `position_sources` | string[] | lookup tables for the coded arrays below |
+| `bounds_um` | `{min: [x,y,z], max: [x,y,z]}` | bounding box of all positions, micrometers |
+| `type` | int[N] | cell-type id |
+| `superclass`, `role`, `side`, `nt` | int[N] | index into the matching lookup table |
+| `sign` | int[N] | +1 excitatory, -1 inhibitory, 0 modulatory or unclear |
+| `body_id` | int[N] | MaleCNS body id, for linking out |
+| `position_um` | float[3N] | flat `x0, y0, z0, x1, ...` in micrometers (drop straight into a `Float32Array` for instancing) |
+| `position_source` | int[N] | 0 soma, 1 copied from strongest partner, 2 mean of its cell type (no position in the data) |
+
+Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Center on `bounds_um` for the camera.
+
 **Eye input (to agree with Person 2):** the eye drives photoreceptors by `(side, hex1, hex2)`. About 170 to 180 of the 220 sampled columns per eye have a photoreceptor; for the rest, inject into that column's L1 and L2 with inverted sign (see DATA_NOTES).
 
 Interventions schema: TODO (with `brain/model/interventions.py`).
