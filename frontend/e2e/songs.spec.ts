@@ -39,7 +39,6 @@ test.beforeEach(async ({ page }) => {
 
 async function loadMap(page: Page) {
   await page.getByRole('tab', { name: 'Songs', exact: true }).click()
-  await page.getByRole('button', { name: 'Community preview', exact: true }).click()
   await page.getByRole('button', { name: 'Load Orbit Test by Test Artist', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Orbit Test', exact: true, level: 1 }),
@@ -69,7 +68,6 @@ test('song search and download load a community map without a fly session or all
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
   await page.getByRole('tab', { name: 'Songs', exact: true }).click()
-  await page.getByRole('button', { name: 'Community preview', exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Songs', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -222,7 +220,6 @@ test('search failure, empty results, and retry have usable recovery states', asy
   )
   await page.goto('/')
   await page.getByRole('tab', { name: 'Songs', exact: true }).click()
-  await page.getByRole('button', { name: 'Community preview', exact: true }).click()
   await expect(page.getByText('The song service returned 503.', { exact: false })).toBeVisible()
   fail = false
   await page.getByRole('button', { name: 'Retry search', exact: true }).click()

@@ -5,37 +5,8 @@ import { difficultyLabel, formatTime } from '@/game/chart'
 import { searchSongs } from '@/game/songs'
 import type { SongResult } from '@/game/songs'
 import { usePlayer } from '@/game/store'
-import { LiveSongs } from '@/components/live-songs'
 
 export function SongLibrary() {
-  const active = usePlayer((s) => s.inspectorTab === 'songs')
-  const [source, setSource] = useState<'live' | 'community'>('live')
-  return (
-    <>
-      <div className="library-sources" role="group" aria-label="Song source">
-        <Button
-          variant={source === 'live' ? 'secondary' : 'ghost'}
-          size="sm"
-          aria-pressed={source === 'live'}
-          onClick={() => setSource('live')}
-        >
-          Live songs
-        </Button>
-        <Button
-          variant={source === 'community' ? 'secondary' : 'ghost'}
-          size="sm"
-          aria-pressed={source === 'community'}
-          onClick={() => setSource('community')}
-        >
-          Community preview
-        </Button>
-      </div>
-      {source === 'live' ? active && <LiveSongs /> : <CommunitySongLibrary />}
-    </>
-  )
-}
-
-function CommunitySongLibrary() {
   const active = usePlayer((s) => s.inspectorTab === 'songs')
   const loaded = usePlayer((s) => s.song)
   const loading = usePlayer((s) => s.loading)
