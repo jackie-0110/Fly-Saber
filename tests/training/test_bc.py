@@ -65,7 +65,6 @@ def bc_config(tmp_path: Path, **overrides: Any) -> BCConfig:
         "split": "train",
         "min_gap_sec": 0.0,
         "window_sec": 3.0,
-        "speed_mps": 7.0,
         "batch_size": 4,
         "learning_rate": 0.003,
         "n_updates": 1,

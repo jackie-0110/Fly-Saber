@@ -39,7 +39,6 @@ class BCConfig:
     split: str
     min_gap_sec: float
     window_sec: float
-    speed_mps: float
     batch_size: int
     learning_rate: float
     n_updates: int
@@ -160,7 +159,7 @@ def make_steps(
     def episodes_and_key(key: jax.Array) -> tuple[Episodes, jax.Array]:
         k_episodes, k_rollout = jax.random.split(key)
         return sample_episodes(
-            k_episodes, map_set, cfg.batch_size, cfg.window_sec, cfg.speed_mps
+            k_episodes, map_set, cfg.batch_size, cfg.window_sec, env.cfg.note_speed_mps
         ), k_rollout
 
     def loss(params: Any, key: jax.Array) -> tuple[jax.Array, Metrics]:
