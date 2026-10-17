@@ -9,7 +9,7 @@ Fill these in during the hour 0 contracts session (30 minutes, all three). Every
 | WebSocket protocol (both directions) | Person 2 | 3 | Draft |
 | `groups.json` and interventions schema | Person 1 | 2, 3 | groups done, interventions TODO |
 | Brain step function signature and checkpoint format | Person 1 | 2, 3 | Done |
-| Activity stream format (quantized rates, cell-type means) | Person 1 | 3 | TODO |
+| Activity stream format (change from rest, per neuron and per cell type) | Person 2 | 1, 3 | Done |
 
 ## 1. Normalized map schema (Person 2)
 
@@ -161,7 +161,7 @@ Every binary message starts with a 4-byte header:
 
 Then a little-endian `uint32` sim `step`, then the payload.
 
-- Kinds 1 and 2: payload layout is section 6 (Person 1).
+- Kinds 1 and 2: brain activity, payload layout in section 6. Only slots with a brain send them, right after that slot's `frame` for the same `step`.
 - Kind 3, eye image, 15 Hz: `uint16` ommatidia count for the left eye, `uint16` for the right, then one `uint8` luminance per ommatidium, left eye first, in the lattice order from `GET /api/eye_lattice` (served once with each ommatidium's azimuth and elevation in degrees, so the front end can draw the hex mosaic).
 
 ## 4. Subgraph files, `groups.json`, and interventions (Person 1)
@@ -385,6 +385,15 @@ action = greedy over split_heads(out.logits, [13, 5, 13, 5]) -> env.step
 - Front-end data that matches: `frontend/public/data/brain/` (re-exported from HiPerGator in #30).
 - Versus: load two bundles (two `load_trained` calls), same `env`, same episode seed.
 
-## 6. Activity stream (Person 1)
+## 6. Activity stream
 
-Spec 13: uint8-quantized rates for all subgraph neurons at 15 Hz, per-cell-type means at 30 Hz. Pin the binary layout here.
+Every slot with a brain streams its activity while playing, after the 4-byte header and `uint32` step of section 3:
+
+| Kind | Rate | Payload |
+|---|---|---|
+| 1, neurons | 15 Hz (at most every other step) | `ready.n_neurons` x `int8`, one per neuron in subgraph order (`neurons.json`, array index i is neuron i) |
+| 2, cell types | 30 Hz (every frame) | `len(ready.cell_types)` x `int8`, the mean over that type's neurons, in `ready.cell_types` order |
+
+Each value is the neuron's firing-rate change from the untouched brain at rest on the gray background, scaled so that +-127 is +-0.25 rate units and clipped there: `value = clip(round((rate - rest) / 0.25 * 127), -127, 127)`. Positive is firing above rest; a lesioned neuron reads below zero for as long as the lesion lasts. Rates during play sit near 0.7 and move by hundredths, which is why the stream carries the change from rest and not the absolute rate.
+
+A client drops a message whose length does not match its kind, and one whose `step` is not after the last step of that kind (reset when it sends `play`).
