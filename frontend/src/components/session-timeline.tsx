@@ -1,16 +1,9 @@
-import { Clock3, Pause, Play, RotateCcw } from 'lucide-react'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function SessionTimeline() {
   return (
-    <section className="session-timeline" aria-labelledby="timeline-heading">
-      <div className="timeline-heading">
-        <h2 id="timeline-heading">
-          <Clock3 aria-hidden="true" />
-          Session timeline
-        </h2>
-        <span>No session loaded</span>
-      </div>
+    <section className="session-timeline" aria-label="Session timeline">
       <div className="timeline-controls">
         <div className="playback-buttons">
           <Button variant="outline" size="icon-sm" disabled aria-label="Play session">

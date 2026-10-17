@@ -44,7 +44,7 @@ test('playback controls stay disabled until a session is loaded', async ({ page 
   for (const name of ['Play session', 'Pause session', 'Restart session']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeDisabled()
   }
-  await expect(page.getByText('No session loaded', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Timeline unavailable until a session is loaded')).toBeVisible()
 })
 
 test('workspace fits the viewport and inspector tabs support the keyboard', async ({ page }) => {
