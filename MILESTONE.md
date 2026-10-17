@@ -8,7 +8,7 @@ What stands between us and the fly playing Fly Saber on stage, in the order it h
 
 - The server runs real-time sessions (30 Hz, 1 or 2 slots for Versus) on the real env, played by the scripted expert. PR #28 adds checkpointed brains.
 - Person 1 has trained a demo fly (PR #30): `bundles/real_fast/`, real wiring, brain trained, 31.4% of notes hit on held-out songs (28.4% on training songs). It is bundled with the exact subgraph it was trained on.
-- PR #29 connects the browser to single-player sessions: server songs and brain selection, audio-clock synchronization, live saber motion, score and note events. Desktop/mobile integration passes with FastAPI serving the built frontend and the scripted expert playing an original silent fixture. Trained-bundle loading remains B3; activity, interventions, Versus and replay remain Milestone C.
+- PR #29 connects the browser to single-player sessions: server songs and brain selection, audio-clock synchronization, live saber motion, score and note events. Desktop/mobile integration passes with FastAPI serving the built frontend and the scripted expert playing an original silent fixture. Trained-bundle loading remains B3; activity and interventions remain Milestone C; replay is optional in Milestone E.
 
 ## Milestone A: a brain visibly playing a song in the browser
 
@@ -32,7 +32,6 @@ The first end-to-end moment. Everything else builds on it.
 
 - [ ] **C1. Lesion Mode.** Server: `set_interventions` builds per-slot interventions with `brain.model.controls.from_controls` (Person 2). Front end: lesion panel (Person 3). Live eye controls from PR #26 can ride the same message.
 - [ ] **C3. Live neuron activity.** Pin the binary layout in `docs/PROTOCOL.md` section 6 (Person 1); stream kinds 1 and 2 (Person 2); light up the neuron cloud (Person 3). PR #30 re-exports `frontend/public/data/brain/*.json` from the trained fly's subgraph, so neuron indices line up.
-- [ ] **C4. Replay fallback** (Person 3, Person 2 pairs). `scripts/record_replays.py` and a replay player that runs with the server off. Both are stubs.
 
 ## Milestone D: public URL
 
@@ -48,6 +47,8 @@ The first end-to-end moment. Everything else builds on it.
 - Expert near 100 on every demo map (acceptance test 4) was measured at 8 m/s; note speed is now 7.0 m/s. Re-measure.
 - The sim runs notes at 7.0 m/s while the preview uses each map's own speed. Hit timing matches (both use `time_sec`); only note spacing on screen differs.
 
-## Can wait
+## Milestone E: if we have time
+
+- [ ] **E1. Replay fallback** (Person 3, Person 2 pairs). `scripts/record_replays.py` and a replay player that runs with the server off. Both are stubs.
 
 Fly's-eye view (eye stream and `/api/eye_lattice`), mood sliders and opto in the UI, curriculum and DAgger, PPO, matched MLP baseline, Gemini narrator (first to cut).
