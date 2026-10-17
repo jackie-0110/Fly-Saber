@@ -1,7 +1,8 @@
 {
   // Cloudflare Workers Builds: set the project's root directory to `frontend`.
-  // Production deploys run `npx wrangler deploy`, PR previews `npx wrangler versions upload`;
-  // both run the build below first, so the dashboard build command can stay empty.
+  // Production deploys run `npx wrangler deploy`, PR previews `npx wrangler preview` (or
+  // `npx wrangler versions upload`); all run the build below first, so the dashboard build
+  // command can stay empty.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "flysaber",
   "main": "worker/index.ts",
@@ -18,4 +19,7 @@
   // keep_vars stops deploys from wiping dashboard-set variables.
   "keep_vars": true,
   "observability": { "enabled": true },
+  // Required by `wrangler preview`. Empty: previews inherit assets, compatibility and
+  // placement from the top level.
+  "previews": {},
 }
