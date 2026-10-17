@@ -1,4 +1,4 @@
-"""REST and WS /ws/session against a tiny fixture map and the fake sim."""
+"""REST and WS /ws/session against a tiny fixture map and the real env played by the expert."""
 
 import json
 from pathlib import Path
@@ -8,9 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
-from server.app import create_app
+from server.app import create_app, expert_sims
 
 AUDIO_BYTES = b"OggS fixture"
+SIMS = expert_sims()
 
 
 def make_map(map_id: str) -> dict[str, Any]:
@@ -70,7 +71,7 @@ def client(tmp_path: Path) -> TestClient:
         }
     ]
     (tmp_path / "demo_allowlist.json").write_text(json.dumps(allowlist))
-    return TestClient(create_app(tmp_path))
+    return TestClient(create_app(tmp_path, SIMS))
 
 
 def test_games(client: TestClient) -> None:
@@ -136,37 +137,39 @@ def play_to_end(ws: WebSocketTestSession, n_slots: int) -> list[dict[str, Any]]:
 
 def test_start_answers_ready(client: TestClient) -> None:
     with client.websocket_connect("/ws/session") as ws:
-        ready = start(ws, ["real"])
+        ready = start(ws, ["expert"])
     assert ready["type"] == "ready"
     assert ready["map_id"] == "abc12_hard"
-    assert ready["slots"] == [{"slot": 0, "brain": "real"}]
+    assert ready["slots"] == [{"slot": 0, "brain": "expert"}]
     assert ready["step_hz"] == 30
 
 
 def test_play_judges_every_note_once_and_ends(client: TestClient) -> None:
     with client.websocket_connect("/ws/session") as ws:
-        start(ws, ["real"])
+        start(ws, ["expert"])
         messages = play_to_end(ws, 1)
     events = [m for m in messages if m["type"] == "event"]
     assert sorted(e["note_id"] for e in events) == [0, 1, 3]
+    assert {e["kind"] for e in events} == {"hit"}
     frames = [m for m in messages if m["type"] == "frame"]
     assert frames
-    assert frames[-1]["render_state"]["t"] >= 1.0
+    last_note, window = 0.6, 0.1
+    assert frames[-1]["render_state"]["t"] > last_note + window
     score = messages[-1]["score"]
     assert score["hits"] + score["misses"] == 3
 
 
 def test_versus_runs_both_slots(client: TestClient) -> None:
     with client.websocket_connect("/ws/session") as ws:
-        ready = start(ws, ["real", "scrambled"])
+        ready = start(ws, ["expert", "expert"])
         messages = play_to_end(ws, 2)
-    assert [s["brain"] for s in ready["slots"]] == ["real", "scrambled"]
+    assert [s["brain"] for s in ready["slots"]] == ["expert", "expert"]
     assert {m["slot"] for m in messages if m["type"] == "ended"} == {0, 1}
 
 
 def test_reset_returns_to_ready_and_can_replay(client: TestClient) -> None:
     with client.websocket_connect("/ws/session") as ws:
-        start(ws, ["real"])
+        start(ws, ["expert"])
         first = play_to_end(ws, 1)[-1]
         ws.send_json({"type": "reset"})
         assert ws.receive_json()["type"] == "ready"
@@ -179,7 +182,7 @@ def test_reset_returns_to_ready_and_can_replay(client: TestClient) -> None:
     [
         {"type": "warp"},
         {"type": "play", "song_t": 0.0},
-        {"type": "start", "game": "saber", "brains": ["real"], "map_id": "nope1_hard", "seed": 0},
+        {"type": "start", "game": "saber", "brains": ["expert"], "map_id": "nope1_hard", "seed": 0},
     ],
 )
 def test_bad_message_gets_error_and_socket_stays_open(
@@ -188,4 +191,4 @@ def test_bad_message_gets_error_and_socket_stays_open(
     with client.websocket_connect("/ws/session") as ws:
         ws.send_json(message)
         assert ws.receive_json()["type"] == "error"
-        assert start(ws, ["real"])["type"] == "ready"
+        assert start(ws, ["expert"])["type"] == "ready"

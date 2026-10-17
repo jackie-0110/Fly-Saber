@@ -16,6 +16,7 @@ blue_chroma: 0.0
 
 # Timing and judging.
 step_hz: 30
+note_speed_mps: 7.0           # one speed for training and live play, not the mapper's
 timing_window_sec: 0.1        # a cut counts within this many seconds of the note's time
 spawn_distance_m: 12.0        # notes are drawn once this close to the hit plane
 max_visible_notes: 16         # nearest notes rendered per frame
