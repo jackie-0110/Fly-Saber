@@ -1,0 +1,59 @@
+{
+ "schema_version": 1,
+ "map_id": "smoke1_hard",
+ "split": "train",
+ "song": {
+  "title": "Container smoke test",
+  "artist": "CI",
+  "mapper": "CI",
+  "bpm": 120.0,
+  "duration_sec": 1.5,
+  "audio_url": "/api/maps/smoke1_hard/audio",
+  "license": "CC BY 4.0",
+  "source_url": "https://example.com"
+ },
+ "difficulty": {
+  "name": "Hard",
+  "note_speed_mps": 10.0,
+  "spawn_distance_m": 12.0
+ },
+ "notes": [
+  {
+   "id": 0,
+   "time_sec": 0.4,
+   "lane": 1,
+   "layer": 0,
+   "color": 0,
+   "cut_direction": 1,
+   "is_bomb": false
+  },
+  {
+   "id": 1,
+   "time_sec": 0.8,
+   "lane": 2,
+   "layer": 1,
+   "color": 1,
+   "cut_direction": 0,
+   "is_bomb": false
+  },
+  {
+   "id": 2,
+   "time_sec": 1.0,
+   "lane": 1,
+   "layer": 0,
+   "color": null,
+   "cut_direction": null,
+   "is_bomb": true
+  },
+  {
+   "id": 3,
+   "time_sec": 1.2,
+   "lane": 0,
+   "layer": 0,
+   "color": 0,
+   "cut_direction": 6,
+   "is_bomb": false
+  }
+ ],
+ "walls": []
+}

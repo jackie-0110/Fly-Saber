@@ -12,6 +12,8 @@
 !server/**
 !configs/
 !configs/*.yaml
+!bundles/
+!bundles/**
 !data/
 !data/maps/
 !data/maps/demo_allowlist.json
@@ -30,3 +32,4 @@
 **/.env
 **/.env.*
 **/*.npz
+!bundles/**/*.npz
