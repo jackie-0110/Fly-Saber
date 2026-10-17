@@ -37,3 +37,6 @@ frontend/playwright-report/
 # SLURM logs
 slurm-*.out
 logs/
+
+# Demo checkpoints shipped with their exact subgraph (scripts/bundle_checkpoint.py)
+!bundles/**/*.npz

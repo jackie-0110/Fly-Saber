@@ -1,0 +1,59 @@
+{
+  "source": "MaleCNS v1.0 flat connectome, minconf 0.5",
+  "n_neurons": 19463,
+  "n_edges": 340922,
+  "n_synapses": 6175540,
+  "roles": {
+    "columnar": 10123,
+    "projection": 5471,
+    "intermediate": 2479,
+    "descending": 1310,
+    "modulatory": 80
+  },
+  "signs": {
+    "1": 254985,
+    "-1": 76587,
+    "0": 9350
+  },
+  "positions_inherited": 2801,
+  "positions_missing": 148,
+  "config": {
+    "dataset": "malecns",
+    "raw_dir": "data/raw/malecns",
+    "out_dir": "data/processed/malecns_subgraph",
+    "min_synapses": 5,
+    "column_stride": 2,
+    "columnar_types": [
+      "R1-R6",
+      "R7.*",
+      "R8.*",
+      "L[1-5]",
+      "Mi(1|4|9)",
+      "Tm(1|2|3|4|9)",
+      "T4[a-d]",
+      "T5[a-d]"
+    ],
+    "projection_types": [
+      "LC\\d+.*",
+      "LPLC\\d+",
+      "LLPC\\d+",
+      "HS.*",
+      "VS.*"
+    ],
+    "descending_superclass": "descending_neuron",
+    "max_intermediates": 2500,
+    "max_neurons": 20000,
+    "hex_inherit_superclasses": [
+      "ol_intrinsic",
+      "ol_sensory"
+    ],
+    "hex_inherit_passes": 2,
+    "modulatory_nts": [
+      "octopamine",
+      "dopamine",
+      "serotonin"
+    ],
+    "max_modulatory_per_nt": 60,
+    "min_modulatory_synapses": 20
+  }
+}

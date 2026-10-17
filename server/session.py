@@ -5,7 +5,7 @@ Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 
 import asyncio
 import uuid
-from collections.abc import Callable
+from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
@@ -36,13 +36,6 @@ from server.protocol import (
 
 STEP_HZ = 30
 GAMES = [Game(id="saber", label="Fly Saber")]
-BRAINS = [
-    Brain(
-        id="expert",
-        label="Scripted expert",
-        description="Perfect player that reads the map; stands in until trained brains load.",
-    ),
-]
 
 
 @dataclass(frozen=True)
@@ -67,7 +60,19 @@ class Sim(Protocol):
     def step(self) -> StepOutput: ...
 
 
-SimFactory = Callable[[dict[str, Any], str, int], Sim]
+class SimFactory(Protocol):
+    """Makes one player's sims; n_neurons is 0 for players without a brain."""
+
+    n_neurons: int
+    cell_types: list[str]
+
+    def __call__(self, map_data: dict[str, Any], seed: int) -> Sim: ...
+
+
+@dataclass(frozen=True)
+class LiveBrain:
+    info: Brain
+    make_sim: SimFactory
 
 
 @dataclass
@@ -80,10 +85,12 @@ class SlotRun:
 class Session:
     """One WebSocket: start, play, clock, pause, reset; one or two slots (Versus)."""
 
-    def __init__(self, websocket: WebSocket, catalog: Catalog, make_sim: SimFactory) -> None:
+    def __init__(
+        self, websocket: WebSocket, catalog: Catalog, brains: Mapping[str, LiveBrain]
+    ) -> None:
         self.websocket = websocket
         self.catalog = catalog
-        self.make_sim = make_sim
+        self.brains = brains
         self.session_id = uuid.uuid4().hex
         self.start: Start | None = None
         self.slots: list[SlotRun] = []
@@ -131,7 +138,7 @@ class Session:
         if start.game not in {g.id for g in GAMES}:
             await self.send(Error(message=f"unknown game {start.game}"))
             return
-        if not set(start.brains) <= {b.id for b in BRAINS}:
+        if not set(start.brains) <= set(self.brains):
             await self.send(Error(message=f"unknown brain in {start.brains}"))
             return
         if map_data is None:
@@ -139,9 +146,12 @@ class Session:
             return
         self.start = start
         self.slots = []
-        for brain in start.brains:
-            sim = self.make_sim(map_data, brain, start.seed)
+        factories = [self.brains[b].make_sim for b in start.brains]
+        for make_sim in factories:
+            sim = make_sim(map_data, start.seed)
             self.slots.append(SlotRun(sim, sim.reset(0.0)))
+        # Versus pairs brains on one subgraph, or a brain with the brainless expert.
+        neural = max(factories, key=lambda f: f.n_neurons)
         await self.send(
             Ready(
                 session_id=self.session_id,
@@ -149,8 +159,8 @@ class Session:
                 map_id=start.map_id,
                 slots=[SlotInfo(slot=i, brain=b) for i, b in enumerate(start.brains)],
                 step_hz=STEP_HZ,
-                n_neurons=0,
-                cell_types=[],
+                n_neurons=neural.n_neurons,
+                cell_types=neural.cell_types,
             )
         )
 
