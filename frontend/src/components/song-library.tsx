@@ -97,6 +97,7 @@ function CommunitySongLibrary() {
   useEffect(
     () => () => {
       request.current?.abort()
+      // Let StrictMode's effect replay restart the initial search.
       initial.current = false
     },
     [],
