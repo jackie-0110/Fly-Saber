@@ -1,13 +1,93 @@
-import { useRef, useState } from 'react'
-import { Expand, Move, Orbit, ScanLine, Video } from 'lucide-react'
+import { Component, lazy, Suspense, useCallback, useRef, useState } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
+import {
+  Expand,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Maximize,
+  Orbit,
+  RotateCcw,
+  ScanLine,
+  Video,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { openSongLibrary, usePlayer } from '@/game/store'
+import type { GameCameraAction } from '@/game/game-scene'
+
+const GameScene = lazy(() => import('@/game/game-scene'))
+
+class GameBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
+}
+
+function CameraButton({
+  label,
+  children,
+  onClick,
+  disabled = false,
+}: {
+  label: string
+  children: ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={label}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function GamePreview() {
   const panelRef = useRef<HTMLDivElement>(null)
   const [fullscreenError, setFullscreenError] = useState('')
+  const [sceneAttempt, setSceneAttempt] = useState(0)
+  const [contextLost, setContextLost] = useState(false)
+  const [cameraReady, setCameraReady] = useState(false)
+  const [showFly, setShowFly] = useState(true)
+  const chart = usePlayer((s) => s.chart)
+  const loading = usePlayer((s) => s.loading)
+  const error = usePlayer((s) => s.error)
+  const navigate = useRef<((action: GameCameraAction) => void) | null>(null)
+  const onNavigateReady = useCallback((handler: ((action: GameCameraAction) => void) | null) => {
+    navigate.current = handler
+    setCameraReady(handler !== null)
+  }, [])
+  const onFailure = useCallback(() => {
+    setContextLost(true)
+    setCameraReady(false)
+  }, [])
+  const retry = () => {
+    setContextLost(false)
+    setSceneAttempt((value) => value + 1)
+  }
 
   async function expandScene() {
     try {
@@ -19,13 +99,72 @@ export function GamePreview() {
     }
   }
 
+  function cameraKey(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return
+    const action: Record<string, GameCameraAction> = {
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      ArrowUp: 'up',
+      ArrowDown: 'down',
+      '+': 'in',
+      '=': 'in',
+      '-': 'out',
+      Home: 'reset',
+    }
+    if (action[event.key]) {
+      event.preventDefault()
+      navigate.current?.(action[event.key])
+    } else if (event.code === 'Space' && chart) {
+      event.preventDefault()
+      const player = usePlayer.getState()
+      if (player.playing) player.pause()
+      else void player.play()
+    }
+  }
+
+  const fallback = (
+    <div className="game-scene-fallback" role="status">
+      <Orbit aria-hidden="true" />
+      <h3>The 3D track is unavailable.</h3>
+      <p>This view needs WebGL 2. Song selection, audio, and the timeline still work.</p>
+      <Button variant="outline" size="sm" onClick={retry}>
+        Retry 3D view
+      </Button>
+    </div>
+  )
+
   return (
     <Card className="game-viewport" ref={panelRef} role="region" aria-labelledby="game-heading">
-      <img
-        className="game-art"
-        src="/previews/fly-saber.svg"
-        alt="Static illustration of a fruit fly holding coral and teal sabers on a four-lane track with approaching patterned rhythm blocks."
-      />
+      <div
+        className="game-stage"
+        tabIndex={0}
+        role="region"
+        aria-label="Interactive 3D game view"
+        aria-describedby="game-camera-help"
+        onKeyDown={cameraKey}
+      >
+        {contextLost ? (
+          fallback
+        ) : (
+          <GameBoundary key={sceneAttempt} fallback={fallback}>
+            <Suspense
+              fallback={
+                <div className="game-scene-fallback" role="status">
+                  <LoaderCircle className="spin" />
+                  <p>Preparing the 3D track…</p>
+                </div>
+              }
+            >
+              <GameScene
+                chart={chart}
+                showFly={showFly}
+                onNavigateReady={onNavigateReady}
+                onFailure={onFailure}
+              />
+            </Suspense>
+          </GameBoundary>
+        )}
+      </div>
       <div className="scene-topline">
         <div className="scene-title">
           <ScanLine aria-hidden="true" />
@@ -35,62 +174,115 @@ export function GamePreview() {
         </div>
         <Badge variant="outline" className="scene-label">
           <span className="status-dot" />
-          STATIC SCENE
+          {chart ? 'CHART PREVIEW' : '3D WORKSPACE'}
         </Badge>
       </div>
-      <div className="orientation-marker" aria-hidden="true">
-        <span>FORWARD</span>
-        <div>↑</div>
-        <small>Z</small>
-      </div>
+      {!chart && !loading && cameraReady && (
+        <div className="scene-empty">
+          <span className="eyebrow">READY WHEN YOU ARE</span>
+          <h2>
+            A new perspective
+            <br />
+            on every beat.
+          </h2>
+          <p>Load a song, explore its chart, and move through the music.</p>
+          <Button variant="outline" size="sm" onClick={openSongLibrary}>
+            Choose a song <Video aria-hidden="true" />
+          </Button>
+        </div>
+      )}
+      {(loading || error) && (
+        <div className={`song-notice${error ? ' is-error' : ''}`} role="status">
+          {loading ? (
+            <LoaderCircle className="spin" aria-hidden="true" />
+          ) : (
+            <ScanLine aria-hidden="true" />
+          )}
+          <p>{loading || error}</p>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={loading ? 'Cancel song loading' : 'Dismiss song error'}
+            onClick={() =>
+              loading ? usePlayer.getState().cancelLoad() : usePlayer.getState().clearError()
+            }
+          >
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+      )}
+      {chart && chart.warnings.length > 0 && (
+        <details className="chart-warnings">
+          <summary>Map compatibility notes ({chart.warnings.length})</summary>
+          {chart.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </details>
+      )}
       <div className="scene-bottomline">
         <div className="saber-legend">
           <span>
             <i className="coral" />
-            Left saber
+            Left notes
           </span>
           <span>
             <i className="mint" />
-            Right saber
+            Right notes
           </span>
         </div>
-        <div className="camera-toolbar" aria-label="Game view controls">
-          <span className="camera-view-label">
-            <Video aria-hidden="true" />
-            Third person
-          </span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className="disabled-control"
-                tabIndex={0}
-                aria-label="Game camera orbit and pan will be available with the 3D scene"
-              >
-                <Button variant="ghost" size="icon-sm" disabled aria-label="Orbit game camera">
-                  <Orbit aria-hidden="true" />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Orbit, pan, and zoom are planned for the 3D game scene.</TooltipContent>
-          </Tooltip>
-          <Button variant="ghost" size="icon-sm" disabled aria-label="Pan game camera">
-            <Move aria-hidden="true" />
-          </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={expandScene}
-                aria-label="Toggle game view fullscreen"
-              >
-                <Expand aria-hidden="true" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Expand game view</TooltipContent>
-          </Tooltip>
+        <div className="camera-toolbar" aria-label="Game camera controls">
+          <CameraButton
+            label="Reset game camera"
+            disabled={!cameraReady}
+            onClick={() => navigate.current?.('reset')}
+          >
+            <RotateCcw />
+          </CameraButton>
+          <CameraButton
+            label="Track overview"
+            disabled={!cameraReady}
+            onClick={() => navigate.current?.('overview')}
+          >
+            <Maximize />
+          </CameraButton>
+          <CameraButton
+            label="Player view"
+            disabled={!cameraReady}
+            onClick={() => navigate.current?.('player')}
+          >
+            <Video />
+          </CameraButton>
+          <span className="camera-tool-divider" />
+          <CameraButton
+            label="Zoom game camera in"
+            disabled={!cameraReady}
+            onClick={() => navigate.current?.('in')}
+          >
+            <ZoomIn />
+          </CameraButton>
+          <CameraButton
+            label="Zoom game camera out"
+            disabled={!cameraReady}
+            onClick={() => navigate.current?.('out')}
+          >
+            <ZoomOut />
+          </CameraButton>
+          <CameraButton
+            label={showFly ? 'Hide fly model' : 'Show fly model'}
+            disabled={!cameraReady}
+            onClick={() => setShowFly((value) => !value)}
+          >
+            {showFly ? <Eye /> : <EyeOff />}
+          </CameraButton>
+          <CameraButton label="Toggle game view fullscreen" onClick={expandScene}>
+            <Expand />
+          </CameraButton>
         </div>
       </div>
+      <p className="game-camera-help" id="game-camera-help">
+        Drag to orbit · Scroll to zoom · Right-drag to pan
+        <span>Focus view: arrows rotate, +/− zoom, Home resets, Space plays.</span>
+      </p>
       <p className="fullscreen-status" role="status">
         {fullscreenError}
       </p>

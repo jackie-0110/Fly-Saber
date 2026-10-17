@@ -24,8 +24,10 @@ export class AudioTransport {
   private onChange: (snapshot: PlaybackSnapshot) => void
   private makeContext: () => AudioContext
 
-  constructor(onChange: (snapshot: PlaybackSnapshot) => void,
-    makeContext: () => AudioContext = () => new AudioContext()) {
+  constructor(
+    onChange: (snapshot: PlaybackSnapshot) => void,
+    makeContext: () => AudioContext = () => new AudioContext(),
+  ) {
     this.onChange = onChange
     this.makeContext = makeContext
   }
@@ -50,7 +52,9 @@ export class AudioTransport {
         throw new Error('Duration must be between 0 and 30 minutes.')
       return buffer
     } catch (cause) {
-      throw new Error(`Could not decode this map’s audio. ${cause instanceof Error ? cause.message : 'Try another map or audio format.'}`)
+      throw new Error(
+        `Could not decode this map’s audio. ${cause instanceof Error ? cause.message : 'Try another map or audio format.'}`,
+      )
     }
   }
 
@@ -62,17 +66,25 @@ export class AudioTransport {
   }
 
   getTime() {
-    const time = this.offset + (this.playing && this.context ?
-      (this.context.currentTime - this.startedAt) * this.rate : 0)
+    const time =
+      this.offset +
+      (this.playing && this.context ? (this.context.currentTime - this.startedAt) * this.rate : 0)
     return Math.max(0, Math.min(this.buffer?.duration ?? 0, time))
   }
 
   snapshot(): PlaybackSnapshot {
-    return { time: this.getTime(), duration: this.buffer?.duration ?? 0,
-      playing: this.playing, rate: this.rate, volume: this.volume }
+    return {
+      time: this.getTime(),
+      duration: this.buffer?.duration ?? 0,
+      playing: this.playing,
+      rate: this.rate,
+      volume: this.volume,
+    }
   }
 
-  private emit() { this.onChange(this.snapshot()) }
+  private emit() {
+    this.onChange(this.snapshot())
+  }
 
   private stopSource() {
     if (this.source) {
@@ -107,7 +119,10 @@ export class AudioTransport {
     this.lastUpdate = 0
     const tick = (now: number) => {
       if (!this.playing) return
-      if (now - this.lastUpdate >= 65) { this.emit(); this.lastUpdate = now }
+      if (now - this.lastUpdate >= 65) {
+        this.emit()
+        this.lastUpdate = now
+      }
       this.animation = requestAnimationFrame(tick)
     }
     this.animation = requestAnimationFrame(tick)
