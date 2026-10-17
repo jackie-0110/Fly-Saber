@@ -34,6 +34,17 @@ cat logs/fly-bench-<jobid>.out
 
 Success: `jax ... [CudaDevice(id=0)]` and frames per second far above the laptop's ~1,800.
 
+## Train (behavior cloning)
+
+Needs setup to have run on the current code (it also fetches the song maps). Already set up from an older checkout? Run `uv run python scripts/fetch_maps.py` once inside a job, or resubmit `setup.sbatch`.
+
+```bash
+sbatch --export=ALL training/slurm/bc.sbatch
+tail -f logs/fly-bc-<jobid>.out     # one row every 50 updates
+```
+
+Each row: `loss` should fall; `head_accuracy` is [red position, red direction, blue position, blue direction]. Direction starts near 95% only because "no cut" is almost always right, so watch position accuracy and `hit_rate` (greedy play, fraction of notes hit). Output: `checkpoints/real/seed0/bc_2000.npz` and `bc_log.json`. Settings: `configs/train_bc.yaml`. GPU memory is about 2.5 GB per 64 envs.
+
 ## Every time
 
 ```bash

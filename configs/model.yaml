@@ -36,6 +36,10 @@ modulation_gain:
   serotonin: -1.0
 modulation_max_log_gain: 1.0   # caps any neuron's modulation at e, about 2.7x
 
+# Gradient checkpointing per brain step: training stores only each frame's neuron states and
+# recomputes the substeps on the backward pass. Without it one BC update needs 169 GB.
+remat: true
+
 # Action heads, from the Fly Saber env (Person 2 contract): per saber, 12 cells + idle
 # and 4 directions + no_cut. Red saber first, then blue.
 action_heads: [13, 5, 13, 5]

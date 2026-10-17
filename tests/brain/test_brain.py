@@ -182,3 +182,27 @@ def test_relu_sat_levels_off() -> None:
     for _ in range(60):
         v, out = step(params, v, jnp.array([[1.0], [0.5]]), iv, jax.random.PRNGKey(0))
     assert 1.99 < float(out.rates[3]) <= 2.0  # huge drive, capped at rate_max
+
+
+def test_remat_gives_identical_gradients() -> None:
+    import dataclasses
+
+    graph = _graph(1.0, mod_gain=1.0)
+    params = init_params(jax.random.PRNGKey(0), graph, CFG, N)
+
+    def loss(remat: bool):  # type: ignore[no-untyped-def]
+        step = make_step(graph, dataclasses.replace(CFG, remat=remat), N)
+
+        def f(p):  # type: ignore[no-untyped-def]
+            v, total = init_state(N), jnp.zeros(())
+            for _ in range(5):
+                v, out = step(
+                    p, v, jnp.array([[1.0], [0.5]]), no_interventions(N), jax.random.PRNGKey(0)
+                )
+                total = total + jnp.sum(out.logits**2)
+            return total
+
+        return jax.grad(f)(params)
+
+    for a, b in zip(jax.tree.leaves(loss(True)), jax.tree.leaves(loss(False)), strict=True):
+        np.testing.assert_allclose(a, b, rtol=1e-5, atol=1e-7)
