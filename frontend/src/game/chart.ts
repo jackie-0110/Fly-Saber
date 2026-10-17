@@ -52,6 +52,7 @@ export function object(value: unknown, label = 'Map'): JsonObject {
 export function list(value: unknown, label: string): JsonObject[] {
   if (value === undefined) return []
   if (!Array.isArray(value)) throw new Error(`${label} must be an array.`)
+  if (value.length > 200000) throw new Error(`${label} exceeds the preview size limit.`)
   return value.map((item) => object(item, label))
 }
 
@@ -104,13 +105,13 @@ export function beatClock(bpm: number, changes: BpmChange[] = [], offset = 0) {
 }
 
 export function sampleClock(data: JsonObject): (beat: number) => number {
-  const frequency = numeric(data.songFrequency)
-  const regions = list(data.bpmData, 'Audio BPM regions')
+  const frequency = numeric(data.songFrequency ?? data._songFrequency)
+  const regions = list(data.bpmData ?? data._regions, 'Audio BPM regions')
     .map((region) => ({
-      startBeat: numeric(region.sb),
-      endBeat: numeric(region.eb),
-      start: numeric(region.si) / frequency,
-      end: numeric(region.ei) / frequency,
+      startBeat: numeric(region.sb ?? region._startBeat),
+      endBeat: numeric(region.eb ?? region._endBeat),
+      start: numeric(region.si ?? region._startSampleIndex) / frequency,
+      end: numeric(region.ei ?? region._endSampleIndex) / frequency,
     }))
     .sort((a, b) => a.startBeat - b.startBeat)
   if (

@@ -66,9 +66,13 @@ async function loadSong(
       usePlayer.setState({
         loading: '',
         error:
-          cause instanceof Error
-            ? cause.message
-            : 'Could not load this song. Try importing its map ZIP.',
+          cause instanceof Error && cause.name === 'TimeoutError'
+            ? 'The song download timed out. Try again, or import its map ZIP.'
+            : cause instanceof TypeError
+              ? 'Could not download this song. Check your connection, or import its map ZIP.'
+              : cause instanceof Error
+                ? cause.message
+                : 'Could not load this song. Try importing its map ZIP.',
       })
   } finally {
     if (pending === controller) pending = null

@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-This plan follows [`FLY_SABER_HANDOFF.md`](../FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The handoff describes a fly playing from visual input, with interventions that affect its behavior. The frontend must communicate that goal without claiming that this static preview demonstrates it.
+This plan follows [`FLY_SABER_HANDOFF.md`](../FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The chart preview is now interactive. Fly actions and neuron firing still require a real backend connection.
 
 The current implementation is in `frontend/`, per the frontend owner's request. The repository has since been reorganized around this directory. Keep build, Docker, and deployment paths aligned with it.
 
@@ -10,10 +10,15 @@ Implemented now:
 
 - React, TypeScript, and Vite with shadcn/ui components and a dark grey workstation design system.
 - A workstation layout with a compact toolbar, large Fly Saber viewport, right-hand brain/session inspector, and bottom timeline/readouts, stacking vertically on small screens.
-- The original Fly Saber SVG remains a static preview. The brain SVG has been replaced with a real 19,462-neuron cloud loaded from the committed MaleCNS JSON assets.
+- An audio-synchronized 3D track with instanced directional notes, bombs, walls, a neutral fly mesh, and independent game-camera orbit/pan/zoom/presets.
+- Unrestricted community song search and local map ZIP import in the Songs sidebar tab, with song information above the viewport. Existing charts only; no automatic block generation.
+- Play/pause/restart, forward/backward scrubbing, playback speed, volume, and a chart-density timeline work without a fly session.
+- The brain renders a real 19,462-neuron cloud loaded from the committed MaleCNS JSON assets.
 - Brain orbit, pan, zoom, display-axis presets, keyboard navigation, group/type filters, point selection, and position provenance are implemented. Rendering is lazy-loaded and uses a single point cloud with error/retry states.
-- Honest anatomy/preview labels, inactive playback, unreported scores, fullscreen game viewing, and Neurons/Details/Next steps inspector tabs.
-- No network session, fake firing animation, audio, or game simulation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
+- Honest anatomy/chart-preview labels, unreported scores, fullscreen game viewing, and Neurons/Songs/Session/Details/Next steps inspector tabs.
+- No fly session, fabricated firing animation, or browser policy simulation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
+
+See [SONG_PREVIEW.md](./SONG_PREVIEW.md) for implemented map/audio behavior and the remaining real-time inference integration. The sections below retain the broader live-session roadmap; their scene, camera, and local-audio foundations are already implemented.
 
 The current point cloud uses supplied anatomical positions, including partner and type-mean estimates marked in the export. Colors identify cell types, not firing. The old neural SVG remains decorative artwork only and must never become scientific test data.
 

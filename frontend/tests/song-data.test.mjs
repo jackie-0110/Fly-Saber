@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { strToU8, zipSync } from 'fflate'
 import { beatClock, formatTime, lowerBound, parseChart, sampleClock } from '../src/game/chart.ts'
 import { importSong, mapKey, parseSongResult } from '../src/game/songs.ts'
-import { info, mapZip, result, v2, v3, wav } from './song-fixtures.mjs'
+import { info, mapZip, result, v2, v3, wav } from './song-fixtures.ts'
 
 const options = { id: 'fixture_normal', name: 'Normal', characteristic: 'Standard', bpm: 120, speed: 10, jumpOffset: 0, offset: 0 }
 const signal = () => new AbortController().signal
@@ -53,6 +53,37 @@ test('v4 indexed metadata resolves notes and audio sample regions without using 
   assert.throws(() => parseChart({ version: '4.0.0', colorNotes: [{ i: 5 }] }, options), /metadata/)
 })
 
+test('audio timing accepts both supported sample-region schemas and rejects discontinuities', () => {
+  const time = sampleClock({ _songFrequency: 100, _regions: [
+    { _startBeat: 0, _endBeat: 4, _startSampleIndex: 0, _endSampleIndex: 200 },
+    { _startBeat: 4, _endBeat: 8, _startSampleIndex: 200, _endSampleIndex: 600 },
+  ] })
+  assert.equal(time(6), 4)
+  assert.throws(() => sampleClock({ songFrequency: 100, bpmData: [
+    { sb: 0, eb: 4, si: 0, ei: 200 }, { sb: 5, eb: 8, si: 200, ei: 600 },
+  ] }), /invalid audio timing/)
+})
+
+test('a complete modern ZIP uses its sample timing and modern song/mapper metadata', async () => {
+  const modern = { version: '4.0.0', song: { title: 'Sample Regions', author: 'Fixture Artist' },
+    audio: { songFilename: 'song.wav', audioDataFilename: 'AudioData.dat', bpm: 120 },
+    difficultyBeatmaps: [{ characteristic: 'Standard', difficulty: 'Hard', beatmapDataFilename: 'Hard.dat',
+      noteJumpMovementSpeed: 12, beatmapAuthors: { mappers: ['Modern Mapper'] } }],
+  }
+  const audio = { version: '4.0.0', songFrequency: 100, bpmData: [
+    { sb: 0, eb: 4, si: 0, ei: 200 }, { sb: 4, eb: 8, si: 200, ei: 600 },
+  ] }
+  const chart = { version: '4.0.0', colorNotes: [{ b: 6 }], colorNotesData: [{ x: 2, y: 1, c: 1, d: 7 }] }
+  const zip = zipSync({ 'Info.dat': strToU8(JSON.stringify(modern)), 'AudioData.dat': strToU8(JSON.stringify(audio)),
+    'Hard.dat': strToU8(JSON.stringify(chart)), 'song.wav': wav() })
+  const song = await importSong(zip, 'abcd', null, signal())
+  assert.equal(song.title, 'Sample Regions')
+  assert.equal(song.mapper, 'Modern Mapper')
+  assert.equal(song.charts[0].map_id, 'abcd_hard')
+  assert.equal(song.charts[0].notes[0].time_sec, 4)
+  assert.equal(song.charts[0].notes[0].cut_direction, 7)
+})
+
 test('malformed numbers and versions are rejected and off-grid notes are explicitly reported', () => {
   assert.throws(() => parseChart({ version: '9.0.0' }, options), /unsupported/)
   assert.throws(() => parseChart({ version: '3.0.0', colorNotes: [{ b: '2' }] }, options), /invalid number/)
@@ -88,6 +119,9 @@ test('one malformed difficulty cannot prevent other supported difficulties from 
 test('map IDs and links are recognized, catalog assets stay on the community CDN', () => {
   assert.equal(mapKey('https://beatsaver.com/maps/ABC12'), 'abc12')
   assert.equal(mapKey('abc12'), 'abc12')
+  assert.equal(mapKey('#abcd'), 'abcd')
+  assert.equal(mapKey('ABBA'), null)
+  assert.equal(mapKey('dead'), null)
   assert.equal(mapKey('https://example.org/maps/abc12'), null)
   assert.equal(mapKey('Daft Punk'), null)
   assert.equal(parseSongResult(result).title, 'Orbit Test')

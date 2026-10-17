@@ -60,7 +60,9 @@ export function parseSongResult(value: unknown): SongResult {
 
 export function mapKey(query: string): string | null {
   const trimmed = query.trim()
-  if (/^[a-f0-9]{1,8}$/i.test(trimmed)) return trimmed.toLowerCase()
+  if (/^#[a-f0-9]{1,8}$/i.test(trimmed)) return trimmed.slice(1).toLowerCase()
+  // Names like "ABBA" and "dead" are valid hex too; keep them as search phrases.
+  if (/^[a-f0-9]{1,8}$/i.test(trimmed) && /\d/.test(trimmed)) return trimmed.toLowerCase()
   try {
     const url = new URL(trimmed)
     if (['beatsaver.com', 'www.beatsaver.com'].includes(url.hostname))
