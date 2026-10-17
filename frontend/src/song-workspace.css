@@ -981,3 +981,65 @@
     grid-column: 1 / -1;
   }
 }
+
+.library-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 18px 0;
+}
+.live-library h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.live-brain-picker {
+  display: grid;
+  gap: 8px;
+  margin-block: 18px 12px;
+  font-size: 14px;
+}
+.live-brain-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #262729;
+  color: #e3e6e5;
+  font: inherit;
+}
+.live-brain-picker select:focus-visible {
+  outline: 2px solid #a4d9cf;
+  outline-offset: 2px;
+}
+.catalog-license {
+  padding: 0 12px 10px;
+  margin: 0;
+  font-size: 12px;
+  color: #b2b9b7;
+}
+.song-attribution {
+  flex-basis: 100%;
+  font-size: 12px;
+  margin: 0;
+  color: #b2b9b7;
+  overflow-wrap: anywhere;
+}
+.song-header:has(.song-attribution) {
+  flex-wrap: wrap;
+}
+.scene-title > .live-session-status:last-child {
+  display: inline;
+  font-size: 12px;
+  color: #b4d8cb;
+}
+@media (max-width: 600px) {
+  .live-brain-picker select {
+    font-size: 16px;
+  }
+  .scene-title .live-session-status {
+    max-width: 130px;
+    overflow-wrap: anywhere;
+  }
+}

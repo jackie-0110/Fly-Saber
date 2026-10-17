@@ -52,15 +52,15 @@ Each frame reads `transport.getTime()` without integrating frame deltas. A seek 
 
 React receives timeline snapshots around 15 Hz; the scene reads the audio clock at render rate. Paused scenes render on demand, including camera changes and seeks. Device pixel ratio, note/wall instances, and archive sizes are bounded. GPU resources are disposed on unmount. The fly and sabers stay in a neutral pose without inferred actions, hits, or fabricated scores.
 
-Playback speed changes Web Audio's buffer rate, including pitch. It is a chart-inspection control; a future live adapter must explicitly agree on speed support.
+Playback speed changes Web Audio's buffer rate, including pitch, for community previews. Live server songs stay at 1× because the protocol does not negotiate speed.
 
-## Connecting real-time inference later
+## Live sessions
 
-Keep the audio transport, chart, and spectator cameras. Add a session adapter that transmits or negotiates the selected normalized chart and shared song time, then consumes real saber actions, events, score, and indexed neuron activity. The existing server catalog only knows maps on its disk and still uses the demo audio allowlist, so a browser-loaded community map cannot be passed to it by ID alone today. This feature intentionally does not start that connection.
+Live songs load a normalized chart from `GET /api/maps/{id}` and audio from its server audio endpoint. `session-client.ts` opens `/ws/session`, sends `start`, waits for a matching `ready`, then sends `play` when Web Audio starts and `clock` every second. Saber actions, scores, note removals and final results come from server messages. Community maps remain local previews; the server cannot play an arbitrary browser-loaded chart.
 
-Reconcile mapper note speed/spawn distance with `configs/saber.yaml` before claiming visual equivalence with fly input: the current sim uses a fixed speed. Chart cut directions also retain all nine values here while the sim adapts them to four. A shared rendering-settings contract should make these differences explicit.
+Pause sends the current clock and freezes the existing run. Resume preserves score and brain state. A seek sends a new `play` at the selected audio time, resetting score, events and recurrent state there. It does not restore the brain's earlier history. Changing maps/brains tears down the old socket; stale callbacks cannot update its replacement. Errors stop audio and allow a fresh connection on play.
 
-Chart scrubbing works now. Seeking a running recurrent brain is separate work: define whether it resets at that timestamp or restores/recomputes prior state. Moving the browser timeline must never imply that inference state has been restored. Normal real-time inference does not require a recorded performance.
+The scene retains mapper speed/spawn distance; the server currently uses the fixed speed in `configs/saber.yaml`. Timing agrees at the hit plane, but spacing may differ. Chart cut directions retain all nine values while the sim adapts to four. Neuron activity still requires the binary stream contract.
 
 ## Validation
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { backendUrl } from '@/game/backend'
 
 type BackendState = 'checking' | 'connected' | 'disconnected'
 
@@ -22,7 +23,10 @@ export function BackendStatus() {
       request = new AbortController()
       deadline = setTimeout(() => request?.abort(), 4000)
       try {
-        const response = await fetch('/api/games', { signal: request.signal, cache: 'no-store' })
+        const response = await fetch(backendUrl('/api/games'), {
+          signal: request.signal,
+          cache: 'no-store',
+        })
         if (!response.ok) throw new Error('Backend unavailable')
         const games: unknown = await response.json()
         // Vite's HTML fallback or an unrelated service must not count as a connection.

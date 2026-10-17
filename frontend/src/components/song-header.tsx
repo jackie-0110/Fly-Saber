@@ -32,6 +32,9 @@ export function SongHeader() {
             <span>{formatTime(duration)}</span>
             <span>{chart.notes.filter((n) => !n.is_bomb).length.toLocaleString()} notes</span>
             <span>Mapped by {song.mapper}</span>
+            {song.serverMapId && (
+              <span>{song.split === 'heldout' ? 'Unseen map' : 'Training map'} · Live play</span>
+            )}
             {song.sourceUrl && (
               <a href={song.sourceUrl} target="_blank" rel="noreferrer">
                 Map source
@@ -41,6 +44,7 @@ export function SongHeader() {
           </div>
         )}
       </div>
+      {song?.attribution && <p className="song-attribution">{song.attribution}</p>}
     </section>
   )
 }

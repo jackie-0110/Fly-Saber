@@ -9,6 +9,8 @@ const groups = JSON.parse(
 ) as Record<string, number[]>
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/maps', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/brains', (route) => route.fulfill({ json: [] }))
   await page.route('**/api/games', (route) =>
     route.fulfill({ json: [{ id: 'saber', label: 'Fly Saber' }] }),
   )

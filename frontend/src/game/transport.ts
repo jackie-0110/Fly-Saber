@@ -58,6 +58,10 @@ export class AudioTransport {
     }
   }
 
+  async unlock() {
+    await this.audioContext().resume()
+  }
+
   load(buffer: AudioBuffer) {
     this.pause()
     this.buffer = buffer

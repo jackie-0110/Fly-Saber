@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { openSongLibrary, usePlayer } from '@/game/store'
 import type { GameCameraAction } from '@/game/game-scene'
 import { FlyMotionPreview } from '@/game/fly-motion-preview'
+import { useSession } from '@/game/session'
 
 const GameScene = lazy(() => import('@/game/game-scene'))
 
@@ -78,6 +79,7 @@ export function GamePreview() {
   const chart = usePlayer((s) => s.chart)
   const loading = usePlayer((s) => s.loading)
   const error = usePlayer((s) => s.error)
+  const sessionStatus = useSession((s) => s.status)
   const navigate = useRef<((action: GameCameraAction) => void) | null>(null)
   const onNavigateReady = useCallback((handler: ((action: GameCameraAction) => void) | null) => {
     navigate.current = handler
@@ -175,6 +177,13 @@ export function GamePreview() {
           <h2 id="game-heading">Game viewport</h2>
           <span className="scene-divider" />
           <span>Fly Saber</span>
+          {sessionStatus !== 'idle' && (
+            <span className="live-session-status" role="status">
+              {sessionStatus === 'connecting'
+                ? 'Connecting live session…'
+                : `Live · ${sessionStatus}`}
+            </span>
+          )}
         </div>
       </div>
       {motionPreview && <FlyMotionPreview />}

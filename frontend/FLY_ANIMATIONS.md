@@ -6,7 +6,7 @@ Open `/?flyMotion=preview` to review movements without a backend. Choose a movem
 
 ## Connect the trained model
 
-The adapter matches [`docs/PROTOCOL.md`](../docs/PROTOCOL.md) and `server/protocol.py`. Attach it to the session socket owned by your session integration:
+The adapter matches [`docs/PROTOCOL.md`](../docs/PROTOCOL.md) and `server/protocol.py`. `src/game/session-client.ts` now owns the live socket and forwards validated frames to `flyMotion.acceptMessage`, mirroring pause, seek, reset, end and disconnect. No additional attachment is needed in the app. A standalone consumer can attach it to its own socket:
 
 ```ts
 import { attachFlyMotionStream, flyMotion } from './game/fly-motion'
@@ -29,6 +29,6 @@ Frames are validated before changing pose. Duplicate/out-of-order steps, backwar
 
 Reaches blend from the previous pose. A single-tick cut finishes before following the latest no-cut/idle target; new cuts can interrupt immediately. A 140 ms stroke passes the blade midpoint through its selected grid center. Persistent identical cuts repeat at most every 280 ms instead of restarting at every 30 Hz frame; changing cells/cuts or returning to no-cut re-arms immediately. These are display transitions smoothed from frame arrival time, not hit detection or an assertion of exact audio timing. The backend remains authoritative for judging actions and outcomes.
 
-The controller and mesh are separate: replace `fly-model.tsx` or bind `sample().hands` to a later asset's bones without changing the protocol adapter. The current stylized forelegs stretch to cover the grid. The current backend has no walking, flight, duck, dodge, or diagonal action heads, so those are not synthesized from notes or wall positions. No WebSocket is opened automatically and no trained model/session selection is assumed.
+The controller and mesh are separate: replace `fly-model.tsx` or bind `sample().hands` to a later asset's bones without changing the protocol adapter. The current stylized forelegs stretch to cover the grid. The current backend has no walking, flight, duck, dodge, or diagonal action heads, so those are not synthesized from notes or wall positions. The app opens the WebSocket when playing a server-catalog song with an available player. Community preview and animation review open no session.
 
 Validation: `npm run build`, `npm run lint`, `npm run test:unit`, and Playwright checks in `e2e/fly-motion.spec.ts`.

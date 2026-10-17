@@ -1,10 +1,14 @@
 import { Activity, SlidersHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { usePlayer } from '@/game/store'
+import { useSession } from '@/game/session'
 
 export function SessionOverview() {
   const song = usePlayer((s) => s.song)
   const chart = usePlayer((s) => s.chart)
+  const brain = usePlayer((s) => s.brain)
+  const status = useSession((s) => s.status)
+  const error = useSession((s) => s.error)
   return (
     <>
       <section className="session-overview" aria-labelledby="overview-heading">
@@ -19,7 +23,7 @@ export function SessionOverview() {
           </div>
           <div>
             <dt>Brain variant</dt>
-            <dd className="muted-value">Not connected</dd>
+            <dd className="muted-value">{status === 'idle' ? 'Not connected' : brain}</dd>
           </div>
           <div>
             <dt>Dataset</dt>
@@ -35,19 +39,20 @@ export function SessionOverview() {
             <dt>Session status</dt>
             <dd>
               <span className="status-dot amber" />
-              No live session
+              {status === 'idle' ? 'No live session' : `Live session: ${status}`}
             </dd>
           </div>
         </dl>
       </section>
+      {error && <p role="alert">{error}</p>}
       <div className="intervention-placeholder">
         <SlidersHorizontal aria-hidden="true" />
         <span>Brain controls</span>
         <Badge variant="outline">Coming later</Badge>
       </div>
       <p className="inspector-footnote">
-        Audio and chart preview run locally. Real-time fly actions and neuron firing require a
-        backend session.
+        Live songs use server actions and scores. Community maps run as local previews. Neuron
+        firing awaits the activity stream.
       </p>
     </>
   )

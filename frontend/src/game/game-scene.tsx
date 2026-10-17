@@ -18,6 +18,7 @@ import type { Chart } from './chart'
 import { transport, usePlayer } from './store'
 import { FlyModel } from './fly-model'
 import { flyMotion, previewMotion } from './fly-motion'
+import { useSession } from './session'
 
 export type GameCameraAction =
   'reset' | 'overview' | 'player' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
@@ -274,6 +275,7 @@ function Notes({ chart }: { chart: Chart | null }) {
       dummy.scale.set(1, 1, 1)
       for (let i = first; i < end; i++) {
         const note = chart.notes[i]
+        if (useSession.getState().removed.has(note.id)) continue
         const category = note.is_bomb ? 18 : note.color! * 9 + note.cut_direction!
         if (counts[category] >= CAPACITY) continue
         dummy.position.set(
