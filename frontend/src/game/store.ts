@@ -4,7 +4,7 @@ import type { PlaybackSnapshot } from './transport.ts'
 import type { Chart, Song } from './chart.ts'
 import { downloadSong, importSongFile } from './songs.ts'
 import type { SongResult } from './songs.ts'
-import { loadServerSong, withLiveCharts } from './catalog.ts'
+import { loadCatalog, loadServerSong, withLiveCharts } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
 import { useSession } from './session.ts'
@@ -42,6 +42,11 @@ export function liveMapId(s: { song: Song | null; chart: Chart | null }): string
 
 let pending: AbortController | null = null
 let playAttempt = 0
+
+async function defaultBrain() {
+  const { brains } = await loadCatalog(AbortSignal.timeout(10000))
+  return (brains.find((b) => b.id === 'real') ?? brains[0])?.id ?? ''
+}
 export const transport = new AudioTransport((snapshot) => {
   usePlayer.setState(snapshot)
   if (!snapshot.playing) liveSession.pause()
@@ -160,6 +165,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     try {
       const mapId = liveMapId(get())
       if (mapId) {
+        if (!get().brain) set({ brain: await defaultBrain() })
+        if (attempt !== playAttempt) return
         if (!get().brain)
           throw new Error('Choose an available brain in the Songs tab, then press play.')
         await transport.unlock()
