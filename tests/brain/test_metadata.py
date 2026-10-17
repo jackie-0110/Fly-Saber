@@ -38,3 +38,5 @@ def test_web_neurons() -> None:
     sources = [out["position_sources"][s] for s in out["position_source"]]
     assert sources == ["soma", "partner", "type_mean", "soma"]
     assert len(out["position_um"]) == 12 and len(out["body_id"]) == 4
+    lo, hi = out["focus_bounds_um"]["min"], out["focus_bounds_um"]["max"]
+    assert out["bounds_um"]["min"][0] <= lo[0] <= hi[0] <= out["bounds_um"]["max"][0]

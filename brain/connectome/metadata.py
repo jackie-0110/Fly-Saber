@@ -50,6 +50,10 @@ def web_neurons(neurons: pd.DataFrame) -> dict[str, Any]:
         "nts": nts,
         "position_sources": POSITION_SOURCES,
         "bounds_um": {"min": um.min(axis=0).tolist(), "max": um.max(axis=0).tolist()},
+        "focus_bounds_um": {
+            "min": np.percentile(um, 1, axis=0).round(1).tolist(),
+            "max": np.percentile(um, 99, axis=0).round(1).tolist(),
+        },
         "body_id": neurons["body_id"].astype(int).tolist(),
         "type": codes("type", types),
         "superclass": codes("superclass", superclasses),

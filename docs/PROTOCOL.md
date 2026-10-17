@@ -198,6 +198,7 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | `cell_types` | string[] | sorted unique types. **Cell-type id = index in this list**, the same list and order as `ready.cell_types` and activity kind 2 |
 | `superclasses`, `roles`, `sides`, `nts`, `position_sources` | string[] | lookup tables for the coded arrays below |
 | `bounds_um` | `{min: [x,y,z], max: [x,y,z]}` | bounding box of all positions, micrometers |
+| `focus_bounds_um` | same shape | 1st to 99th percentile box per axis; frame the camera on this |
 | `type` | int[N] | cell-type id |
 | `superclass`, `role`, `side`, `nt` | int[N] | index into the matching lookup table |
 | `sign` | int[N] | +1 excitatory, -1 inhibitory, 0 modulatory or unclear |
@@ -205,7 +206,17 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | `position_um` | float[3N] | flat `x0, y0, z0, x1, ...` in micrometers (drop straight into a `Float32Array` for instancing) |
 | `position_source` | int[N] | 0 soma, 1 copied from strongest partner, 2 mean of its cell type (no position in the data) |
 
-Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Center on `bounds_um` for the camera.
+**Coordinates**: MaleCNS v1.0 native space, converted from 8 nm voxels to micrometers (0.1 um rounding). It covers the whole CNS including the ventral nerve cord, about 730 x 470 x 930 um. Axes, checked against known anatomy (left vs right somas, ocelli and mushroom bodies on top, nerve cord behind):
+
+| Axis | + direction | Landmarks (um) |
+|---|---|---|
+| x | fly's **left** | right-side somas about 200, midline about 390, left-side somas about 580 |
+| y | **ventral** (down) | ocelli and mushroom bodies about 70 to 95, nerve cord about 450 |
+| z | **posterior** (toward the nerve cord) | front of brain about 180, back of brain about 270, nerve cord about 810 |
+
+For a y-up Three.js scene with the fly facing the camera: subtract the center of `bounds_um`, then negate y (dorsal up) and negate z (anterior toward a camera on +z). The fly's left then appears on the viewer's right, as when facing a real fly. Do not rescale axes independently; the data is isotropic.
+
+Most neurons in this subgraph are in the brain and optic lobes. The 1,310 descending neurons have somas in the brain, so the nerve cord region is nearly empty and a few outliers stretch `bounds_um` to z = 1015. Frame the camera on `focus_bounds_um`.
 
 **Eye input (to agree with Person 2):** the eye drives photoreceptors by `(side, hex1, hex2)`. About 170 to 180 of the 220 sampled columns per eye have a photoreceptor; for the rest, inject into that column's L1 and L2 with inverted sign (see DATA_NOTES).
 
