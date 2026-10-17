@@ -1,0 +1,10 @@
+# training_maps.yaml (owner: Person 2). BeatSaver training-set scrape, spec 8.1.
+# Charts only: training maps never keep audio (spec 8.4).
+raw_dir: data/maps/training/raw     # API responses and .dat files; apart from the demo cache
+out_dir: data/maps/training         # normalized/ plus index.json
+target_songs: 150                   # stop once this many songs normalize
+min_rating: 0.8                     # BeatSaver score, 0 to 1
+min_upvotes: 50
+page_size: 100
+heldout_fraction: 0.15              # of songs, by a hash of the BeatSaver key
+request_interval_sec: 1.0           # stay well under BeatSaver's rate limit

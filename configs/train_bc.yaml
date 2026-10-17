@@ -1,12 +1,13 @@
 # train_bc.yaml (owner: Person 2). Loaded into a dataclass; no magic numbers in code.
-maps_dir: data/maps/normalized
+maps_dir: data/maps/training/normalized  # make training-maps; includes the demo songs, charts only
 split: train
 min_gap_sec: 0.0          # curriculum: thin same-color notes closer than this
 window_sec: 10.0          # episode length; a random window of a random map
 batch_size: 64            # envs per update
 learning_rate: 0.001
-n_updates: 2000
+n_updates: 500           # starts from a fitted readout (training/calibration.py), so fewer needed
 log_every: 50             # also runs a greedy evaluation rollout
 seed: 0
 variant: real              # label for checkpoints/{variant}/seed{seed}/
 checkpoint_dir: checkpoints
+brain_learning_rate: 0.00001  # Person 1: brain trains slowly; live baseline (model.yaml) keeps drift off the readout

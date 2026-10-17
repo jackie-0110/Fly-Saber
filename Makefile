@@ -1,4 +1,4 @@
-.PHONY: setup data subgraph export-web maps train-bc train-ppo serve frontend test test-python test-frontend lint fmt build check docker-build
+.PHONY: setup data subgraph export-web maps training-maps train-bc train-ppo serve frontend test test-python test-frontend lint fmt build check docker-build
 
 setup:
 	uv sync --locked --dev
@@ -15,6 +15,9 @@ export-web:
 
 maps:
 	uv run python scripts/fetch_maps.py
+
+training-maps:
+	uv run python scripts/fetch_training_maps.py
 
 train-bc:
 	uv run python -m training.bc

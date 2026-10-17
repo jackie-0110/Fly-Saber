@@ -182,3 +182,74 @@ def test_relu_sat_levels_off() -> None:
     for _ in range(60):
         v, out = step(params, v, jnp.array([[1.0], [0.5]]), iv, jax.random.PRNGKey(0))
     assert 1.99 < float(out.rates[3]) <= 2.0  # huge drive, capped at rate_max
+
+
+def test_remat_gives_identical_gradients() -> None:
+    import dataclasses
+
+    graph = _graph(1.0, mod_gain=1.0)
+    params = init_params(jax.random.PRNGKey(0), graph, CFG, N)
+
+    def loss(remat: bool):  # type: ignore[no-untyped-def]
+        step = make_step(graph, dataclasses.replace(CFG, remat=remat), N)
+
+        def f(p):  # type: ignore[no-untyped-def]
+            v, total = init_state(N), jnp.zeros(())
+            for _ in range(5):
+                v, out = step(
+                    p, v, jnp.array([[1.0], [0.5]]), no_interventions(N), jax.random.PRNGKey(0)
+                )
+                total = total + jnp.sum(out.logits**2)
+            return total
+
+        return jax.grad(f)(params)
+
+    for a, b in zip(jax.tree.leaves(loss(True)), jax.tree.leaves(loss(False)), strict=True):
+        np.testing.assert_allclose(a, b, rtol=1e-5, atol=1e-7)
+
+
+def test_readout_norm_calibrates_and_is_never_trained() -> None:
+    import dataclasses
+
+    graph = _graph(1.0)
+    raw = init_params(jax.random.PRNGKey(0), graph, dataclasses.replace(CFG, readout_norm=False), N)
+    assert np.all(np.asarray(raw.dn_std) == 1) and np.all(np.asarray(raw.dn_mean) == 0)
+
+    params = init_params(jax.random.PRNGKey(0), graph, CFG, N)
+    # DN 2 follows the flickering eye, DN 3 has no input: it gets the std floor, not ~0.
+    assert float(params.dn_mean[0]) > 0 and float(params.dn_std[0]) > float(params.dn_std[1])
+    # Floor is 0.1 x the median of the raw stds, (std0 + 0) / 2.
+    assert np.isclose(float(params.dn_std[1]), 0.05 * float(params.dn_std[0]), rtol=1e-3)
+
+    step = make_step(graph, CFG, N)
+
+    def loss(p):  # type: ignore[no-untyped-def]
+        _, out = step(
+            p, init_state(N), jnp.array([[1.0], [0.5]]), no_interventions(N), jax.random.PRNGKey(0)
+        )
+        return jnp.sum(out.logits**2) + out.value**2
+
+    g = jax.grad(loss)(params)
+    # dn_std never gets gradients. dn_mean does (the live baseline needs them); optimizers
+    # keep the stored leaf fixed (tests/training/test_bc.py).
+    assert float(jnp.abs(g.dn_std).max()) == 0.0
+    assert float(jnp.abs(g.readout_w).max()) > 0.0
+
+
+def test_freeze_brain_stops_gradients_at_dns() -> None:
+    import dataclasses
+
+    graph = _graph(1.0)
+    cfg = dataclasses.replace(CFG, freeze_brain=True)
+    params = init_params(jax.random.PRNGKey(0), graph, cfg, N)
+    step = make_step(graph, cfg, N)
+
+    def loss(p):  # type: ignore[no-untyped-def]
+        _, out = step(
+            p, init_state(N), jnp.array([[1.0], [0.5]]), no_interventions(N), jax.random.PRNGKey(0)
+        )
+        return jnp.sum(out.logits**2)
+
+    g = jax.grad(loss)(params)
+    assert float(jnp.abs(g.bias).max()) == 0.0 and float(jnp.abs(g.log_pair).max()) == 0.0
+    assert float(jnp.abs(g.readout_w).max()) > 0.0

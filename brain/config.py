@@ -58,3 +58,16 @@ class ModelConfig:
     modulation_gain: dict[str, float] = field(default_factory=dict)
     modulation_max_log_gain: float = 1.0
     rate_max: float = 10.0  # saturation level for activation relu_sat
+    remat: bool = True  # gradient checkpointing per brain step; trades compute for memory
+    # Readout normalization: actions read (DN rate - mean) / std, both measured once on
+    # flickering visual input when params are created. See brain/model/brain.py.
+    readout_norm: bool = True
+    calibration_stimuli: int = 16
+    calibration_frames: int = 90
+    readout_std_floor: float = 0.1  # fraction of the median DN std; avoids dividing by ~0
+    readout_clip: float = 5.0  # normalized DN values are clipped to +-this
+    freeze_brain: bool = False  # stop gradients at the DNs: train only the readout, much faster
+    # Live baseline: the readout subtracts the DN rates of the brain at rest under the
+    # *current* params (rest_dn), recomputed each update, so brain drift cancels out.
+    live_baseline: bool = True
+    baseline_frames: int = 45

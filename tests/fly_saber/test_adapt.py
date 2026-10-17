@@ -48,3 +48,7 @@ def test_denser_changing_maps_score_harder() -> None:
     calm = [note(t, cut=0) for t in range(5)]
     busy = [note(t / 2, cut=t % 2, lane=t % 4) for t in range(10)]
     assert difficulty(calm)["score"] < difficulty(busy)["score"]
+
+
+def test_difficulty_is_finite_when_no_saber_has_two_notes() -> None:
+    assert difficulty([note(0.0, 0), note(1.0, 1)])["score"] == 2.0
