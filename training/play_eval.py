@@ -117,12 +117,12 @@ def play_conditions(
     k_ep, k_play = jax.random.split(jax.random.PRNGKey(seed))
     episodes = sample_episodes(k_ep, map_set, n_windows, window_sec, env.cfg.note_speed_mps)
     n_steps = math.ceil(window_sec * env.cfg.step_hz) + 1
-    policy_drives = jnp.ones(episodes.speed_mps.shape, dtype=bool)
 
     @jax.jit
     def play(iv: Interventions) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
         policy = dataclasses.replace(trained.policy, interventions=iv)
-        m = rollout(env, policy, trained.params, episodes, k_play, n_steps, policy_drives)
+        drives = jnp.ones(n_windows, bool)
+        m = rollout(env, policy, trained.params, episodes, k_play, n_steps, drives)
         return m.hits, m.misses, m.bad_cuts, m.bombs
 
     results = {}
