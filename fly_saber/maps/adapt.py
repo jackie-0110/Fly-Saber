@@ -84,10 +84,22 @@ def difficulty(notes: list[dict[str, Any]]) -> dict[str, float]:
     pairs = [
         pair for color in (0, 1) for pair in pairwise(n for n in colored if n["color"] == color)
     ]
-    direction_changes = np.mean(
-        [SIM_DIRECTION[a["cut_direction"]] != SIM_DIRECTION[b["cut_direction"]] for a, b in pairs]
+    # A saber with one note has no changes; mean([]) would make the score NaN.
+    direction_changes = (
+        np.mean(
+            [
+                SIM_DIRECTION[a["cut_direction"]] != SIM_DIRECTION[b["cut_direction"]]
+                for a, b in pairs
+            ]
+        )
+        if pairs
+        else 0.0
     )
-    cell_changes = np.mean([(a["lane"], a["layer"]) != (b["lane"], b["layer"]) for a, b in pairs])
+    cell_changes = (
+        np.mean([(a["lane"], a["layer"]) != (b["lane"], b["layer"]) for a, b in pairs])
+        if pairs
+        else 0.0
+    )
     notes_per_sec = len(colored) / span if span > 0 else 0.0
     return {
         "notes_per_sec": float(notes_per_sec),
