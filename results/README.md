@@ -27,5 +27,5 @@ fly-relevant signals (for example LPLC2 reports looming wherever it happens) and
 where-on-screen detail this game needs. Training the brain's own parameters did not beat
 training the readout alone in free play.
 
-The demo fly is `bundles/real_fast/` (real wiring, brain trained, seed 0, update 950),
+The demo fly is `bundles/real/` (real wiring, brain trained, seed 0, update 950),
 shipped with the exact subgraph it was trained on.

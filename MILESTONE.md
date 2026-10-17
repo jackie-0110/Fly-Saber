@@ -7,7 +7,7 @@ What stands between us and the fly playing Fly Saber on stage, in the order it h
 ## Where we are
 
 - The server runs real-time sessions (30 Hz, 1 or 2 slots for Versus) on the real env, played by the scripted expert. PR #28 adds checkpointed brains.
-- Person 1 has trained a demo fly (PR #30): `bundles/real_fast/`, real wiring, brain trained, 31.4% of notes hit on held-out songs (28.4% on training songs). It is bundled with the exact subgraph it was trained on.
+- Person 1 has trained a demo fly (PR #30): `bundles/real/`, real wiring, brain trained, 31.4% of notes hit on held-out songs (28.4% on training songs). It is bundled with the exact subgraph it was trained on.
 - The front end has the game scene, song browser, 3D neuron cloud, and a saber rig that can follow motor frames (PR #29), but **nothing opens the session WebSocket yet**, so no one can watch the fly play in the browser.
 
 ## Milestone A: a brain visibly playing a song in the browser
@@ -23,9 +23,9 @@ The first end-to-end moment. Everything else builds on it.
 
 ## Milestone B: the trained fly in the server
 
-- [x] **B1. A trained checkpoint.** PR #30 (Person 1): `bundles/real_fast/bc_950.npz`, 31.4% held-out hits. Full results in `results/README.md`.
+- [x] **B1. A trained checkpoint.** PR #30 (Person 1): `bundles/real/bc_950.npz`, 31.4% held-out hits. Full results in `results/README.md`.
 - [x] **B2. Checkpoint bundled with its subgraph.** PR #27 adds `scripts/bundle_checkpoint.py`, a deterministic subgraph build, and a content-hash fingerprint; PR #30 ships the bundle. Subgraph rebuilds on different machines differ (19,462 vs 19,463 neurons), so **always load a bundle's own `subgraph/`, never a local rebuild.**
-- [x] **B3. Server loads bundles** (Person 2). `/api/brains` lists each mode in `configs/brains.yaml` with a trained `bundles/<id>/`, loaded with `training.play_eval.load_trained` from the bundle's own subgraph; a bundle that fails to load is skipped with a log line. **Remaining (Person 1):** run `scripts/export_brains.py` and commit `bundles/real/` (and the control modes); today only `bundles/real_fast/` exists, which the server does not look for.
+- [x] **B3. Server loads bundles** (Person 2). `/api/brains` lists each mode in `configs/brains.yaml` with a trained `bundles/<id>/`, loaded with `training.play_eval.load_trained` from the bundle's own subgraph; a bundle that fails to load is skipped with a log line. `bundles/real/` is served today. **Remaining (Person 1):** bundle the control modes (`scripts/export_brains.py`) so Versus has a second brain.
 - [ ] **B4. Improve the trained fly** (Person 1 runs, Person 2 owns BC). Readout-only (33.9% held-out) still beats brain training (31.4%). Not blocking: the fly already plays from vision.
 
 ## Milestone C: the must-ship demo features
