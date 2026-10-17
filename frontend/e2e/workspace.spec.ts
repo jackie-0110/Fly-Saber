@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { CAMERA_SETTLE_MS, MOVING_EDGE_LIMIT } from '../src/brain/rendering.ts'
+import { CAMERA_SETTLE_MS, MOVING_EDGE_LIMIT, SAMPLE_EDGE_LIMIT } from '../src/brain/rendering.ts'
 
 declare global {
   interface Window {
@@ -19,7 +19,35 @@ const groups = JSON.parse(
 ) as Record<string, number[]>
 const edges = JSON.parse(
   readFileSync(new URL('../public/data/brain/edges.json', import.meta.url), 'utf8'),
-) as { n_edges: number; pre: number[]; post: number[]; weight: number[] }
+) as {
+  n_edges: number
+  n_synapses: number
+  pre: number[]
+  post: number[]
+  weight: number[]
+  sign: number[]
+}
+
+// CI browsers rasterize WebGL in software, where drawing all 340k edges stalls the page.
+// Tests that need "All" detail use a prefix of the real table: it still exceeds the
+// movement preview, so preview, restore and upload behavior are exercised the same way.
+const FIXTURE_EDGES = 2 * MOVING_EDGE_LIMIT + 7
+const fixture = (() => {
+  const slice = <T>(values: T[]) => values.slice(0, FIXTURE_EDGES)
+  const weight = slice(edges.weight)
+  return {
+    ...edges,
+    n_edges: FIXTURE_EDGES,
+    n_synapses: weight.reduce((sum, value) => sum + value, 0),
+    pre: slice(edges.pre),
+    post: slice(edges.post),
+    weight,
+    sign: slice(edges.sign),
+  }
+})()
+const format = (value: number) => value.toLocaleString('en-US')
+const shown = (value: number, total = edges.n_edges) =>
+  `${format(value)} of ${format(total)} connections shown`
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/maps', (route) => route.fulfill({ json: [] }))
@@ -124,19 +152,20 @@ test('group filters restrict cell types and preserve original neuron IDs', async
   ).toEqual(['', ...t5.map(String)])
 })
 
-test('complete connections can be hidden, filtered, and traced for the selected neuron', async ({
+test('connections default to a sample, can be hidden, filtered, and traced for the selected neuron', async ({
   page,
 }, testInfo) => {
   await page.goto('/')
   const summary = page.locator('.brain-connection-summary')
-  const format = (value: number) => value.toLocaleString('en-US')
-  const shown = (value: number) => `${format(value)} of ${format(edges.n_edges)} connections shown`
-  await expect(summary).toContainText(shown(edges.n_edges))
+  const detail = page.getByLabel('Connection detail', { exact: true })
+  await expect(summary).toContainText(shown(SAMPLE_EDGE_LIMIT))
+  await expect(summary).toContainText('Evenly spaced sample')
   await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
-  await page.getByRole('checkbox', { name: 'Connections', exact: true }).uncheck()
-  await expect(summary).toContainText(shown(0))
-  await page.getByRole('checkbox', { name: 'Connections', exact: true }).check()
+  await detail.selectOption('off')
+  await expect(summary).toContainText('Connections hidden')
+  await detail.selectOption('sample')
   await page.getByRole('button', { name: 'Select next neuron' }).click()
+  // Selection is never sampled.
   const incident = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
   await expect(summary).toContainText(shown(incident))
   await expect(summary).toContainText('Blue: incoming')
@@ -150,23 +179,25 @@ test('complete connections can be hidden, filtered, and traced for the selected 
   const filtered = edges.pre.filter(
     (pre, edge) => visible.has(pre) && visible.has(edges.post[edge]),
   ).length
-  await expect(summary).toContainText(shown(filtered))
+  await expect(summary).toContainText(shown(Math.min(filtered, SAMPLE_EDGE_LIMIT)))
   await expect(summary).not.toContainText('Blue: incoming')
   await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
-  await expect(summary).toContainText(shown(edges.n_edges))
+  await expect(summary).toContainText(shown(SAMPLE_EDGE_LIMIT))
 })
 
-test('missing connections show a recoverable data error', async ({ page }) => {
+test('connections load after the neurons and a failed load is retried on its own', async ({
+  page,
+}) => {
   await page.route('**/data/brain/edges.json', (route) => route.fulfill({ status: 404, body: '' }))
   await page.goto('/')
-  await expect(
-    page.getByText('Could not load the brain data files.', { exact: true }),
-  ).toBeVisible()
-  await page.unroute('**/data/brain/edges.json')
-  await page.getByRole('button', { name: 'Retry 3D view', exact: true }).click()
-  await expect(page.locator('.brain-connection-summary')).toContainText(
-    `${edges.n_edges.toLocaleString('en-US')} of ${edges.n_edges.toLocaleString('en-US')} connections shown`,
+  await expect(page.locator('.neuron-count')).toContainText(
+    `${format(neurons.n_neurons)} of ${format(neurons.n_neurons)} neurons shown`,
   )
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
+  await expect(page.getByText('Could not load edges.json.', { exact: true })).toBeVisible()
+  await page.unroute('**/data/brain/edges.json')
+  await page.getByRole('button', { name: 'Retry connections', exact: true }).click()
+  await expect(page.locator('.brain-connection-summary')).toContainText(shown(SAMPLE_EDGE_LIMIT))
 })
 
 test('camera movement uses a resident preview buffer and restores every connection', async ({
@@ -210,9 +241,11 @@ test('camera movement uses a resident preview buffer and restores every connecti
       }
     }
   })
+  await page.route('**/data/brain/edges.json', (route) => route.fulfill({ json: fixture }))
   await page.goto('/')
   const summary = page.locator('.brain-connection-summary')
-  const allShown = `${edges.n_edges.toLocaleString('en-US')} of ${edges.n_edges.toLocaleString('en-US')} connections shown`
+  await page.getByLabel('Connection detail', { exact: true }).selectOption('all')
+  const allShown = shown(fixture.n_edges, fixture.n_edges)
   await expect(summary).toContainText(allShown)
   await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
   const stage = page.locator('.brain-stage-3d')
@@ -244,7 +277,7 @@ test('camera movement uses a resident preview buffer and restores every connecti
   await expect(summary).toContainText(allShown)
   await expect
     .poll(() => page.evaluate(() => window.brainRendering.lines.at(-1)?.count))
-    .toBe(edges.n_edges * 2)
+    .toBe(fixture.n_edges * 2)
   await expect.poll(resolution).toBeCloseTo(restingResolution, 1)
   const settledBox = (await stage.boundingBox())!
   expect(settledBox.width).toBeCloseTo(box.width, 1)
@@ -263,7 +296,7 @@ test('camera movement uses a resident preview buffer and restores every connecti
         text: document.querySelector('.brain-connection-summary')?.textContent,
       }
     },
-    { duration: CAMERA_SETTLE_MS * 4, fullCount: edges.n_edges * 2 },
+    { duration: CAMERA_SETTLE_MS * 4, fullCount: fixture.n_edges * 2 },
   )
   expect(stable.full).toBe(true)
   expect(stable.text).toContain(allShown)
@@ -286,11 +319,15 @@ test('camera movement uses a resident preview buffer and restores every connecti
         return Math.max(...before.map((value, i) => Math.abs(value - (after[i] ?? Infinity))))
       }, cameraBeforeResize!),
     )
-    .toBeLessThan(0.0001)
+    // A refit moves the camera by ~0.1 or more; leftover OrbitControls damping from the
+    // drag may still apply ~1e-4 on the resize render.
+    .toBeLessThan(0.001)
 
   // Selection retains all incident connections even while the camera is moving.
   await page.getByRole('button', { name: 'Select next neuron' }).click()
-  const selectedCount = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
+  const selectedCount = fixture.pre.filter(
+    (pre, edge) => pre === 0 || fixture.post[edge] === 0,
+  ).length
   await stage.scrollIntoViewIfNeeded()
   const selectedBox = (await stage.boundingBox())!
   await page.evaluate(() => {

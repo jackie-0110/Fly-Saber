@@ -4,6 +4,15 @@ interface ConnectionGraph {
 }
 
 export const MOVING_EDGE_LIMIT = 20_000
+// The default "Sample" detail draws this many evenly spaced edges, moving or not;
+// "All" draws every filtered edge at rest. Software WebGL stalls on the full graph.
+export const SAMPLE_EDGE_LIMIT = MOVING_EDGE_LIMIT
+export type ConnectionDetail = 'off' | 'sample' | 'all'
+
+export function sampleEdges(edges: number[], limit: number): number[] {
+  if (edges.length <= limit) return edges
+  return Array.from({ length: limit }, (_, i) => edges[Math.floor((i * edges.length) / limit)])
+}
 export const CAMERA_SETTLE_MS = 160
 
 // Reuse the N neuron positions rather than uploading 2E duplicate positions.

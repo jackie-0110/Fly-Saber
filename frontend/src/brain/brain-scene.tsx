@@ -5,7 +5,7 @@ import { OrbitControls } from '@react-three/drei'
 import { BufferAttribute, BufferGeometry, Color, Spherical, Vector3 } from 'three'
 import type { MutableRefObject } from 'react'
 import { cellTypeColor } from './data'
-import type { BrainData } from './data'
+import type { BrainData, BrainEdges } from './data'
 import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
 
 export type CameraAction =
@@ -13,6 +13,7 @@ export type CameraAction =
 
 interface SceneProps {
   data: BrainData
+  edges: BrainEdges | null
   indices: number[]
   edgeIndices: number[]
   showConnections: boolean
@@ -27,14 +28,16 @@ interface SceneProps {
 
 function Connections({
   data,
+  edges,
   edgeIndices,
   selected,
   moving,
 }: Pick<SceneProps, 'data' | 'edgeIndices' | 'selected'> & {
+  edges: BrainEdges
   moving: MutableRefObject<boolean>
 }) {
   const geometry = useMemo(() => {
-    const { index, outgoing } = connectionIndex(data, edgeIndices, selected)
+    const { index, outgoing } = connectionIndex({ asset: data.asset, edges }, edgeIndices, selected)
     const result = new BufferGeometry()
     result.setAttribute('position', new BufferAttribute(data.positions, 3))
     result.setIndex(new BufferAttribute(index, 1))
@@ -44,7 +47,7 @@ function Connections({
     }
     result.computeBoundingSphere()
     return result
-  }, [data, edgeIndices, selected])
+  }, [data, edges, edgeIndices, selected])
   useEffect(() => () => geometry.dispose(), [geometry])
   useFrame(() => {
     const count =
@@ -308,7 +311,9 @@ export default function BrainScene(props: SceneProps) {
         onNavigateReady={props.onNavigateReady}
         onMotionChange={updateMotion}
       />
-      {props.showConnections && <Connections {...props} moving={moving} />}
+      {props.showConnections && props.edges && (
+        <Connections {...props} edges={props.edges} moving={moving} />
+      )}
       <NeuronCloud {...props} />
     </Canvas>
   )
