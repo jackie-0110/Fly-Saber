@@ -1,7 +1,6 @@
-import { ArrowUpRight, ChevronDown, Music2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowUpRight, Music2 } from 'lucide-react'
 import { difficultyLabel, formatTime } from '@/game/chart'
-import { openSongLibrary, usePlayer } from '@/game/store'
+import { usePlayer } from '@/game/store'
 
 export function SongHeader() {
   const song = usePlayer((s) => s.song)
@@ -16,14 +15,14 @@ export function SongHeader() {
       </div>
       <div className="current-song-copy">
         <div className="current-song-title">
-          <h1>{song?.title ?? 'Your next track starts here.'}</h1>
+          <h1>{song?.title ?? 'No song selected'}</h1>
           {chart && (
             <span className="current-difficulty" data-difficulty={chart.difficulty.name}>
               {difficultyLabel(chart.difficulty.name)}
             </span>
           )}
         </div>
-        {song && chart ? (
+        {song && chart && (
           <div className="current-song-meta">
             <span>
               {song.artist}
@@ -40,15 +39,8 @@ export function SongHeader() {
               </a>
             )}
           </div>
-        ) : (
-          <p>Choose a community song or import a map to explore it in 3D.</p>
         )}
       </div>
-      <Button className="choose-song" variant="outline" size="sm" onClick={openSongLibrary}>
-        <Music2 aria-hidden="true" />
-        {song ? 'Change song' : 'Choose song'}
-        <ChevronDown aria-hidden="true" />
-      </Button>
     </section>
   )
 }

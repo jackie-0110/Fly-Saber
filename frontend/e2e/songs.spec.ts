@@ -31,11 +31,9 @@ test.beforeEach(async ({ page }) => {
   )
 })
 
-async function importMap(page: Page) {
+async function loadMap(page: Page) {
   await page.getByRole('tab', { name: 'Songs', exact: true }).click()
-  await page
-    .getByLabel('Import map ZIP', { exact: true })
-    .setInputFiles({ name: 'orbit.zip', mimeType: 'application/zip', buffer: archive })
+  await page.getByRole('button', { name: 'Load Orbit Test by Test Artist', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Orbit Test', exact: true, level: 1 }),
   ).toBeVisible()
@@ -63,7 +61,7 @@ test('song search and download load a community map without a fly session or all
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
-  await page.getByRole('button', { name: 'Choose song', exact: true }).click()
+  await page.getByRole('tab', { name: 'Songs', exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Songs', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -83,18 +81,23 @@ test('song search and download load a community map without a fly session or all
     'href',
     'https://beatsaver.com/maps/abcd',
   )
-  await expect(page.getByText('CHART PREVIEW', { exact: true })).toBeVisible()
+  await expect(page.getByText('CHART PREVIEW', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Import map ZIP', { exact: true })).toHaveCount(0)
+  await expect(
+    page.getByRole('region', { name: 'Loaded song difficulties', exact: true }),
+  ).toHaveCount(0)
+  await expect(header.getByRole('button', { name: 'Change song', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Play song', exact: true })).toBeEnabled()
   await page.getByRole('tab', { name: 'Session', exact: true }).click()
   await expect(page.getByText('No live session', { exact: true })).toBeVisible()
   expect(errors).toEqual([])
 })
 
-test('local map import supports playback, pause, backward seeks, rate changes, and restart', async ({
+test('loaded maps support playback, pause, backward seeks, rate changes, and restart', async ({
   page,
 }) => {
   await page.goto('/')
-  await importMap(page)
+  await loadMap(page)
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Pause song', exact: true })).toBeVisible()
   const slider = page.getByRole('slider', { name: 'Song position', exact: true })
@@ -118,7 +121,7 @@ test('dragging the timeline previews the new position and resumes only if it was
   page,
 }) => {
   await page.goto('/')
-  await importMap(page)
+  await loadMap(page)
   const slider = page.getByRole('slider', { name: 'Song position', exact: true })
   await slider.scrollIntoViewIfNeeded()
   const box = (await slider.boundingBox())!
@@ -141,10 +144,10 @@ test('difficulty changes keep the song position and the camera can orbit, zoom, 
   page,
 }) => {
   await page.goto('/')
-  await importMap(page)
+  await loadMap(page)
   await seek(page, 1.5)
   await page
-    .getByRole('region', { name: 'Loaded song difficulties', exact: true })
+    .locator('.song-card.is-loaded')
     .getByRole('button', { name: 'Normal', exact: true })
     .click()
   await expect(page.getByRole('slider', { name: 'Song position', exact: true })).toHaveValue('1.5')
@@ -175,29 +178,33 @@ test('difficulty changes keep the song position and the camera can orbit, zoom, 
     expect(overflow.height).toBeLessThanOrEqual(overflow.viewportHeight)
 })
 
-test('failed imports preserve the loaded song and a new valid import recovers', async ({
+test('failed downloads preserve the loaded song and a new valid download recovers', async ({
   page,
 }) => {
   await page.goto('/')
-  await importMap(page)
-  await page.getByLabel('Import map ZIP', { exact: true }).setInputFiles({
-    name: 'broken.zip',
-    mimeType: 'application/zip',
-    buffer: Buffer.from('broken zip'),
-  })
+  await loadMap(page)
+  await seek(page, 5)
+  const next = { ...result, id: 'abc1', metadata: { ...result.metadata, songName: 'Next Track' } }
+  await page.route('https://api.beatsaver.com/**', (route) =>
+    route.fulfill({ json: { docs: [next] } }),
+  )
+  await page.route('https://r2cdn.beatsaver.com/test.zip', (route) =>
+    route.fulfill({ body: Buffer.from('broken zip'), contentType: 'application/zip' }),
+  )
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('button', { name: 'Load Next Track by Test Artist', exact: true }).click()
   await expect(page.getByText('Could not open that ZIP.', { exact: false })).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'Orbit Test', level: 1, exact: true }),
   ).toBeVisible()
+  await expect(page.getByRole('slider', { name: 'Song position', exact: true })).toHaveValue('5')
   await expect(page.getByRole('button', { name: 'Play song', exact: true })).toBeEnabled()
-  await page.getByLabel('Import map ZIP', { exact: true }).setInputFiles({
-    name: 'song.mp3',
-    mimeType: 'audio/mpeg',
-    buffer: Buffer.from('audio is not a map'),
-  })
-  await expect(page.getByText('Plain audio has no block chart.', { exact: false })).toBeVisible()
-  await importMap(page)
+  await page.route('https://r2cdn.beatsaver.com/test.zip', (route) =>
+    route.fulfill({ body: archive, contentType: 'application/zip' }),
+  )
+  await page.getByRole('button', { name: 'Load Next Track by Test Artist', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Dismiss song error', exact: true })).toHaveCount(0)
+  await expect(page.locator('.song-card.is-loaded')).toContainText('Next Track')
 })
 
 test('search failure, empty results, and retry have usable recovery states', async ({ page }) => {
@@ -226,7 +233,7 @@ test('cancelling a pending song download retains the previous track and position
   page,
 }) => {
   await page.goto('/')
-  await importMap(page)
+  await loadMap(page)
   await seek(page, 5)
   const stalled = {
     ...result,
@@ -257,7 +264,7 @@ test('cancelling a pending song download retains the previous track and position
 
 test('WebGL context loss is recoverable without losing the selected song', async ({ page }) => {
   await page.goto('/')
-  await importMap(page)
+  await loadMap(page)
   await expect(page.getByRole('button', { name: 'Reset game camera', exact: true })).toBeEnabled()
   await page.locator('.game-stage canvas').evaluate((canvas) => {
     const gl = (canvas as HTMLCanvasElement).getContext('webgl2')!
@@ -289,7 +296,7 @@ test('audio and song selection still work when WebGL is unavailable', async ({ p
   await expect(
     page.getByRole('heading', { name: 'The 3D track is unavailable.', exact: true }),
   ).toBeVisible()
-  await importMap(page)
+  await loadMap(page)
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Pause song', exact: true })).toBeVisible()
   await expect(page.getByRole('slider', { name: 'Song position', exact: true })).toBeEnabled()

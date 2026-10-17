@@ -67,12 +67,12 @@ async function loadSong(
         loading: '',
         error:
           cause instanceof Error && cause.name === 'TimeoutError'
-            ? 'The song download timed out. Try again, or import its map ZIP.'
+            ? 'The song download timed out. Try again.'
             : cause instanceof TypeError
-              ? 'Could not download this song. Check your connection, or import its map ZIP.'
+              ? 'Could not download this song. Check your connection and try again.'
               : cause instanceof Error
                 ? cause.message
-                : 'Could not load this song. Try importing its map ZIP.',
+                : 'Could not load this song. Try again or choose another map.',
       })
   } finally {
     if (pending === controller) pending = null

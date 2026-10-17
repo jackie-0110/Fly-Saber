@@ -19,7 +19,7 @@ npm run preview
 
 `npm run lint` checks the frontend with Oxlint.
 
-`npm run test:unit` validates the real brain export, neuron indices and coordinates, chart normalization, ZIP imports, timing, and audio transport. It uses Node 22.6 or newer with TypeScript stripping.
+`npm run test:unit` validates the real brain export, neuron indices and coordinates, chart normalization, ZIP parsing, timing, audio transport, and fly motor animation. It uses Node 22.6 or newer with TypeScript stripping.
 
 `npm run format` formats the frontend source with Prettier; `npm run format:check` verifies it.
 
@@ -41,17 +41,16 @@ for the full CI checks.
 - Desktop windows use a viewport-height workspace with a brain sidebar around 30% of the width and a compact timeline. The brain fills the sidebar width, neuron metadata forms a compact grid below it, and session information has its own tab. Narrow screens stack the panels vertically.
 - Song information appears above the viewport: title, artist, mapper, difficulty, initial BPM, decoded audio duration, note count, and a source link for community maps.
 - The Songs sidebar tab searches the unrestricted community catalog by song, artist, mapper, map ID, or map link. It supports pagination and loading a specific difficulty. Songs download directly to the browser; no fly backend is needed, and the server's demo allowlist is not used by this picker.
-- Import a complete local map ZIP by file picker or drag and drop. It must contain `Info.dat`, existing charts, and song audio. Files stay in browser memory and clear on refresh. Plain audio uploads and automatic chart generation are not supported.
-- The true 3D game scene shows the track, directional notes, bombs, walls, and an original fly mesh in a neutral pose. Orbit, pan, zoom, overview, player view, reset, fly visibility, and fullscreen controls work. The game camera stays independent of the brain camera and playback time.
+- The true 3D game scene shows the track, directional notes, bombs, walls, and an articulated fly mesh with resting motion and independent saber reach/cut animations. Orbit, pan, zoom, overview, player view, reset, fly visibility, and fullscreen controls work. The game camera stays independent of the brain camera and playback time.
 - Play, pause, restart, scrub forward/backward, adjust speed, and change volume. Timeline bars show chart note density, not an audio waveform. Block positions derive directly from the audio clock; difficulty changes preserve song position. Scrubbing pauses audio while dragging and resumes on release only if it was playing.
 - The brain renders all 19,462 neurons from the committed MaleCNS v1.0 visual-to-motor subgraph as a single point cloud. This subset contains mostly brain locations and eight distant ascending-neuron somas. It does not include full neuron shapes or a continuous ventral nerve cord reconstruction.
 - Drag to orbit, right-drag to pan, and scroll to zoom. Touch supports orbit, pinch zoom, and two-finger pan. Camera buttons offer reset, display-axis views, and zoom. Focus the view to rotate with arrow keys, zoom with +/−, and reset with Home.
 - Filter by authentic group and cell type. Click a point or use previous/next buttons to inspect its body ID, backend index, type, side, role, transmitter, original coordinates, and position provenance.
 - Expand the neuron view to fullscreen and adjust point size/opacity to inspect dense regions. All 19,462 neurons render, occupying 16,528 distinct coordinate triples because some share partner/estimated positions. Transparent points do not hide deeper neurons with depth writes; coincident points still overlap without invented offsets.
 - Colors identify cell types. **Neuron firing data must still be received from the backend.** No activity is simulated. See [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
-- Chart preview is labeled explicitly. Scores, saber actions, fly vision, and firing activity await the real inference/session connection. The frontend does not fabricate policy actions or judge hits.
+- The fly animation adapter accepts the existing backend motor frame protocol. Open `/?flyMotion=preview` for isolated sample movements; see [FLY_ANIMATIONS.md](./FLY_ANIMATIONS.md) for connection and lifecycle instructions. Scores, live saber actions, fly vision, and firing activity await the real inference/session connection. The frontend does not fabricate policy actions or judge hits.
 - The 3D renderers load separately from the workspace. Loading, malformed data, unsupported WebGL, and context loss have explanatory states and retry actions. Song selection, audio, timeline, and neuron metadata remain usable without WebGL.
-- No backend, model, or connectome download is needed to view the page or import a local map. Community search/download needs internet access. Google Fonts are optional, with local fallbacks.
+- No backend, model, or connectome download is needed to view the page or review fly animations. Community search/download needs internet access. Google Fonts are optional, with local fallbacks.
 - No measured neuron counts, firing rates, or scores are fabricated.
 
 The frontend owner's implementation lives in `frontend/`.

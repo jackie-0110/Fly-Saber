@@ -14,12 +14,12 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { openSongLibrary, usePlayer } from '@/game/store'
 import type { GameCameraAction } from '@/game/game-scene'
+import { FlyMotionPreview } from '@/game/fly-motion-preview'
 
 const GameScene = lazy(() => import('@/game/game-scene'))
 
@@ -66,6 +66,9 @@ function CameraButton({
 }
 
 export function GamePreview() {
+  const [motionPreview] = useState(
+    () => new URLSearchParams(window.location.search).get('flyMotion') === 'preview',
+  )
   const panelRef = useRef<HTMLDivElement>(null)
   const [fullscreenError, setFullscreenError] = useState('')
   const [sceneAttempt, setSceneAttempt] = useState(0)
@@ -158,6 +161,7 @@ export function GamePreview() {
               <GameScene
                 chart={chart}
                 showFly={showFly}
+                motionPreview={motionPreview}
                 onNavigateReady={onNavigateReady}
                 onFailure={onFailure}
               />
@@ -172,12 +176,9 @@ export function GamePreview() {
           <span className="scene-divider" />
           <span>Fly Saber</span>
         </div>
-        <Badge variant="outline" className="scene-label">
-          <span className="status-dot" />
-          {chart ? 'CHART PREVIEW' : '3D WORKSPACE'}
-        </Badge>
       </div>
-      {!chart && !loading && cameraReady && (
+      {motionPreview && <FlyMotionPreview />}
+      {!motionPreview && !chart && !loading && cameraReady && (
         <div className="scene-empty">
           <span className="eyebrow">READY WHEN YOU ARE</span>
           <h2>

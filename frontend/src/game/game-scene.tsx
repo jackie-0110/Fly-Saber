@@ -9,21 +9,22 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
-  Quaternion,
   Spherical,
   SRGBColorSpace,
-  Vector3,
 } from 'three'
 import type { InstancedMesh, Material } from 'three'
 import { lowerBound } from './chart'
 import type { Chart } from './chart'
 import { transport, usePlayer } from './store'
+import { FlyModel } from './fly-model'
+import { flyMotion, previewMotion } from './fly-motion'
 
 export type GameCameraAction =
   'reset' | 'overview' | 'player' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
 interface SceneProps {
   chart: Chart | null
   showFly: boolean
+  motionPreview?: boolean
   onNavigateReady: (navigate: ((action: GameCameraAction) => void) | null) => void
   onFailure: () => void
 }
@@ -197,113 +198,6 @@ function Track() {
         <planeGeometry args={[400, 400]} />
         <meshStandardMaterial color="#141a1e" roughness={1} />
       </mesh>
-    </group>
-  )
-}
-
-function Segment({
-  from,
-  to,
-  color = '#5d696a',
-  radius = 0.035,
-}: {
-  from: [number, number, number]
-  to: [number, number, number]
-  color?: string
-  radius?: number
-}) {
-  const { middle, rotation, length } = useMemo(() => {
-    const a = new Vector3(...from)
-    const b = new Vector3(...to)
-    const direction = b.clone().sub(a)
-    return {
-      middle: a.add(b).multiplyScalar(0.5),
-      length: direction.length(),
-      rotation: new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), direction.normalize()),
-    }
-  }, [from, to])
-  return (
-    <mesh position={middle} quaternion={rotation}>
-      <cylinderGeometry args={[radius, radius, length, 6]} />
-      <meshStandardMaterial color={color} roughness={0.6} />
-    </mesh>
-  )
-}
-
-function FlyModel() {
-  return (
-    <group position={[0, 0.05, 2.6]}>
-      <mesh position={[0, 0.98, 0.48]} scale={[0.54, 0.55, 0.86]}>
-        <sphereGeometry args={[0.65, 16, 12]} />
-        <meshStandardMaterial color="#595e56" roughness={0.7} metalness={0.15} />
-      </mesh>
-      <mesh position={[0, 1.16, -0.18]} scale={[0.8, 0.85, 1]}>
-        <sphereGeometry args={[0.42, 16, 12]} />
-        <meshStandardMaterial color="#7c8170" roughness={0.75} />
-      </mesh>
-      <mesh position={[0, 1.44, -0.62]} scale={[1, 0.85, 0.75]}>
-        <sphereGeometry args={[0.37, 16, 12]} />
-        <meshStandardMaterial color="#acac8d" roughness={0.7} />
-      </mesh>
-      {[-1, 1].map((side) => (
-        <group key={side}>
-          <mesh position={[side * 0.28, 1.5, -0.72]} scale={[0.6, 0.95, 0.7]}>
-            <sphereGeometry args={[0.27, 12, 10]} />
-            <meshStandardMaterial color="#b66855" roughness={0.45} />
-          </mesh>
-          <mesh
-            position={[side * 0.82, 1.43, 0.36]}
-            rotation={[0.1, side * 0.35, side * 0.17]}
-            scale={[1.24, 0.035, 0.56]}
-          >
-            <sphereGeometry args={[0.8, 16, 8]} />
-            <meshStandardMaterial
-              color="#b8d5ce"
-              transparent
-              opacity={0.28}
-              roughness={0.25}
-              depthWrite={false}
-            />
-          </mesh>
-          <Segment
-            from={[side * 0.15, 1.67, -0.73]}
-            to={[side * 0.3, 1.98, -1.02]}
-            radius={0.018}
-          />
-          {[0, 1, 2].map((leg) => (
-            <group key={leg}>
-              <Segment
-                from={[side * 0.2, 1, leg * 0.3 - 0.2]}
-                to={[side * 0.7, 0.5, leg * 0.55 - 0.45]}
-              />
-              <Segment
-                from={[side * 0.7, 0.5, leg * 0.55 - 0.45]}
-                to={[side * 0.95, 0.03, leg * 0.65 - 0.3]}
-                radius={0.025}
-              />
-            </group>
-          ))}
-          <group position={[side * 1.08, 1, -1.1]} rotation={[0.1, 0, side * -0.4]}>
-            <mesh>
-              <cylinderGeometry args={[0.055, 0.075, 0.35, 10]} />
-              <meshStandardMaterial color="#737a7c" metalness={0.7} roughness={0.35} />
-            </mesh>
-            <mesh position={[0, 0.88, 0]}>
-              <cylinderGeometry args={[0.025, 0.035, 1.42, 10]} />
-              <meshBasicMaterial color={COLORS[side < 0 ? 0 : 1]} />
-            </mesh>
-            <mesh position={[0, 0.88, 0]}>
-              <cylinderGeometry args={[0.065, 0.065, 1.4, 10]} />
-              <meshBasicMaterial
-                color={COLORS[side < 0 ? 0 : 1]}
-                transparent
-                opacity={0.16}
-                depthWrite={false}
-              />
-            </mesh>
-          </group>
-        </group>
-      ))}
     </group>
   )
 }
@@ -501,7 +395,7 @@ export default function GameScene(props: SceneProps) {
       <Navigation onNavigateReady={props.onNavigateReady} />
       <Track />
       <Notes chart={props.chart} />
-      {props.showFly && <FlyModel />}
+      {props.showFly && <FlyModel controller={props.motionPreview ? previewMotion : flyMotion} />}
     </Canvas>
   )
 }

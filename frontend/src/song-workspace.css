@@ -101,15 +101,6 @@
   color: #bfd6cf;
   background: #30433e;
 }
-.choose-song {
-  border-color: #566562;
-  background: #303c3c;
-  color: #d0e0da;
-  font-size: 11px;
-}
-.choose-song svg:last-child {
-  width: 12px;
-}
 .game-stage {
   position: absolute;
   inset: 0;
@@ -548,55 +539,6 @@
 .song-search-actions button:hover {
   background: #c4e2d9;
 }
-.map-import {
-  border: 1px dashed #5b6a62;
-  border-radius: 5px;
-  background: #2c343180;
-  transition: background 0.15s;
-}
-.map-import.is-dragging {
-  background: #3b5d50;
-  border-color: #b6d5d0;
-}
-.map-import-button {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 13px 12px;
-  border: 0;
-  background: transparent;
-  color: #bdcfc5;
-  text-align: left;
-  cursor: pointer;
-}
-.map-import-button > svg {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-}
-.map-import-button > svg:last-child {
-  width: 13px;
-  margin-left: auto;
-  color: #92a89d;
-}
-.map-import-button span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.map-import-button strong {
-  font-size: 11px;
-  font-weight: 500;
-}
-.map-import-button small {
-  font-size: 9px;
-  color: #9dafaa;
-}
-.map-import:has(input:focus-visible) {
-  outline: 2px solid var(--mint);
-  outline-offset: 3px;
-}
 .library-section-label {
   display: flex;
   align-items: center;
@@ -609,26 +551,6 @@
 .library-section-label > span:last-child:not(:first-child) {
   font-size: 9px;
   letter-spacing: 0;
-}
-.library-section-label svg {
-  width: 13px;
-  height: 13px;
-  color: #b6d5d0;
-}
-.loaded-difficulties {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  padding: 12px;
-  border: 1px solid #536a5d;
-  border-radius: 5px;
-  background: #2d3b33;
-}
-.loaded-difficulties > strong {
-  font-size: 12px;
-  font-weight: 500;
-  color: #d8e4db;
-  overflow-wrap: anywhere;
 }
 .song-results {
   display: flex;
@@ -849,19 +771,6 @@
     gap: 2px 8px;
     font-size: 9px;
   }
-  .choose-song {
-    width: 31px;
-    height: 31px;
-    padding: 0;
-    font-size: 0;
-    gap: 0;
-  }
-  .choose-song svg {
-    width: 14px;
-  }
-  .choose-song svg:last-child {
-    display: none;
-  }
   .game-camera-help span {
     display: none;
   }
@@ -1005,5 +914,70 @@
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;
+  }
+}
+
+.fly-motion-preview {
+  position: absolute;
+  top: 58px;
+  left: 18px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: min(220px, calc(100% - 36px));
+  padding: 13px;
+  border: 1px solid #53665e;
+  border-radius: 6px;
+  background: #222b2eef;
+  color: #d1e1d9;
+  font-size: 11px;
+}
+.fly-motion-preview > span {
+  color: #a3b6ae;
+  font-size: 10px;
+}
+.fly-motion-preview label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fly-motion-preview select,
+.fly-motion-preview button {
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid #53665e;
+  border-radius: 4px;
+  background: #303c3c;
+  color: #d1e1d9;
+  font: inherit;
+}
+.fly-motion-preview button {
+  cursor: pointer;
+}
+.fly-motion-preview :focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+}
+@media (max-width: 899px) {
+  .fly-motion-preview {
+    top: 54px;
+    width: calc(100% - 36px);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px;
+    font-size: 10px;
+  }
+  .fly-motion-preview > strong,
+  .fly-motion-preview > span {
+    grid-column: 1 / -1;
+  }
+  .fly-motion-preview label,
+  .fly-motion-preview select {
+    min-width: 0;
+  }
+  .fly-motion-preview button {
+    grid-column: 1 / -1;
   }
 }
