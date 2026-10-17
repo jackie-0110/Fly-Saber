@@ -34,3 +34,4 @@ frontend/dist/
 
 # SLURM logs
 slurm-*.out
+logs/
