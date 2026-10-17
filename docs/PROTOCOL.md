@@ -46,6 +46,8 @@ One JSON file per playable (song, difficulty): `data/maps/normalized/{map_id}.js
 }
 ```
 
+The normalizer reads BeatSaver Info.dat v2 and v4 (with its audio data file for timing) and difficulty files v2, v3 and v4. It rejects a nonzero legacy `_songTimeOffset`, v2 `_BPMChanges` and rotating v4 charts.
+
 Rules:
 
 - `time_sec` is seconds from the start of the audio file, with BPM changes and any song offset already applied. It is the moment the note crosses the hit plane.

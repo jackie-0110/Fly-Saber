@@ -71,7 +71,7 @@ def test_bad_or_unknown_key(tmp_path: Path, key: str, status: int) -> None:
 
 
 def test_unsupported_map_is_422(tmp_path: Path) -> None:
-    info = info_with("Easy", _version="4.0.0")
+    info = info_with("Easy", _version="3.0.0")
     beatsaver = FakeBeatSaver([[meta("abc1", "Easy")]], {"abc1": level_zip(info)})
     client = make_client(tmp_path, beatsaver)
     response = client.post("/api/community/abc1")

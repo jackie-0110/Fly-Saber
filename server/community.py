@@ -83,7 +83,7 @@ class CommunityMaps:
                 allowed=None,
             )
         except (ValueError, KeyError, StopIteration) as error:
-            # UnsupportedMapError is a ValueError: v4 Info.dat, legacy offsets, unknown formats.
+            # UnsupportedMapError is a ValueError: legacy offsets, rotating charts, unknown formats.
             raise MapImportError(422, f"the fly cannot play this map yet: {error}") from error
         if not maps:
             raise MapImportError(422, "the map has no Standard difficulty for the fly to play")
