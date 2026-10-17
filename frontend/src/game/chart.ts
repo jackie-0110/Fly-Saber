@@ -29,6 +29,9 @@ export interface Chart {
 }
 
 export interface Song {
+  serverMapId?: string
+  split?: 'train' | 'heldout'
+  attribution?: string
   id: string
   title: string
   subtitle: string

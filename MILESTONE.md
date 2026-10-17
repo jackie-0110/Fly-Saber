@@ -8,18 +8,18 @@ What stands between us and the fly playing Fly Saber on stage, in the order it h
 
 - The server runs real-time sessions (30 Hz, 1 or 2 slots for Versus) on the real env, played by the scripted expert. PR #28 adds checkpointed brains.
 - Person 1 has trained a demo fly (PR #30): `bundles/real_fast/`, real wiring, brain trained, 31.4% of notes hit on held-out songs (28.4% on training songs). It is bundled with the exact subgraph it was trained on.
-- The front end has the game scene, song browser, 3D neuron cloud, and a saber rig that can follow motor frames (PR #29), but **nothing opens the session WebSocket yet**, so no one can watch the fly play in the browser.
+- PR #29 connects the browser to single-player sessions: server songs and brain selection, audio-clock synchronization, live saber motion, score and note events. Desktop/mobile integration passes with FastAPI serving the built frontend and the scripted expert playing an original silent fixture. Trained-bundle loading remains B3; activity, interventions, Versus and replay remain Milestone C.
 
 ## Milestone A: a brain visibly playing a song in the browser
 
 The first end-to-end moment. Everything else builds on it.
 
 - [ ] **A1. Server plays checkpointed brains.** PR #28 (Person 2): `/api/brains` lists `real` and `rewired` when their checkpoints exist; each slot carries its own brain state; `ready` reports `n_neurons` and `cell_types`.
-- [ ] **A2. Session client in the front end** (Person 3). Open `WS /ws/session`; send `start {game, brains: [...], map_id, seed}`, `play {song_t}` when audio starts, `clock {song_t}` about once a second; handle `ready`, `frame`, `event`, `ended`, `error` (`docs/PROTOCOL.md` section 3). Attach PR #29's motion adapter to `frame.render_state.sabers`.
-- [ ] **A3. Songs from the server catalog** (Person 3, Person 2 owns the contract). The fly can only play maps the server knows: live play picks from `GET /api/maps` and plays `GET /api/maps/{id}/audio`. Charts loaded from BeatSaver in the browser cannot be played by the fly.
-- [ ] **A4. Score and note events in the HUD** (Person 3): `render_state.score`, and `event {kind, note_id}` to slice or remove notes.
-- [ ] **A5. Brain picker** (Person 3) from `GET /api/brains`.
-- [ ] **A6. One integration run** (Person 2 and Person 3): the FastAPI app serving `frontend/dist`, a song played in the browser while the server sims the same `map_id`.
+- [x] **A2. Session client in the front end** (Person 3), PR #29. Open `WS /ws/session`; send `start {game, brains: [...], map_id, seed}`, `play {song_t}` when audio starts, `clock {song_t}` about once a second; handle `ready`, `frame`, `event`, `ended`, `error` (`docs/PROTOCOL.md` section 3). Attach PR #29's motion adapter to `frame.render_state.sabers`.
+- [x] **A3. Songs from the server catalog** (Person 3, Person 2 owns the contract), PR #29. The fly can only play maps the server knows: live play picks from `GET /api/maps` and plays `GET /api/maps/{id}/audio`. Charts loaded from BeatSaver in the browser cannot be played by the fly.
+- [x] **A4. Score and note events in the HUD** (Person 3), PR #29: `render_state.score`, and `event {kind, note_id}` to slice or remove notes.
+- [x] **A5. Brain picker** (Person 3), PR #29, from `GET /api/brains`. Only advertised players are offered; prefer `real` when available.
+- [x] **A6. One integration run** (Person 2 and Person 3), PR #29: FastAPI serving `frontend/dist`, browser audio and real env/expert simulating the same `map_id`, verified on desktop/mobile with an original silent fixture. Repeat with a trained brain and demo audio after B3 and map staging. Opt-in regression: `FLY_SABER_INTEGRATION_URL=http://127.0.0.1:8000 npx playwright test live-integration`.
 
 ## Milestone B: the trained fly in the server
 
