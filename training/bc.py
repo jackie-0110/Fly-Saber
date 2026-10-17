@@ -7,6 +7,7 @@ test stub. The env is driven by the expert's actions while the policy is scored
 against them, so every update sees fresh episodes and no dataset is stored.
 """
 
+import json
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -18,9 +19,15 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 
-from fly_saber.env import IDLE_CELL, NO_CUT, SaberEnv
+from brain.config import ModelConfig
+from brain.config import load_config as load_model_config
+from fly_saber.config import CONFIG_DIR, load_config
+from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
 from fly_saber.experts import saber_expert
+from fly_saber.eye import EyeConfig
 from fly_saber.maps.dataset import Episodes, MapSet, load_map_set, sample_episodes
+from training.brain_policy import build
+from training.checkpoints import save_checkpoint, subgraph_fingerprint
 
 # Per saber: position head (12 cells + idle), then direction head (4 cuts + no cut).
 HEADS_PER_SABER = (IDLE_CELL + 1, NO_CUT + 1)
@@ -32,12 +39,13 @@ class BCConfig:
     split: str
     min_gap_sec: float
     window_sec: float
-    speed_mps: float
     batch_size: int
     learning_rate: float
     n_updates: int
     log_every: int
     seed: int
+    variant: str
+    checkpoint_dir: str
 
 
 class Policy(Protocol):
@@ -145,12 +153,13 @@ def make_steps(
     optimizer: optax.GradientTransformation,
 ) -> tuple[Callable[..., Any], Callable[..., Metrics]]:
     """Jitted (update, evaluate) over random windows of `map_set`."""
-    n_steps = math.ceil(cfg.window_sec * env.cfg.step_hz) + 1
+    # reset lets an episode run two timing windows past end_sec to judge its last notes.
+    n_steps = math.ceil((cfg.window_sec + 2 * env.cfg.timing_window_sec) * env.cfg.step_hz) + 1
 
     def episodes_and_key(key: jax.Array) -> tuple[Episodes, jax.Array]:
         k_episodes, k_rollout = jax.random.split(key)
         return sample_episodes(
-            k_episodes, map_set, cfg.batch_size, cfg.window_sec, cfg.speed_mps
+            k_episodes, map_set, cfg.batch_size, cfg.window_sec, env.cfg.note_speed_mps
         ), k_rollout
 
     def loss(params: Any, key: jax.Array) -> tuple[jax.Array, Metrics]:
@@ -200,3 +209,36 @@ def train(
             log.append(row)
             print(row, flush=True)
     return params, log
+
+
+def run(cfg: BCConfig, model_cfg: ModelConfig, saber_cfg: SaberConfig, eye_cfg: EyeConfig) -> Path:
+    """Clone the expert into a fresh brain and save it; returns the checkpoint path."""
+    env, policy, params = build(model_cfg, saber_cfg, eye_cfg, jax.random.PRNGKey(cfg.seed))
+    params, log = train(env, policy, params, cfg)
+    run_dir = Path(cfg.checkpoint_dir) / cfg.variant / f"seed{cfg.seed}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "bc_log.json").write_text(json.dumps(log, indent=1))
+    return save_checkpoint(
+        run_dir / f"bc_{cfg.n_updates}.npz",
+        params,
+        variant=cfg.variant,
+        stage="bc",
+        step=cfg.n_updates,
+        configs={"model": model_cfg, "saber": saber_cfg, "eye": eye_cfg, "train": cfg},
+        subgraph=subgraph_fingerprint(model_cfg.subgraph_dir),
+        metrics=log[-1],
+    )
+
+
+def main() -> None:
+    path = run(
+        load_config(BCConfig, "train_bc"),
+        load_model_config(CONFIG_DIR / "model.yaml", ModelConfig),
+        load_config(SaberConfig, "saber"),
+        load_config(EyeConfig, "eye"),
+    )
+    print(f"saved {path}")
+
+
+if __name__ == "__main__":
+    main()
