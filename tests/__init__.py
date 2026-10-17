@@ -1,1 +1,1 @@
-"""Tests for FlyArcade. Each owner adds tests for their own core logic."""
+"""Tests for Fly Saber. Each owner adds tests for their own core logic."""

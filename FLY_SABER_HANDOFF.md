@@ -1,6 +1,6 @@
-# FlyArcade: Coding Agent Handoff
+# Fly Saber: Coding Agent Handoff
 
-You are building **FlyArcade**, a web app where a simulated fruit fly brain, built from the real connectome, plays 3D browser games while users watch its neurons fire and change anything about its brain in real time.
+You are building **Fly Saber**, a web app where a simulated fruit fly brain, built from the real connectome, plays 3D browser games while users watch its neurons fire and change anything about its brain in real time.
 
 This document is the full spec. Read all of it before writing code. Work milestone by milestone, keep the must-ship tier working at all times, and verify each milestone before moving on.
 
@@ -23,7 +23,7 @@ This document is the full spec. Read all of it before writing code. Work milesto
 "You've seen the viral fly brain play Beat Saber. It was replaying movements. Ours actually sees the blocks, and you get the controls: blind one eye, lesion its motion detectors, flood it with arousal, scramble its wiring, and watch what happens."
 
 ### Context (why this is novel)
-After the MaleCNS v1.0 connectome (about 166,000 neurons, adult male fruit fly, Google Research and HHMI Janelia) was released, viral demos connected it to Doom, Beat Saber, Minecraft, and Mario 64. These demos are watch-only, and the Beat Saber one did not independently play: its motor output replayed movements. FlyArcade fills both gaps: a fly network that genuinely plays from visual input, plus full interactive control over its brain while it plays.
+After the MaleCNS v1.0 connectome (about 166,000 neurons, adult male fruit fly, Google Research and HHMI Janelia) was released, viral demos connected it to Doom, Beat Saber, Minecraft, and Mario 64. These demos are watch-only, and the Beat Saber one did not independently play: its motor output replayed movements. Fly Saber fills both gaps: a fly network that genuinely plays from visual input, plus full interactive control over its brain while it plays.
 
 ### Games
 | Game | Tier | Description |
@@ -95,7 +95,7 @@ Skip: Roblox, Nessie, Solana, PlanIT, DeepSpace, Auth0, Least Vibe Coded. Team m
 ## 4. Repository layout
 
 ```
-flyarcade/
+fly_saber/
   README.md
   Makefile                  # setup, data, train, serve, web, test, lint
   pyproject.toml
@@ -116,7 +116,7 @@ flyarcade/
     DATA_NOTES.md           # what the real files contain, deviations from this spec
     PROTOCOL.md             # WebSocket message spec
     RESULTS.md
-  flyarcade/
+  fly_saber/
     connectome/
       load_malecns.py
       load_flywire.py
@@ -176,7 +176,7 @@ flyarcade/
 
 ---
 
-## 5. Connectome pipeline (`flyarcade/connectome/`)
+## 5. Connectome pipeline (`fly_saber/connectome/`)
 
 ### 5.1 Sources
 - **MaleCNS v1.0** (primary): Janelia neuPrint (`neuprint-python`, requires a free token). Also check for bulk downloads (Parquet or CSV) on the Janelia / Google release pages, which are faster than querying.
@@ -216,7 +216,7 @@ Tests: in/out degrees identical after rewiring; edge count identical; seeded and
 
 ---
 
-## 6. Brain model (`flyarcade/model/brain.py`)
+## 6. Brain model (`fly_saber/model/brain.py`)
 
 ### 6.1 Dynamics
 Leaky rate network, Euler-integrated, `K` substeps per game frame (default `K=4`, configurable):
@@ -249,7 +249,7 @@ Interventions are a single pytree passed to the step function so the server can 
 
 ---
 
-## 7. Simulation (`flyarcade/sim/`)
+## 7. Simulation (`fly_saber/sim/`)
 
 ### 7.1 Fly eye (`eye.py`)
 - Two hexagonal ommatidia lattices (left and right eye), configurable count per eye (default about 700) and wide field of view.
@@ -302,7 +302,7 @@ Each env exposes a `render_state(state)` returning plain object positions, types
 
 ---
 
-## 8. Song map pipeline (`flyarcade/maps/`)
+## 8. Song map pipeline (`fly_saber/maps/`)
 
 **Priority:** parsing, normalizing, and adapting maps (8.2, 8.3) plus the demo allowlist (8.4) are **must ship**, because Fly Saber cannot run without them. Start in hour 0, in parallel with everything else. The automated BeatSaver scraper for a large training set (8.1 at scale) is target tier; for must-ship, a handful of manually downloaded maps is enough.
 
@@ -354,7 +354,7 @@ Arduino or Raspberry Pi with toggle switches (lesion groups) and potentiometers 
 
 ---
 
-## 12. Training (`flyarcade/train/`)
+## 12. Training (`fly_saber/train/`)
 
 1. **Behavior cloning (`bc.py`):** roll out experts in thousands of parallel envs, train the brain to imitate actions (cross-entropy). Optionally a few rounds of DAgger. This gives a working agent early.
 2. **PPO fine-tuning (`ppo.py`):** PureJaxRL-style single-file PPO, fully jitted, thousands of envs, recurrent state handled per env. Start from the BC checkpoint.
@@ -372,7 +372,7 @@ Arduino or Raspberry Pi with toggle switches (lesion groups) and potentiometers 
 
 ---
 
-## 13. Server (`flyarcade/server/`)
+## 13. Server (`fly_saber/server/`)
 
 - FastAPI app. `GET /api/brains`, `GET /api/games`, `GET /api/maps`, `GET /api/explorer/{brain}`, `WS /ws/session`.
 - A session holds env state, brain state, interventions, and steps at a fixed rate (target 30 Hz) using jitted functions on CPU or GPU.

@@ -1,20 +1,21 @@
-# FlyArcade frontend implementation plan
+# Fly Saber frontend implementation plan
 
 ## Scope and current state
 
-This plan follows [`FLYARCADE_HANDOFF.md`](../FLYARCADE_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The handoff describes a fly playing from visual input, with interventions that affect its behavior. The frontend must communicate that goal without claiming that this static preview demonstrates it.
+This plan follows [`FLY_SABER_HANDOFF.md`](../FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The handoff describes a fly playing from visual input, with interventions that affect its behavior. The frontend must communicate that goal without claiming that this static preview demonstrates it.
 
-The implementation lives in the repository's canonical `frontend/` directory. The handoff's older `web/` path was superseded by the team reorganization; `make frontend` runs this client. Preserve the existing Vite `/api` and `/ws` development proxies for integration with `server/`.
+The current implementation is in `frontend/`, per the frontend owner's request. The repository has since been reorganized around this directory. Keep build, Docker, and deployment paths aligned with it.
 
 Implemented now:
 
 - React, TypeScript, and Vite with shadcn/ui components and a dark grey workstation design system.
 - A workstation layout with a compact toolbar, large Fly Saber viewport, right-hand brain/session inspector, and bottom timeline/readouts, stacking vertically on small screens.
-- Two original, local SVG images. Neither is a recorded session, scientific reconstruction, or source of test data.
-- Honest static-preview labels, inactive playback, unreported scores, fullscreen viewing, and Activity/Details/Next steps inspector tabs.
-- No network session, fake firing animation, audio, game simulation, or 3D camera interaction.
+- The original Fly Saber SVG remains a static preview. The brain SVG has been replaced with a real 19,403-neuron cloud loaded from the committed MaleCNS JSON assets.
+- Brain orbit, pan, zoom, display-axis presets, keyboard navigation, group/type filters, point selection, and position provenance are implemented. Rendering is lazy-loaded and uses a single point cloud with error/retry states.
+- Honest anatomy/preview labels, inactive playback, unreported scores, fullscreen game viewing, and Neurons/Details/Next steps inspector tabs.
+- No network session, fake firing animation, audio, or game simulation. Backend neuron firing data is still needed; see [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
 
-The point cloud is a decorative illustration of a brain and ventral nerve cord. Do not use its positions, point count, or colors as scientific data. Display only the anatomical structures supplied in the eventual backend asset.
+The current point cloud uses supplied anatomical positions, including partner and type-mean estimates marked in the export. Colors identify cell types, not firing. The old neural SVG remains decorative artwork only and must never become scientific test data.
 
 ## Visual direction
 
@@ -24,17 +25,9 @@ Use the checked-in shadcn/ui Button, Badge, Card, Tooltip, Tabs, and Separator c
 
 ## 1. Agree on real contracts before adding a connection
 
-[`docs/PROTOCOL.md`](../docs/PROTOCOL.md) now contains draft map, render-state, REST, and WebSocket contracts, with Pydantic models in `server/protocol.py`. The server runs a fake simulation; authentic neural activity, interventions, and brain inference are still pending. Build against these inspected contracts, confirm remaining details with their owners, and never treat the preview SVG as a fixture.
+[`docs/PROTOCOL.md`](../docs/PROTOCOL.md) now documents exported brain arrays, groups, and session messages. Inspect the current server implementation and real samples before connecting activity; confirm asset identity and rate interpretation. Do not treat the old preview SVG as a fixture.
 
-Current integration facts from the checked-in contracts:
-
-- Fetch the full normalized map over REST. Note distance is `(time_sec - song_t) * note_speed_mps`; grid cells use `layer * 4 + lane`. Frames contain saber cells/cuts and score rather than every note position.
-- Start with `start`, wait for `ready`, then send `play {song_t}` when audio starts. Send `clock {song_t}` about once a second; `pause` carries a boolean. Preserve `slot` for each brain.
-- Binary messages have an 8-byte prefix: kind, slot, two reserved bytes, then a little-endian uint32 simulation step. The eye payload is described; neuron rates and cell-type mean payloads remain TODO.
-- Subgraph indices are neuron row numbers. `neurons.parquet` includes `body_id`, `type`, `side`, and `x/y/z` in 8 nm voxels, with `position_inherited` metadata and some NaN positions. Preserve the index mapping when excluding missing points; disclose inherited positions. Do not fabricate positions for missing neurons.
-- `set_interventions`, `human_action`, and `narrate` currently return errors. Their controls must remain unavailable.
-
-Inspect actual backend responses and exported assets with the server and connectome owners. Confirm or complete these agreements in `docs/PROTOCOL.md`:
+Inspect actual backend responses and exported assets with the server and connectome owners. Record these agreements in `docs/PROTOCOL.md`:
 
 | Contract | Questions to settle |
 | --- | --- |
@@ -92,7 +85,7 @@ Changing the spectator camera must not change the fly's visual input, ommatidia 
 
 ### Simulation and audio timing
 
-Follow the current protocol's client audio clock: after `ready`, send `play {song_t}` when audio starts and `clock {song_t}` about once a second. The server catches up or holds its simulation against that timeline. Simulation outcomes remain authoritative; note presentation follows the normalized map and audio song time. Use `AudioContext.currentTime` for smooth audio-aligned presentation between frames. Measure network latency and jitter, buffer briefly, and confirm drift handling with the server owner. Where supported, `getOutputTimestamp()` can relate audio output to the performance clock.
+The handoff calls the simulation authoritative while also asking audio to drive visual positioning. Resolve that with a shared presentation timeline: simulation timestamps define outcomes; map simulation time to the Web Audio clock at a negotiated start time. Use `AudioContext.currentTime` for smooth audio-aligned presentation between authoritative frames. Measure network/clock offset and jitter, buffer briefly, and resynchronize using the agreed protocol. Where supported, `getOutputTimestamp()` can relate audio output to the performance clock.
 
 Never advance notes using frame counts. Agree with the server owner on acceptable presentation delay and drift thresholds; handle pause, suspended audio contexts, tab visibility, restart, reconnect, playback rate, and seeking explicitly. A hard jump may require audio restart rather than replaying old hit effects. Test a full actual song, not just an opening segment.
 
@@ -106,7 +99,7 @@ Load authentic coordinates and metadata once per versioned brain asset. Convert 
 
 Render the planned 5,000 to 20,000 neuron subgraph as a single `THREE.Points`/BufferGeometry cloud, with attributes for position, type color, and activity. Avoid a mesh or React component per neuron. Update activity attributes at the stream rate, mark buffers dirty, and interpolate brightness in the render loop. Keep a subdued type-colored baseline and an accessible activity legend. Add a shader only if profiling justifies it. Render connectivity on selection with an edge budget, rather than displaying millions of edges.
 
-The current export uses soma positions in 8 nm voxels, with some positions inherited from a partner and some missing. Confirm the browser export retains those provenance flags and the original row-index mapping. Points are a spatial summary, not full neuron morphology. If detailed morphology is needed later, fetch selected neuron skeletons or meshes on demand, with provenance and memory limits.
+Confirm whether exported coordinates represent somas, centroids, or another location. Points are a spatial summary, not full neuron morphology. If detailed morphology is needed later, fetch selected neuron skeletons or meshes on demand, with provenance and memory limits.
 
 ### User rotation and navigation
 

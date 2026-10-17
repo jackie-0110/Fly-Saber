@@ -1,5 +1,5 @@
 [project]
-name = "flyarcade"
+name = "fly-saber"
 version = "0.1.0"
 description = "A connectome-based fruit fly brain that plays 3D rhythm games, with live brain controls."
 readme = "README.md"

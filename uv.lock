@@ -524,7 +524,7 @@ wheels = [
 ]
 
 [[package]]
-name = "flyarcade"
+name = "fly-saber"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

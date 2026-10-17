@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" vite.config.ts",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts"
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" vite.config.ts",
+    "test:unit": "node --experimental-strip-types --test tests/brain-data.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

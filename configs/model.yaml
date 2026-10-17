@@ -1,4 +1,4 @@
-# Connectome rate network (owner: Person 1). See FLYARCADE_HANDOFF.md section 6.
+# Connectome rate network (owner: Person 1). See FLY_SABER_HANDOFF.md section 6.
 subgraph_dir: data/processed/malecns_subgraph
 
 # Timing: one game frame at 30 Hz, split into Euler substeps.

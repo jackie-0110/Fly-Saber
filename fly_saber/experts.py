@@ -1,6 +1,6 @@
 """Scripted perfect players reading the true future state (spec 7.4).
 
-Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
+Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 import jax
