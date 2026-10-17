@@ -86,7 +86,9 @@ Not downloaded yet.
 
 ## Ommatidia to photoreceptor mapping (Person 2)
 
-See MaleCNS deviation 2. Hex grid is about 36 by 39 per eye, 892 columns.
+**Column orientation.** Fitting soma positions against `(hex1, hex2)`: in the lamina (which sits directly under the retina, so it maps the eye), +hex1 moves up and forward, +hex2 up and backward, in both eyes (vertical fit R2 0.99, front-back 0.6 to 0.85). In the medulla the front-back direction is reversed, which is the first optic chiasm, as expected. The hex axes are 120 degrees apart, not 60: with 120 degrees the 892 columns form an eye 1.15 times taller than wide, as a fly eye is; with 60 degrees it would be 3.3 times taller than wide. Angles per column are in `frontend/public/data/brain/columns.json` (PROTOCOL section 4).
+
+**R1-R6 coverage is sparse.** Only 48 of 217 left and 97 of 220 right kept columns have a traced R1-R6; others have only R7/R8 or no photoreceptor. In those columns L1 and L2 take the luminance input directly with inverted sign (photoreceptor synapses onto them are inhibitory). 1,648 neurons take eye input in total.
 
 ## Beat Saber map formats, v2 and v3 (Person 2)
 

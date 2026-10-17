@@ -8,7 +8,7 @@ import pandas as pd
 from brain.config import ModelConfig
 from brain.model.brain import (
     Graph,
-    _eye_inputs,
+    eye_inputs,
     init_params,
     init_state,
     make_step,
@@ -42,6 +42,7 @@ def _graph(sign: float) -> Graph:
         dn=jnp.array([2, 3], dtype=jnp.int32),
         input_neuron=jnp.array([0], dtype=jnp.int32),
         input_column=jnp.array([0], dtype=jnp.int32),
+        input_channel=jnp.array([0], dtype=jnp.int32),
         input_sign=jnp.array([1.0]),
     )
 
@@ -52,7 +53,7 @@ def _settle(graph: Graph, eye: float, iv=None, frames: int = 60):  # type: ignor
     iv = no_interventions(N) if iv is None else iv
     v = init_state(N)
     for _ in range(frames):
-        v, out = step(params, v, jnp.array([eye]), iv, jax.random.PRNGKey(0))
+        v, out = step(params, v, jnp.array([[eye], [0.5]]), iv, jax.random.PRNGKey(0))
     return out
 
 
@@ -91,7 +92,7 @@ def test_vmap_over_envs() -> None:
     v, out = step(
         params,
         jnp.zeros((8, N)),
-        jnp.ones((8, 1)),
+        jnp.ones((8, 2, 1)),
         no_interventions(N),
         jax.random.split(jax.random.PRNGKey(0), 8),
     )
@@ -105,21 +106,34 @@ def test_split_heads_and_counts() -> None:
     assert param_counts(params) == {"brain": 3 * N + 2, "readout": 2 * 5 + 5 + 2 + 1, "total": 32}
 
 
-def test_eye_inputs_fall_back_to_lamina() -> None:
+def test_color_channel_drives_only_its_neurons() -> None:
+    graph = _graph(1.0)._replace(input_channel=jnp.array([1], dtype=jnp.int32))
+    params = init_params(jax.random.PRNGKey(0), graph, CFG, N)
+    step = jax.jit(make_step(graph, CFG, N))
+    rates = []
+    for color in (0.0, 1.0):
+        v = init_state(N)
+        for _ in range(60):
+            v, out = step(
+                params, v, jnp.array([[0.3], [color]]), no_interventions(N), jax.random.PRNGKey(0)
+            )
+        rates.append(float(out.rates[0]))
+    assert rates[1] > rates[0] + 0.5  # neuron 0 now follows channel 1, not luminance
+
+
+def test_eye_inputs_channels_and_fallback() -> None:
     neurons = pd.DataFrame(
         {
-            "type": ["R1-R6", "L1", "L1", "L2", "T4a"],
-            "role": ["columnar"] * 5,
-            "side": ["L"] * 5,
-            "hex1": [2.0, 2.0, 4.0, 4.0, 4.0],
-            "hex2": [2.0, 2.0, 2.0, 2.0, 2.0],
+            "type": ["R1-R6", "R7p", "L1", "L1", "L2", "R8y", "T4a"],
+            "role": ["columnar"] * 7,
+            "side": ["L"] * 7,
+            "hex1": [2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0],
+            "hex2": [2.0] * 7,
         }
     )
-    columns, neuron, column, sign = _eye_inputs(neurons)
+    columns, inputs = eye_inputs(neurons)
     assert len(columns) == 2
-    # Column (2,2) has a photoreceptor; column (4,2) does not, so its L1 and L2 take input.
-    assert sorted(zip(neuron.tolist(), sign.tolist(), strict=True)) == [
-        (0, 1.0),
-        (2, -1.0),
-        (3, -1.0),
-    ]
+    got = sorted(inputs[["neuron", "column", "channel", "sign"]].itertuples(index=False, name=None))
+    # Column 0 (2,2) has R1-R6: it takes luminance, R7 takes color, L1 gets nothing.
+    # Column 1 (4,2) has only an R8: L1 and L2 take luminance with inverted sign.
+    assert got == [(0, 0, 0, 1.0), (1, 0, 1, 1.0), (3, 1, 0, -1.0), (4, 1, 0, -1.0), (5, 1, 1, 1.0)]
