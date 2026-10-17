@@ -121,3 +121,13 @@ def test_observation_shows_approaching_note_and_hides_it_after_the_hit() -> None
     while int(state.hits) == 0:
         _, state, *_ = env.step(state, saber_expert(env, state))
     np.testing.assert_allclose(env.observe(state), background)
+
+
+def test_notes_at_the_end_of_a_window_are_still_judged() -> None:
+    env = make_env()
+    notes = note_arrays([note(0.4 + 0.3 * i, 0, 0) for i in range(6)], max_notes=32)
+    _, state = env.reset(notes, SPEED, jnp.float32(0.0), jnp.float32(2.0))
+    step, done = jax.jit(env.step), False
+    while not done:
+        _, state, _, done, _ = step(state, idle(env, state))
+    assert int(state.misses) == 6
