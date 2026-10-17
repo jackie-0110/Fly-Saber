@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from flyarcade.maps import parse_v2, parse_v3
+from flyarcade.maps.allowlist import AllowlistEntry
 from flyarcade.maps.chart import BpmChange, Chart, UnsupportedMapError
 
 SCHEMA_VERSION = 1
@@ -31,6 +32,11 @@ def load_dat(path: Path) -> dict[str, Any]:
     """Read a .dat JSON file; some editors write a UTF-8 BOM."""
     data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8-sig"))
     return data
+
+
+def load_info(level_dir: Path) -> dict[str, Any]:
+    """Read a level's Info.dat; the filename's case varies between maps."""
+    return load_dat(next(p for p in level_dir.iterdir() if p.name.lower() == "info.dat"))
 
 
 def format_major_version(dat: dict[str, Any]) -> int:
@@ -124,14 +130,13 @@ def normalize_level(
     key: str,
     split: str,
     duration_sec: float,
-    license: str | None,
+    allowed: AllowlistEntry | None,
 ) -> list[dict[str, Any]]:
     """Normalize every Standard difficulty of an extracted BeatSaver level.
 
-    `license` is set only for allowlisted audio; it controls `audio_url`.
+    `allowed` is the level's allowlist entry; without one the map ships no audio.
     """
-    info_path = next(p for p in level_dir.iterdir() if p.name.lower() == "info.dat")
-    info = load_dat(info_path)
+    info = load_info(level_dir)
     if format_major_version(info) != 2:
         raise UnsupportedMapError(f"Info.dat version {info.get('version')}")
     if info.get("_songTimeOffset", 0):
@@ -157,8 +162,9 @@ def normalize_level(
                 "mapper": info["_levelAuthorName"],
                 "bpm": bpm,
                 "duration_sec": duration_sec,
-                "audio_url": f"/api/maps/{map_id}/audio" if license else None,
-                "license": license,
+                "audio_url": f"/api/maps/{map_id}/audio" if allowed else None,
+                "license": allowed.license if allowed else None,
+                "attribution": allowed.attribution if allowed else None,
                 "source_url": f"https://beatsaver.com/maps/{key}",
             }
             difficulty = {

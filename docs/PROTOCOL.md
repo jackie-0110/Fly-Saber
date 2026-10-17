@@ -28,6 +28,7 @@ One JSON file per playable (song, difficulty): `data/maps/normalized/{map_id}.js
     "duration_sec": 184.2,
     "audio_url": "/api/maps/3a2b1_hard/audio",  // null when the audio is not allowlisted
     "license": "CC BY 4.0",          // null when not allowlisted
+    "attribution": "\"Example Song\" by Example Artist (https://...), licensed under CC BY 4.0",  // show with the song; null when not allowlisted
     "source_url": "https://beatsaver.com/maps/3a2b1"
   },
   "difficulty": {

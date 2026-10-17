@@ -6,8 +6,13 @@ from typing import Any
 
 import pytest
 
+from flyarcade.maps.allowlist import AllowlistEntry
 from flyarcade.maps.chart import BpmChange, UnsupportedMapError
 from flyarcade.maps.normalize import beats_to_seconds, normalize_level, spawn_distance_m
+
+ALLOWED = AllowlistEntry(
+    key="abc", title="Fixture", artist="Artist", license="CC BY 4.0", song_url="u", split="train"
+)
 
 INFO = {
     "_version": "2.0.0",
@@ -64,7 +69,7 @@ def write_level(root: Path, easy: dict[str, Any], info: dict[str, Any] = INFO) -
 
 def normalize(level: Path) -> dict[str, Any]:
     (normalized,) = normalize_level(
-        level, key="abc", split="train", duration_sec=10.0, license="CC BY 4.0"
+        level, key="abc", split="train", duration_sec=10.0, allowed=ALLOWED
     )
     return normalized
 
@@ -91,10 +96,10 @@ def test_normalized_notes_are_sorted_in_seconds_with_bombs_and_off_grid_dropped(
     ]
 
 
-def test_audio_url_only_for_licensed_maps(tmp_path: Path) -> None:
+def test_audio_url_only_for_allowlisted_maps(tmp_path: Path) -> None:
     level = write_level(tmp_path / "v2", V2_EASY)
-    (unlicensed,) = normalize_level(level, key="abc", split="train", duration_sec=1, license=None)
-    assert unlicensed["song"]["audio_url"] is None
+    (unlisted,) = normalize_level(level, key="abc", split="train", duration_sec=1, allowed=None)
+    assert unlisted["song"]["audio_url"] is None
     assert normalize(level)["song"]["audio_url"] == "/api/maps/abc_easy/audio"
 
 

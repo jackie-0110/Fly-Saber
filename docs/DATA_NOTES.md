@@ -12,7 +12,8 @@ What the real files actually contain, and every deviation from the spec. Inspect
 
 Inspected 5 BeatSaver levels of Kevin MacLeod songs (keys 53af, 2dd26, 304be, 4fd1b, 4f4de): 11 Standard difficulties, difficulty formats 2.0.0, 2.2.0, 2.6.0, and 3.3.0.
 
-- **BeatSaver API has no license field.** Licensing comes from the song itself, so demo maps are songs with a known Creative Commons license (Kevin MacLeod, CC BY 4.0), recorded in `demo_allowlist.json`.
+- **BeatSaver API has no license field.** Licensing comes from the song itself, so demo maps are songs with a known Creative Commons license (Kevin MacLeod, CC BY 4.0), recorded in `demo_allowlist.json`. Each allowlisted song was matched by title in incompetech's catalog (`pieces.json`) and links to its incompetech page; Bathroom Ballet (4fd1b) is not in the catalog and was dropped. The audio is the mapper's upload, so its length can differ from incompetech's by a few seconds (trimmed intros or tails).
+- `song.duration_sec` comes from BeatSaver's `metadata.duration`, the length of the uploaded audio.
 - Every Info file seen is the v2 layout (`_version` 2.x, `_difficultyBeatmapSets`), even when the difficulty files are v3. The filename case varies (`info.dat` and `Info.dat`). Info v4 is rejected.
 - Files may start with a UTF-8 BOM; read with `utf-8-sig`.
 - v2 notes: `_type` 0 red, 1 blue, 3 bomb. v2 walls: `_type` 0 full height, 1 crouch; we convert to the v3 `(layer, height)` the game uses, `(0, 5)` and `(2, 3)`.
