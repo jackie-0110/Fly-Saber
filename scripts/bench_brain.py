@@ -71,6 +71,14 @@ def main(batches: list[int]) -> None:
         keys = jax.random.split(key, eyes.shape[0])
         return jax.lax.scan(body, init_state(n), (eyes, keys))[1]
 
+    def actions_only(params: Params, eyes: Array, key: Array) -> Array:
+        # Training keeps actions, not every neuron's rate per frame (that is ~29 GB at 4096 envs).
+        def body(v: Array, xs: tuple[Array, Array]) -> tuple[Array, Array]:
+            v, out = step(params, v, xs[0], iv, xs[1])
+            return v, out.logits
+
+        return jax.lax.scan(body, init_state(n), (eyes, jax.random.split(key, eyes.shape[0])))[1]
+
     run = jax.jit(rollout)
     key = jax.random.PRNGKey(1)
     loom = jnp.asarray(looming_eye(FRAMES, columns))
@@ -110,7 +118,7 @@ def main(batches: list[int]) -> None:
 
     print("\nspeed (frames per second of simulated play, all envs combined):")
     for b in batches:
-        batched = jax.jit(jax.vmap(rollout, in_axes=(None, None, 0)))
+        batched = jax.jit(jax.vmap(actions_only, in_axes=(None, None, 0)))
         keys = jax.random.split(key, b)
         _wait(batched(params, loom, keys))
         t = time.perf_counter()
