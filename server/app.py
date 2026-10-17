@@ -3,56 +3,83 @@
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from fly_saber.config import load_config
-from fly_saber.env import SaberConfig, SaberEnv
-from fly_saber.experts import saber_expert
-from fly_saber.eye import EyeConfig
+from fly_saber.config import CONFIG_DIR
 from server.catalog import Catalog
 from server.protocol import Brain, Game, MapSummary
-from server.saber_sim import LiveSaber
-from server.session import BRAINS, GAMES, Session, SimFactory
+from server.saber_sim import brain_sims, expert_sims
+from server.session import GAMES, LiveBrain, Session
+
+EXPERT = Brain(
+    id="expert",
+    label="Scripted expert",
+    description="Perfect player that reads the map; stands in until trained brains load.",
+)
 
 
-def expert_sims() -> LiveSaber:
-    """The real env played by the scripted expert."""
-    env = SaberEnv.create(load_config(SaberConfig, "saber"), load_config(EyeConfig, "eye"))
-    return LiveSaber(env, saber_expert)
+@dataclass(frozen=True)
+class BrainSpec:
+    id: str
+    label: str
+    description: str
+    checkpoint: str
 
 
-def warm_up(catalog: Catalog, make_sim: SimFactory) -> None:
-    """Compile the sim for every map size now; a first session would stall the event loop."""
+def brain_specs() -> list[BrainSpec]:
+    raw = yaml.safe_load((CONFIG_DIR / "server.yaml").read_text())
+    return [BrainSpec(**b) for b in raw["brains"]]
+
+
+def serving_brains(specs: list[BrainSpec]) -> list[LiveBrain]:
+    """The expert, plus every brain whose checkpoint exists."""
+    brains = [LiveBrain(EXPERT, expert_sims())]
+    for spec in specs:
+        if Path(spec.checkpoint).is_file():
+            info = Brain(id=spec.id, label=spec.label, description=spec.description)
+            brains.append(LiveBrain(info, brain_sims(Path(spec.checkpoint))))
+    return brains
+
+
+def warm_up(catalog: Catalog, brains: list[LiveBrain]) -> None:
+    """Compile every player's sim for every map size now; a first session would stall the
+    event loop."""
     for summary in catalog.list_maps():
         map_data = catalog.get_map(summary.map_id)
-        if map_data is not None:
-            sim = make_sim(map_data, BRAINS[0].id, 0)
+        if map_data is None:
+            continue
+        for brain in brains:
+            sim = brain.make_sim(map_data, 0)
             sim.reset(0.0)
             sim.step()
 
 
 def create_app(
     maps_dir: Path = Path("data/maps"),
-    make_sim: SimFactory | None = None,
+    brains: list[LiveBrain] | None = None,
     frontend_dir: Path | None = None,
 ) -> FastAPI:
+    """`brains` defaults to the expert alone."""
     app = FastAPI(title="Fly Saber")
-    make_sim = make_sim or expert_sims()
+    brains = brains or [LiveBrain(EXPERT, expert_sims())]
+    by_id = {b.info.id: b for b in brains}
     catalog = Catalog(maps_dir)
-    warm_up(catalog, make_sim)
+    warm_up(catalog, brains)
 
     @app.get("/api/games")
     def games() -> list[Game]:
         return GAMES
 
     @app.get("/api/brains")
-    def brains() -> list[Brain]:
-        return BRAINS
+    def brain_list() -> list[Brain]:
+        return [b.info for b in brains]
 
     @app.get("/api/maps")
     def maps() -> list[MapSummary]:
@@ -75,7 +102,7 @@ def create_app(
     @app.websocket("/ws/session")
     async def session(websocket: WebSocket) -> None:
         await websocket.accept()
-        await Session(websocket, catalog, make_sim).run()
+        await Session(websocket, catalog, by_id).run()
 
     if frontend_dir is not None:
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
@@ -83,5 +110,10 @@ def create_app(
     return app
 
 
-_frontend = Path("frontend/dist")
-app = create_app(frontend_dir=_frontend if _frontend.is_dir() else None)
+def serve() -> FastAPI:
+    """The production app, for `uvicorn server.app:serve --factory`."""
+    frontend = Path("frontend/dist")
+    return create_app(
+        brains=serving_brains(brain_specs()),
+        frontend_dir=frontend if frontend.is_dir() else None,
+    )

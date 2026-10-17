@@ -100,7 +100,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | Endpoint | Returns |
 |---|---|
 | `GET /api/games` | `[{ "id": "saber", "label": "Fly Saber" }]` |
-| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`, one per variant in `variants.yaml` that has a checkpoint |
+| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`: always `expert` (the scripted player), then each brain in `configs/server.yaml` (`real`, `rewired`) whose checkpoint file exists at startup |
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
@@ -129,13 +129,15 @@ Server behaviour:
 - Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
 - `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
+- Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
+- A served checkpoint loads with its own model config, so that config's `subgraph_dir` must hold the subgraph it was trained on; startup fails if the subgraph fingerprint differs.
 - The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
 
 #### Server to client
 
 | `type` | Fields | Rate |
 |---|---|---|
-| `ready` | `session_id`, `game`, `map_id`, `slots: [{slot, brain}]`, `step_hz`, `n_neurons`, `cell_types: string[]` | once per `start` / `reset` |
+| `ready` | `session_id`, `game`, `map_id`, `slots: [{slot, brain}]`, `step_hz`, `n_neurons`, `cell_types: string[]` | once per `start` / `reset`. `n_neurons` and `cell_types` are the slots' brain subgraph (same list and order as `neurons.json`); 0 and `[]` when every slot is `expert` |
 | `frame` | `slot`, `render_state` (section 2) | 30 Hz per slot |
 | `event` | `slot`, `t`, `kind`, `note_id` | as they happen |
 | `ended` | `slot`, `score` (same shape as `render_state.score`) | end of song |
