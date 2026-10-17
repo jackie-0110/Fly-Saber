@@ -66,3 +66,48 @@ def test_web_columns_flags_fallback() -> None:
     assert out["n_columns"] == 2 and out["kept_spacing_deg"] == 10.0
     assert out["luminance_input"] == [0, 1]  # column 1 has only L1/L2 fallback for luminance
     assert out["hex1"] == [2, 4]
+
+
+def _modes_brain() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """R -> L1 -> Mi1 -> LC4 -> DN, plus a shortcut variant wiring R straight to the DN."""
+    neurons = pd.DataFrame(
+        {
+            "type": ["R1-R6", "L1", "Mi1", "LC4", "DNp01"],
+            "role": ["columnar", "columnar", "columnar", "projection", "descending"],
+            "sign": [-1, -1, 1, 1, 1],
+        }
+    )
+    real = pd.DataFrame(
+        {"pre": [0, 1, 2, 3], "post": [1, 2, 3, 4], "weight": [9, 8, 7, 6], "sign": [-1, -1, 1, 1]}
+    )
+    short = pd.DataFrame(
+        {"pre": [0, 1, 2, 0], "post": [1, 2, 3, 4], "weight": [9, 8, 7, 6], "sign": [-1, -1, 1, -1]}
+    )
+    return neurons, real, short
+
+
+def test_wiring_stats() -> None:
+    from brain.connectome.metadata import wiring_stats
+
+    neurons, real, short = _modes_brain()
+    r = wiring_stats(neurons, real, real)
+    # Eye inputs are R and L1, so the DN is 3 synapses from L1 in the real chain.
+    assert r["direct_eye_to_motor_connections"] == 0 and r["eye_to_motor_synapses_median"] == 3.0
+    assert r["connections_shared_with_real"] == 1.0 and r["excitatory_neuron_fraction"] == 0.6
+    s = wiring_stats(neurons, short, real)
+    assert s["direct_eye_to_motor_connections"] == 1 and s["eye_to_motor_synapses_median"] == 1.0
+    assert s["connections_shared_with_real"] == 0.75
+
+
+def test_edge_sample_keeps_strongest_per_block() -> None:
+    from brain.connectome.metadata import edge_sample
+
+    neurons, real, _ = _modes_brain()
+    extra = pd.DataFrame(
+        {"pre": [2], "post": [3], "weight": [99], "sign": [1]}
+    )  # same block as 2->3
+    edges = pd.concat([real, extra], ignore_index=True)
+    sample = edge_sample(neurons, edges, per_block=1)
+    assert [2, 3, 99, 1] in sample and [2, 3, 7, 1] not in sample
+    # One per block: photoreceptor>lamina, lamina>medulla, medulla>projection, projection>DN.
+    assert len(sample) == 4

@@ -143,3 +143,55 @@ def web_controls(controls: Any, groups: dict[str, list[int]]) -> dict[str, Any]:
         "stimulation": {"min": 0.0, "max": controls.max_stimulation},
         "noise": {"min": 0.0, "max": controls.max_noise, "default": 0.0},
     }
+
+
+def wiring_stats(
+    neurons: pd.DataFrame, edges: pd.DataFrame, real_edges: pd.DataFrame
+) -> dict[str, Any]:
+    """How a brain's wiring routes the eye to the motor neurons, versus the real brain."""
+    import scipy.sparse as sp
+    import scipy.sparse.csgraph as cg
+
+    from brain.connectome.variants import neuron_layers
+
+    layer = neuron_layers(neurons).to_numpy()
+    eye = np.flatnonzero(np.isin(layer, ["photoreceptor"]) | neurons["type"].isin(["L1", "L2"]))
+    dn = np.flatnonzero(neurons["role"].to_numpy() == "descending")
+    n = len(neurons)
+    graph = sp.csr_matrix(
+        (np.ones(len(edges)), (edges["pre"].to_numpy(), edges["post"].to_numpy())), shape=(n, n)
+    )
+    hops = cg.dijkstra(graph, unweighted=True, indices=eye, min_only=True)[dn]
+    reached = hops[np.isfinite(hops)]
+    real_pairs = set(zip(real_edges["pre"], real_edges["post"], strict=True))
+    shared = sum(p in real_pairs for p in zip(edges["pre"], edges["post"], strict=True))
+    direct = edges["pre"].isin(eye) & edges["post"].isin(dn)
+    signs = neurons["sign"].to_numpy()
+    return {
+        "direct_eye_to_motor_connections": int(direct.sum()),
+        "eye_to_motor_synapses_median": float(np.median(reached)) if len(reached) else None,
+        "eye_to_motor_synapses_histogram": {
+            str(int(h)): int(c)
+            for h, c in zip(*np.unique(reached, return_counts=True), strict=True)
+        },
+        "motor_neurons_unreachable_from_eye": int((~np.isfinite(hops)).sum()),
+        "connections_shared_with_real": round(shared / len(edges), 4),
+        "excitatory_neuron_fraction": round(float((signs > 0).mean()), 4),
+    }
+
+
+def edge_sample(neurons: pd.DataFrame, edges: pd.DataFrame, per_block: int) -> list[list[int]]:
+    """The strongest `per_block` connections of each layer-to-layer block, as
+    [pre, post, weight, sign] (neuron indices), for drawing the wiring in 3D."""
+    from brain.connectome.variants import neuron_layers
+
+    layer = neuron_layers(neurons).to_numpy()
+    e = edges.assign(block=layer[edges["pre"]] + ">" + layer[edges["post"]])
+    top = (
+        e.sort_values(["weight", "pre", "post"], ascending=[False, True, True], kind="stable")
+        .groupby("block", sort=True)
+        .head(per_block)
+        .sort_values(["pre", "post"])
+    )
+    rows: list[list[int]] = top[["pre", "post", "weight", "sign"]].astype(int).to_numpy().tolist()
+    return rows
