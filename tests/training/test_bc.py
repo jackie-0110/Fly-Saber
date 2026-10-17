@@ -49,7 +49,7 @@ def setup(tmp_path: Path, **overrides: Any) -> tuple[Any, Any]:
         }
         for i in range(6)
     ]
-    song = {"split": "train", "song": {"duration_sec": 3.0}, "difficulty": {"note_speed_mps": 10.0}}
+    song = {"split": "train", "song": {"duration_sec": 3.0}}
     (tmp_path / "abc_easy.json").write_text(
         json.dumps({"map_id": "abc_easy", "notes": notes, **song})
     )
@@ -58,6 +58,7 @@ def setup(tmp_path: Path, **overrides: Any) -> tuple[Any, Any]:
         "split": "train",
         "min_gap_sec": 0.0,
         "window_sec": 3.0,
+        "speed_mps": 7.0,
         "batch_size": 4,
         "learning_rate": 0.003,
         "n_updates": 1,

@@ -19,7 +19,6 @@ class MapSet:
     """Every map of one split, notes padded to a common length; leading axis is the map."""
 
     notes: NoteArrays
-    speed_mps: jax.Array
     duration_sec: jax.Array
 
 
@@ -50,21 +49,25 @@ def load_map_set(
     arrays = [note_arrays(n, max_notes) for n in notes]
     map_set = MapSet(
         notes=jax.tree.map(lambda *x: jnp.stack(x), *arrays),
-        speed_mps=jnp.array([m["difficulty"]["note_speed_mps"] for m in maps], jnp.float32),
         duration_sec=jnp.array([m["song"]["duration_sec"] for m in maps], jnp.float32),
     )
     return map_set, [m["map_id"] for m in maps]
 
 
-def sample_episodes(key: jax.Array, map_set: MapSet, n: int, window_sec: float) -> Episodes:
-    """`n` random (map, start time) windows of `window_sec`; jit-safe."""
+def sample_episodes(
+    key: jax.Array, map_set: MapSet, n: int, window_sec: float, speed_mps: float
+) -> Episodes:
+    """`n` random (map, start time) windows of `window_sec`; jit-safe.
+
+    Every episode uses `speed_mps`, not the map's own note speed (ours is slower).
+    """
     k_map, k_start = jax.random.split(key)
-    index = jax.random.randint(k_map, (n,), 0, map_set.speed_mps.shape[0])
+    index = jax.random.randint(k_map, (n,), 0, map_set.duration_sec.shape[0])
     latest_start = jnp.maximum(map_set.duration_sec[index] - window_sec, 0.0)
     start = jax.random.uniform(k_start, (n,)) * latest_start
     return Episodes(
         notes=jax.tree.map(lambda x: x[index], map_set.notes),
-        speed_mps=map_set.speed_mps[index],
+        speed_mps=jnp.full(n, speed_mps, jnp.float32),
         start_sec=start,
         end_sec=start + window_sec,
     )

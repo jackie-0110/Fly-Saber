@@ -27,7 +27,6 @@ def write_map(directory: Path, map_id: str, split: str, times: list[float]) -> N
         "map_id": map_id,
         "split": split,
         "song": {"duration_sec": 30.0},
-        "difficulty": {"note_speed_mps": 10.0},
         "notes": notes,
     }
     (directory / f"{map_id}.json").write_text(json.dumps(data))
@@ -57,8 +56,9 @@ def test_sample_episodes_stays_inside_each_song(tmp_path: Path) -> None:
     write_map(tmp_path, "aaa_easy", "train", [1.0])
     map_set, _ = load_map_set(tmp_path, "train", min_notes=1)
 
-    episodes = sample_episodes(jax.random.PRNGKey(0), map_set, n=64, window_sec=10.0)
+    episodes = sample_episodes(jax.random.PRNGKey(0), map_set, n=64, window_sec=10.0, speed_mps=7.0)
 
     assert episodes.notes.time_sec.shape == (64, 1)
     assert (np.asarray(episodes.start_sec) >= 0.0).all()
     assert (np.asarray(episodes.end_sec) <= 30.0).all()
+    assert (np.asarray(episodes.speed_mps) == 7.0).all()
