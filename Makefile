@@ -26,7 +26,7 @@ train-ppo:
 	uv run python -m training.ppo
 
 serve:
-	uv run uvicorn server.app:app --reload --port 8000
+	uv run uvicorn server.app:serve --factory --reload --port 8000
 
 frontend:
 	cd frontend && npm run dev
