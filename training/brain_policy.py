@@ -66,6 +66,12 @@ def eye_directions(columns: pd.DataFrame, eye_cfg: EyeConfig) -> np.ndarray:
     return radians
 
 
+def column_env(saber_cfg: SaberConfig, eye_cfg: EyeConfig, columns: pd.DataFrame) -> SaberEnv:
+    """The env seeing through the brain's eye columns (`load_graph`'s column table)."""
+    left_eye = (columns["side"] == "L").to_numpy()
+    return SaberEnv.create(saber_cfg, eye_cfg, eye_directions(columns, eye_cfg), left_eye)
+
+
 def build(
     model_cfg: ModelConfig, saber_cfg: SaberConfig, eye_cfg: EyeConfig, key: jax.Array
 ) -> tuple[SaberEnv, BrainPolicy, Params]:
@@ -74,7 +80,7 @@ def build(
     if list(model_cfg.action_heads) != env_heads:
         raise ValueError(f"model action_heads {model_cfg.action_heads} != env heads {env_heads}")
     graph, columns, n_neurons = load_graph(model_cfg)
-    env = SaberEnv.create(saber_cfg, eye_cfg, eye_directions(columns, eye_cfg))
+    env = column_env(saber_cfg, eye_cfg, columns)
     k_params, k_cal = jax.random.split(key)
     params = init_params(k_params, graph, model_cfg, n_neurons)
     if model_cfg.readout_norm:  # fit the readout on expert play (Person 1, training/calibration.py)
