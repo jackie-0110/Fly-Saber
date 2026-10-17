@@ -10,15 +10,16 @@ import numpy as np
 import pandas as pd
 
 from brain.config import ModelConfig
+from brain.connectome.metadata import column_angles
 from brain.model.brain import Params, StepFn, init_params, init_state, load_graph, make_step
 from brain.model.interventions import Interventions, no_interventions
-from fly_saber.env import IDLE_CELL, LUMINANCE, NO_CUT, SaberConfig, SaberEnv
-from fly_saber.eye import EyeConfig, column_directions
+from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
+from fly_saber.eye import EyeConfig
 
 
 @dataclass(frozen=True)
 class BrainPolicy:
-    """One brain frame per env step, fed the eye's luminance channel.
+    """One brain frame per env step, fed the eye's luminance and color channels.
 
     Matches the `Policy` interface of training/bc.py; the carry is the membrane potentials.
     """
@@ -33,15 +34,15 @@ class BrainPolicy:
     def apply(
         self, params: Params, carry: jax.Array, obs: jax.Array, key: jax.Array
     ) -> tuple[jax.Array, jax.Array]:
-        v, out = self.step(params, carry, obs[LUMINANCE], self.interventions, key)
+        v, out = self.step(params, carry, obs, self.interventions, key)
         return v, out.logits
 
 
 def eye_directions(columns: pd.DataFrame, eye_cfg: EyeConfig) -> np.ndarray:
-    """Viewing directions for the brain's eye column table, in its row order."""
-    return column_directions(
-        columns["side"].to_numpy(), columns["hex1"].to_numpy(), columns["hex2"].to_numpy(), eye_cfg
-    )
+    """(n_columns, 2) radians (azimuth, elevation) of the brain's eye columns, in row order."""
+    angles = column_angles(columns, eye_cfg.ommatidium_spacing_deg, eye_cfg.binocular_overlap_deg)
+    radians: np.ndarray = np.radians(angles[["azimuth_deg", "elevation_deg"]].to_numpy())
+    return radians
 
 
 def build(

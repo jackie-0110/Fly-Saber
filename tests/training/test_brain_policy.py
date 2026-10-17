@@ -36,22 +36,22 @@ def model_config(subgraph_dir: Path, action_heads: list[int]) -> ModelConfig:
 
 
 def write_subgraph(directory: Path) -> None:
-    """One photoreceptor column per eye, both exciting one descending neuron."""
+    """One R1-R6 column per eye and an R7 in the left one, all exciting one descending neuron."""
     pd.DataFrame(
         {
-            "type": ["R1-R6", "R1-R6", "DNp01"],
-            "role": ["columnar", "columnar", "descending"],
-            "side": ["L", "R", "L"],
-            "hex1": [2.0, 2.0, np.nan],
-            "hex2": [4.0, 4.0, np.nan],
+            "type": ["R1-R6", "R1-R6", "R7p", "DNp01"],
+            "role": ["columnar", "columnar", "columnar", "descending"],
+            "side": ["L", "R", "L", "L"],
+            "hex1": [2.0, 2.0, 2.0, np.nan],
+            "hex2": [4.0, 4.0, 4.0, np.nan],
         }
     ).to_parquet(directory / "neurons.parquet")
-    pd.DataFrame({"pre": [0, 1], "post": [2, 2], "weight": [10, 10], "sign": [1, 1]}).to_parquet(
-        directory / "edges.parquet"
-    )
+    pd.DataFrame(
+        {"pre": [0, 1, 2], "post": [3, 3, 3], "weight": [10, 10, 10], "sign": [1, 1, 1]}
+    ).to_parquet(directory / "edges.parquet")
 
 
-def test_brain_reads_the_luminance_channel(tmp_path: Path) -> None:
+def test_brain_reads_both_eye_channels(tmp_path: Path) -> None:
     write_subgraph(tmp_path)
     _, policy, params = build(
         model_config(tmp_path, [13, 5, 13, 5]), SABER, EYE, jax.random.PRNGKey(0)
@@ -68,7 +68,7 @@ def test_brain_reads_the_luminance_channel(tmp_path: Path) -> None:
         return jnp.asarray(logits)
 
     assert not jnp.allclose(logits_after(0.0, 0.5), logits_after(1.0, 0.5))
-    np.testing.assert_allclose(logits_after(0.5, 0.0), logits_after(0.5, 1.0))
+    assert not jnp.allclose(logits_after(0.5, 0.0), logits_after(0.5, 1.0))
 
 
 def test_env_observes_one_value_per_brain_column_and_runs_under_vmap(tmp_path: Path) -> None:

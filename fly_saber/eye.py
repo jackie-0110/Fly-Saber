@@ -1,4 +1,4 @@
-"""Fly eye directions (hex lattice or connectome columns) and analytic rendering (spec 7.1).
+"""Hexagonal ommatidia lattice and analytic rendering (spec 7.1).
 
 Owner: Person 2. See FLYARCADE_HANDOFF.md for the spec.
 
@@ -26,8 +26,6 @@ class EyeConfig:
     elevation_min_deg: float
     elevation_max_deg: float
     background_luminance: float
-    hex1_axis_deg: float
-    hex2_axis_deg: float
 
 
 @jax.tree_util.register_dataclass
@@ -61,32 +59,6 @@ def lattice(cfg: EyeConfig) -> tuple[np.ndarray, int]:
     left_deg = np.array(left)
     right_deg = left_deg * np.array([-1.0, 1.0])
     return np.radians(np.concatenate([left_deg, right_deg])), len(left_deg)
-
-
-def column_directions(
-    side: np.ndarray, hex1: np.ndarray, hex2: np.ndarray, cfg: EyeConfig
-) -> np.ndarray:
-    """Viewing directions of connectome eye columns as (n_columns, 2) radians, in row order.
-
-    One hex step is `ommatidium_spacing_deg` along `hex1_axis_deg` or `hex2_axis_deg`,
-    measured in the left eye from anterior (0) toward dorsal (90). Each eye is
-    centered between its lateral edge and the binocular overlap; the right eye
-    mirrors the left.
-    """
-    side = np.asarray(side)
-    if not np.isin(side, ["L", "R"]).all():
-        raise ValueError("column side must be L or R")
-    axes = np.radians([cfg.hex1_axis_deg, cfg.hex2_axis_deg])
-    basis = cfg.ommatidium_spacing_deg * np.stack([np.cos(axes), np.sin(axes)])
-    hexes = np.stack([hex1, hex2], axis=-1).astype(np.float64)
-    center_azimuth = (cfg.binocular_overlap_deg - cfg.lateral_extent_deg) / 2.0
-    degrees = np.zeros((len(side), 2))
-    for eye, mirror in (("L", 1.0), ("R", -1.0)):
-        rows = side == eye
-        offsets = hexes[rows] @ basis.T
-        anterior, dorsal = (offsets - offsets.mean(axis=0)).T
-        degrees[rows] = np.stack([mirror * (center_azimuth + anterior), dorsal], axis=-1)
-    return np.radians(degrees)
 
 
 def render(directions: jax.Array, patches: Patches, cfg: EyeConfig) -> jax.Array:
