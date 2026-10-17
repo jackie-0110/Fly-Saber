@@ -118,7 +118,7 @@ def load(
     saved = ModelConfig(**read_meta(path)["configs"]["model"])
     model_cfg = dataclasses.replace(saved, remat=False)
     graph, columns, n_neurons = load_graph(model_cfg)
-    env = SaberEnv.create(saber_cfg, eye_cfg, eye_directions(columns, eye_cfg))
+    env = column_env(saber_cfg, eye_cfg, columns)
     # Shapes only: readout_norm would calibrate a readout the checkpoint overwrites.
     template = init_params(
         jax.random.PRNGKey(0),
