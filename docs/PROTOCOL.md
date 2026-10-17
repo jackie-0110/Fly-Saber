@@ -63,7 +63,7 @@ The front end already has the full map from REST and positions notes from the au
 ```jsonc
 {
   "t": 12.533,                       // sim song time in seconds, same clock as note time_sec
-  "step": 376,                       // sim step index, 30 Hz
+  "step": 376,                       // round(t * 30): counts from song time 0, so it keeps rising across play, seek and reset
   "sabers": [
     { "color": 0, "cell": 5, "cut": null },   // cell 0-11 or null (idle, saber lowered)
     { "color": 1, "cell": 6, "cut": 3 }       // cut 0 up, 1 down, 2 left, 3 right, or null

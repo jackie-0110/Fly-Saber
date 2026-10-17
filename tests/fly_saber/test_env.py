@@ -131,3 +131,11 @@ def test_notes_at_the_end_of_a_window_are_still_judged() -> None:
     while not done:
         _, state, _, done, _ = step(state, idle(env, state))
     assert int(state.misses) == 6
+
+
+def test_render_step_counts_from_song_start_whatever_the_reset_time() -> None:
+    env = make_env()
+    _, state = env.reset(NOTES, SPEED, jnp.float32(1.0), jnp.float32(5.0))
+    assert env.render_state(state)["step"] == 30
+    _, state, *_ = env.step(state, idle(env, state))
+    assert env.render_state(state)["step"] == 31
