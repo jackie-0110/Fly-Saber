@@ -10,6 +10,8 @@
 #
 # Overrides: SERVER_IP, SSH_TARGET, REMOTE_DIR, SITE, WORKER, BACKEND_URL.
 # Skip steps: SKIP_SERVER=1 (server already on port 80), SKIP_WORKER=1 (secret already set).
+# The server redeploys the code it already has. PULL=1 also runs `git pull` there first,
+# which needs GitHub credentials on the server (set them up there, never in this script).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,6 +21,7 @@ REMOTE_DIR=${REMOTE_DIR:-Fly-Saber}
 SITE=${SITE:-https://flysaber.jackie-courtney.com}
 WORKER=${WORKER:-flysaber}
 BACKEND_URL=${BACKEND_URL:-http://$SERVER_IP}
+PULL=${PULL:-0}
 
 step() { printf '\n== %s\n' "$*"; }
 fail() {
@@ -32,7 +35,7 @@ if [ "${SKIP_SERVER:-0}" != 1 ]; then
     ssh "$SSH_TARGET" bash -s <<EOF
 set -euo pipefail
 cd "$REMOTE_DIR"
-git pull --ff-only
+if [ "$PULL" = 1 ]; then git pull --ff-only; fi
 SUDO=\$([ "\$(id -u)" = 0 ] || echo sudo)
 if command -v ufw >/dev/null && \$SUDO ufw status | grep -q 'Status: active'; then
     \$SUDO ufw allow 80/tcp >/dev/null && echo "ufw: port 80 open"
