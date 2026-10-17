@@ -70,7 +70,7 @@ Keyed by `body`. Use `consensus_nt` (falls back to cell-type level). Values: `ac
 
 | | Count |
 |---|---|
-| Neurons | 19,403 (10,122 columnar, 5,471 projection, 2,500 intermediate, 1,310 descending) |
+| Neurons | 19,462 (10,122 columnar, 5,471 projection, 2,479 intermediate, 1,310 descending, 80 modulatory) |
 | Edges | 336,983 carrying 6.1M synapses |
 | Edge signs | 254k excitatory, 76k inhibitory, 7k zero (octopamine, dopamine, serotonin, unclear) |
 | Positions | 2,793 inherited from a partner, 144 missing |
@@ -79,6 +79,8 @@ Keyed by `body`. Use `consensus_nt` (falls back to cell-type level). Values: `ac
 Each kept neuron gets only part of its real input from inside the subgraph (median share: columnar 0.30, projection 0.20, intermediate 0.44, descending 0.54). The rest comes from neurons we cut. Trainable per-neuron biases stand in for that missing drive.
 
 Intermediates are the top 2,500 central neurons by min(synapses in from projection neurons, synapses out to DNs); a neuron needs both.
+
+**Modulatory neurons.** The visual-to-motor cut alone had no octopamine or dopamine neurons, so mood sliders had nothing to act on. In the whole CNS there are 392 dopamine, 101 octopamine, and 48 serotonin neurons; 55, 39, and 31 of them synapse onto the subgraph. We keep, per transmitter, up to 60 with at least 20 synapses onto it: 37 dopamine, 31 octopamine (the OA-VUMa family, OA-AL2i, OA-ASM), 12 serotonin. 21 of them had been picked as intermediates, where their unsigned synapses did nothing; they moved to the `modulatory` role, which shifted neuron indices once. Their 6,698 synapses reach 2,665 neurons, mostly central relay, LC projection neurons, and DNs, not T4/T5 (real octopaminergic modulation of motion vision may act without direct synapses). Modulatory neurons get no synaptic input in the model: their real inputs (internal state, other senses) are outside it, so the mood sliders drive them.
 
 ## FlyWire (Person 1)
 

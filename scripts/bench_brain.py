@@ -26,6 +26,7 @@ from brain.model.brain import (
     param_counts,
 )
 from brain.model.interventions import no_interventions
+from brain.model.stimuli import looming_eye
 
 FRAMES = 90  # 3 seconds of game time
 T = TypeVar("T")
@@ -33,20 +34,6 @@ T = TypeVar("T")
 
 def _wait(x: T) -> T:
     return jax.block_until_ready(x)  # type: ignore[no-untyped-call,no-any-return]
-
-
-def looming_eye(n_frames: int, columns: pd.DataFrame) -> np.ndarray:
-    """A dark disc expanding on a bright background in the left eye, centered on its columns.
-
-    Returns (frames, 2, columns): luminance, and a neutral 0.5 color channel.
-    """
-    left = (columns["side"] == "L").to_numpy()
-    h = columns[["hex1", "hex2"]].to_numpy(dtype=float)
-    center = h[left].mean(axis=0)
-    dist = np.linalg.norm(h - center, axis=1)
-    radius = np.linspace(0, dist[left].max(), n_frames)[:, None]
-    luminance = np.where(left & (dist < radius), 0.0, 1.0)
-    return np.stack([luminance, np.full_like(luminance, 0.5)], axis=1).astype(np.float32)
 
 
 def main(batches: list[int]) -> None:

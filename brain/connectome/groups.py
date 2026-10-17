@@ -36,7 +36,11 @@ def build_groups(neurons: pd.DataFrame) -> dict[str, list[int]]:
             groups[f"{name}_{label}"] = groups[name].intersection(
                 neurons.index[neurons["side"] == side]
             )
+    groups["eye_left"] = groups["photoreceptors_left"].union(groups["lamina_left"])
+    groups["eye_right"] = groups["photoreceptors_right"].union(groups["lamina_right"])
     groups["DN_all"] = neurons.index[neurons["role"] == "descending"]
+    for nt in MODULATORY:
+        groups[nt] = neurons.index[(neurons["role"] == "modulatory") & (neurons["nt"] == nt)]
     groups["intermediates"] = neurons.index[neurons["role"] == "intermediate"]
     for nt in MODULATORY:
         groups[f"modulatory_{nt}"] = neurons.index[neurons["nt"] == nt]

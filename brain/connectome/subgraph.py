@@ -8,7 +8,9 @@ Pipeline:
 2. Keep columnar types in every `column_stride`-th column of each eye.
 3. Keep all visual projection neurons and all descending neurons.
 4. Add central brain bridge neurons between projection neurons and DNs.
-5. Induce edges, fill missing positions, and reindex to 0..N-1.
+5. Add neuromodulatory neurons (octopamine, dopamine, serotonin) with the most
+   synapses onto everything kept so far.
+6. Induce edges, fill missing positions, and reindex to 0..N-1.
 """
 
 from dataclasses import dataclass
@@ -19,7 +21,7 @@ import pandas as pd
 from brain.config import SubgraphConfig
 from brain.connectome.signs import nt_to_sign
 
-ROLES = ("columnar", "projection", "descending", "intermediate")
+ROLES = ("columnar", "projection", "descending", "intermediate", "modulatory")
 
 
 @dataclass(frozen=True)
@@ -84,7 +86,8 @@ def select_neurons(neurons: pd.DataFrame, edges: pd.DataFrame, cfg: SubgraphConf
     role[descending] = "descending"
     seeds = role.dropna()
 
-    budget = min(cfg.max_intermediates, cfg.max_neurons - len(seeds))
+    reserved = cfg.max_modulatory_per_nt * len(cfg.modulatory_nts)
+    budget = min(cfg.max_intermediates, cfg.max_neurons - len(seeds) - reserved)
     if budget > 0:
         proj_ids = seeds.index[seeds == "projection"]
         dn_ids = seeds.index[seeds == "descending"]
@@ -95,7 +98,33 @@ def select_neurons(neurons: pd.DataFrame, edges: pd.DataFrame, cfg: SubgraphConf
         score = score[~score.index.isin(seeds.index) & (score > 0)]
         role[score.nlargest(budget).index] = "intermediate"
 
+    if cfg.modulatory_nts:
+        _add_modulatory(neurons, edges, cfg, role)
     return role.dropna()
+
+
+def _add_modulatory(
+    neurons: pd.DataFrame, edges: pd.DataFrame, cfg: SubgraphConfig, role: pd.Series
+) -> None:
+    """Mark neuromodulatory neurons in `role`, in place.
+
+    Modulatory intermediates become "modulatory": their fast synapses carry no sign,
+    so as intermediates they did nothing. Seeds (DNs, projection) keep their role.
+    """
+    is_mod = neurons["nt"].isin(cfg.modulatory_nts)
+    role[(role == "intermediate") & is_mod] = "modulatory"
+    targets = role.index[role.notna() & (role != "modulatory")]
+    candidates = neurons.index[is_mod & role.isna()]
+    out = edges[edges["body_pre"].isin(candidates) & edges["body_post"].isin(targets)]
+    syn = out.groupby("body_pre")["weight"].sum()
+    syn = syn[syn >= cfg.min_modulatory_synapses]
+    already = role == "modulatory"
+    for nt in cfg.modulatory_nts:
+        room = cfg.max_modulatory_per_nt - int((already & (neurons["nt"] == nt)).sum())
+        if room <= 0:
+            continue
+        of_nt = syn[neurons.loc[syn.index, "nt"] == nt]
+        role[of_nt.nlargest(room).index] = "modulatory"
 
 
 def _fill_positions(neurons: pd.DataFrame, edges: pd.DataFrame) -> pd.DataFrame:

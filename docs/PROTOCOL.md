@@ -170,7 +170,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 | `body_id` | int64 | MaleCNS body id |
 | `type` | str | cell type, e.g. `T4a`, `LPLC2`, `DNp01` |
 | `superclass` | str | e.g. `ol_intrinsic`, `visual_projection`, `descending_neuron` |
-| `role` | str | `columnar`, `projection`, `descending`, `intermediate` |
+| `role` | str | `columnar`, `projection`, `descending`, `intermediate`, `modulatory` (octopamine, dopamine, serotonin; the mood system) |
 | `side` | str | `L`, `R`, `M` (rarely missing) |
 | `x`, `y`, `z` | float64 | soma position in 8 nm voxels; NaN for 144 neurons |
 | `position_inherited` | bool | true if position was copied from the strongest partner (photoreceptors mostly) |
@@ -180,7 +180,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 **`edges.parquet`**: `pre` (int32 index), `post` (int32 index), `weight` (int32 synapse count, at least 5), `sign` (int8, sign of `pre`). Sorted by `post` then `pre`.
 
-**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `modulatory_<nt>`, plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `brain/connectome/groups.py`.
+**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `eye_left`, `eye_right` (photoreceptors plus lamina), `octopamine`, `dopamine`, `serotonin` (modulatory-role neurons, what the mood sliders drive), `modulatory_<nt>` (every neuron with that transmitter, including a serotonergic DN), plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `brain/connectome/groups.py`.
 
 **`meta.json`**: counts, sign totals, and the config used.
 
@@ -195,7 +195,7 @@ Committed to git so the front end needs no Python or data download. Regenerate w
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | int | 1 |
-| `n_neurons` | int | N (19,403) |
+| `n_neurons` | int | N (19,462) |
 | `cell_types` | string[] | sorted unique types. **Cell-type id = index in this list**, the same list and order as `ready.cell_types` and activity kind 2 |
 | `superclasses`, `roles`, `sides`, `nts`, `position_sources` | string[] | lookup tables for the coded arrays below |
 | `bounds_um` | `{min: [x,y,z], max: [x,y,z]}` | bounding box of all positions, micrometers |
@@ -232,7 +232,30 @@ Angles: hex1 and hex2 are axial hex coordinates with axes 120 degrees apart. **+
 | `opto` | (N,) | extra input current; around 5 forces a neuron on |
 | `noise_std` | () | std of current noise on every neuron each substep (for the arousal slider) |
 
-Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, groups["giant_fiber"], 5.0)`. Mood sliders: TODO.
+Helpers: `no_interventions(N)`, `lesion(iv, groups["T4"])`, `stimulate(iv, groups["giant_fiber"], 5.0)`.
+
+**`set_interventions` payload** (the `interventions` field of the WebSocket message). The server builds the pytree with `brain.model.controls.from_controls(payload, groups, load_controls(), n_neurons)`, which validates names and clamps values (ValueError on bad input, answer `error`). Every key is optional; `{}` is the unmodified brain. Each message replaces the previous state, it does not add to it.
+
+```jsonc
+{
+  "lesion": ["looming_detectors", "eye_left"],   // group names: silence them
+  "stimulate": { "giant_fiber": 5.0 },          // group -> opto current, 0 to stimulation.max
+  "mood": { "arousal": 0.8, "calm": -0.3 },     // mood name -> level, -1 to 1, 0 neutral
+  "noise": 0.1                                  // neural noise std, 0 to noise.max
+}
+```
+
+Lesion wins over stimulation and mood for neurons in both. Any group in `groups.json` is accepted; the curated ones are in `controls.json`.
+
+**`controls.json`** (`frontend/public/data/brain/controls.json`, from `configs/controls.yaml`): what the UI shows.
+
+- `sections`: `[{group, label, description, n_neurons}]`, 12 lesionable brain sections (each eye, motion detectors, looming detectors, LC feature detectors, HS/VS, central relay, giant fiber, all DNs, octopamine, dopamine, serotonin).
+- `moods`: `[{name, label, group, low_label, high_label, description, min: -1, max: 1, default: 0}]`: `arousal` (octopamine), `reward_drive` (dopamine), `calm` (serotonin).
+- `stimulation: {min, max}`, `noise: {min, max, default}`.
+
+**How moods work:** a mood level drives its modulatory group like opto. Each neuron those modulatory neurons synapse onto has its output multiplied by exp(gain * change in their rate from rest), with `modulation_gain` per transmitter in `configs/model.yaml` (octopamine +1, dopamine +1, serotonin -1, an assumption) and capped at e. At level 0 the factor is exactly 1, so moods never need retraining. -1 silences the group (same as lesioning it). Targets are mostly central relay neurons, visual projection neurons (LC9, LC14), and DNs; in this data the modulatory neurons do not synapse directly onto T4/T5.
+
+**Effect on motor output before training** (`uv run python scripts/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
 
 ## 5. Brain step and checkpoints (Person 1)
 
@@ -258,7 +281,7 @@ logits_per_head = split_heads(out.logits, cfg.action_heads)
 
 One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs: `jax.vmap(step, in_axes=(None, 0, 0, None, 0))`.
 
-Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
+Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
 
 **Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
 
