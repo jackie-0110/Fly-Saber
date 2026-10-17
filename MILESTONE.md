@@ -31,7 +31,6 @@ The first end-to-end moment. Everything else builds on it.
 ## Milestone C: the must-ship demo features
 
 - [ ] **C1. Lesion Mode.** Server: `set_interventions` builds per-slot interventions with `brain.model.controls.from_controls` (Person 2). Front end: lesion panel (Person 3). Live eye controls from PR #26 can ride the same message.
-- [ ] **C2. Real vs. scrambled Versus.** Server already runs 2 slots; front end needs the split screen (Person 3); a control checkpoint needs bundling (Person 1). **Decision needed (all):** in PR #30, partners shuffled within layers beats real wiring (51.8% vs 31.4% held out), and E/I shuffled is worse (20.0%). Pick which control goes on stage and what the pitch claims.
 - [ ] **C3. Live neuron activity.** Pin the binary layout in `docs/PROTOCOL.md` section 6 (Person 1); stream kinds 1 and 2 (Person 2); light up the neuron cloud (Person 3). PR #30 re-exports `frontend/public/data/brain/*.json` from the trained fly's subgraph, so neuron indices line up.
 - [ ] **C4. Replay fallback** (Person 3, Person 2 pairs). `scripts/record_replays.py` and a replay player that runs with the server off. Both are stubs.
 
