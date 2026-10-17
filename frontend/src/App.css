@@ -225,6 +225,23 @@
   justify-content: space-between;
   gap: 15px;
 }
+.saber-legend {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  color: #bac1c4;
+  font-size: 10px;
+}
+.saber-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.saber-legend i {
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+}
 .coral {
   background: #e1a18f;
 }
@@ -1053,6 +1070,10 @@
   .session-readouts {
     grid-template-columns: 1fr 1.1fr 1.1fr;
   }
+  .saber-legend {
+    gap: 10px;
+    font-size: 9px;
+  }
   .camera-view-label {
     display: none;
   }
@@ -1133,6 +1154,10 @@
     left: 18px;
     right: 15px;
     bottom: 17px;
+  }
+  .saber-legend {
+    font-size: 8px;
+    gap: 12px;
   }
   .camera-toolbar {
     gap: 1px;

@@ -139,12 +139,13 @@ export function GamePreview() {
   )
 
   return (
-    <Card className="game-viewport" ref={panelRef} role="region" aria-label="Game viewport">
+    <Card className="game-viewport" ref={panelRef} role="region" aria-labelledby="game-heading">
       <div
         className="game-stage"
         tabIndex={0}
         role="region"
         aria-label="Interactive 3D game view"
+        aria-describedby="game-camera-help"
         onKeyDown={cameraKey}
       >
         {contextLost ? (
@@ -170,22 +171,24 @@ export function GamePreview() {
           </GameBoundary>
         )}
       </div>
-      {sessionStatus !== 'idle' && (
-        <div className="scene-topline">
-          <div className="scene-title">
+      <div className="scene-topline">
+        <div className="scene-title">
+          <ScanLine aria-hidden="true" />
+          <h2 id="game-heading">Game viewport</h2>
+          {sessionStatus !== 'idle' && (
             <span className="live-session-status" role="status">
               {sessionStatus === 'connecting'
                 ? 'Connecting live session…'
                 : `Live · ${sessionStatus}`}
             </span>
-          </div>
+          )}
         </div>
-      )}
+      </div>
       {motionPreview && <FlyMotionPreview />}
       {!motionPreview && !chart && !loading && cameraReady && (
         <div className="scene-empty">
           <h2>Choose a song to begin</h2>
-          <p>Explore a community chart with the fly.</p>
+          <p>Watch the fly play a live song or explore a community chart.</p>
           <Button size="sm" onClick={openSongLibrary}>
             Choose a song
           </Button>
@@ -211,15 +214,25 @@ export function GamePreview() {
           </Button>
         </div>
       )}
+      {chart && chart.warnings.length > 0 && (
+        <details className="chart-warnings">
+          <summary>Map compatibility notes ({chart.warnings.length})</summary>
+          {chart.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </details>
+      )}
       <div className="scene-bottomline">
-        {chart && chart.warnings.length > 0 && (
-          <details className="chart-warnings">
-            <summary>Map compatibility notes ({chart.warnings.length})</summary>
-            {chart.warnings.map((warning) => (
-              <p key={warning}>{warning}</p>
-            ))}
-          </details>
-        )}
+        <div className="saber-legend">
+          <span>
+            <i className="coral" />
+            Left notes
+          </span>
+          <span>
+            <i className="mint" />
+            Right notes
+          </span>
+        </div>
         <div className="camera-toolbar" aria-label="Game camera controls">
           <CameraButton
             label="Reset game camera"
@@ -269,6 +282,10 @@ export function GamePreview() {
           </CameraButton>
         </div>
       </div>
+      <p className="game-camera-help" id="game-camera-help">
+        Drag to orbit · Scroll to zoom · Right-drag to pan
+        <span>Focus view: arrows rotate, +/− zoom, Home resets, Space plays.</span>
+      </p>
       <p className="fullscreen-status" role="status">
         {fullscreenError}
       </p>
