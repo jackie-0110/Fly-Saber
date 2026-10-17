@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from flyarcade.maps.allowlist import load_allowlist
 from flyarcade.server.protocol import MapSummary
 
 # Also keeps request paths from escaping the maps directory.
@@ -25,10 +26,7 @@ class Catalog:
         self.maps_dir = maps_dir
 
     def allowlist(self) -> set[str]:
-        path = self.maps_dir / "demo_allowlist.json"
-        if not path.exists():
-            return set()
-        return {entry["key"] for entry in json.loads(path.read_text())}
+        return set(load_allowlist(self.maps_dir / "demo_allowlist.json"))
 
     def get_map(self, map_id: str) -> dict[str, Any] | None:
         if not MAP_ID_PATTERN.fullmatch(map_id):

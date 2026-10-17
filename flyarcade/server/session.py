@@ -15,6 +15,7 @@ from typing import Any, Literal, Protocol
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+from flyarcade.maps.adapt import ANY_DIRECTION, SIM_DIRECTION
 from flyarcade.server.catalog import Catalog
 from flyarcade.server.protocol import (
     Brain,
@@ -70,8 +71,8 @@ class Sim(Protocol):
 
 SimFactory = Callable[[dict[str, Any], str, int], Sim]
 
-# Map cut directions 0-8 to the sim's 4 (up, down, left, right); 8 "any" becomes down.
-FOUR_WAY_CUT = (0, 1, 2, 3, 0, 0, 1, 1, 1)
+# render_state has no "any" cut, so the fake saber cuts down on those notes.
+ANY_DIRECTION_CUT = 1
 
 
 class FakeSaberSim:
@@ -106,7 +107,8 @@ class FakeSaberSim:
                 self.hits += 1
                 self.combo += 1
                 self.max_combo = max(self.max_combo, self.combo)
-                cuts[note["color"]] = FOUR_WAY_CUT[note["cut_direction"]]
+                cut = int(SIM_DIRECTION[note["cut_direction"]])
+                cuts[note["color"]] = ANY_DIRECTION_CUT if cut == ANY_DIRECTION else cut
                 events.append(NoteEvent(self.t, "hit", note["id"]))
             else:
                 self.misses += 1
