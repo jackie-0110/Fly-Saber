@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { formatTime } from '@/game/chart'
 import { liveMapId, usePlayer } from '@/game/store'
 import { useSession } from '@/game/session'
-import { PanelLetter } from '@/components/figure'
 
 export function SessionTimeline() {
   const time = usePlayer((s) => s.time)
@@ -42,7 +41,6 @@ export function SessionTimeline() {
   return (
     <section className="session-timeline" aria-label="Song playback">
       <div className="timeline-controls">
-        <PanelLetter>c</PanelLetter>
         <div className="playback-buttons">
           <Button
             className="primary-play"

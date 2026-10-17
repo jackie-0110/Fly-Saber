@@ -21,7 +21,7 @@
   height: 52px;
   flex-shrink: 0;
   margin: 0 20px;
-  border-bottom: 1.5px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 .brand {
   display: flex;
@@ -91,27 +91,62 @@
 
 /* ---------- Plate grid ---------- */
 
+/*
+ * One grid for both columns: row 1 holds the song title and the inspector tabs,
+ * row 2 the two dark-field views (always the same height), row 3 the tools for
+ * each view. Columns share rows through subgrid so the views start and end on
+ * the same lines.
+ */
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 30%);
-  gap: 0 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 34%);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0 20px;
   flex: 1;
-  padding: 0 20px;
+  padding: 0 20px 14px;
 }
 .observation-workspace {
   display: grid;
-  grid-template-rows: auto minmax(460px, 1fr) auto auto;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
+  min-width: 0;
+}
+.transport {
   min-width: 0;
 }
 
+/* Corner label on each dark-field view, the way figure panels are lettered. */
+.inset-label {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: calc(100% - 110px);
+  color: var(--field-ink);
+  pointer-events: none;
+}
+.inset-label h2 {
+  color: var(--field-ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.inset-label p {
+  margin-top: 1px;
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
 .panel-letter {
   flex-shrink: 0;
-  width: 18px;
-  color: var(--ink);
-  font-size: 20px;
+  color: inherit;
+  font-size: 19px;
   font-weight: 800;
   font-variation-settings: 'wdth' 100;
-  line-height: 1;
+  line-height: 0.95;
 }
 
 /* ---------- a: task header ---------- */
@@ -121,8 +156,10 @@
   align-items: center;
   gap: 14px;
   min-width: 0;
-  min-height: 68px;
-  padding: 12px 0;
+  min-height: 60px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 12px;
 }
 .song-header:has(.song-attribution) {
   flex-wrap: wrap;
@@ -140,8 +177,8 @@
   box-shadow: inset 0 0 0 1px var(--rule);
 }
 .current-song-cover {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
 }
 .current-song-cover > svg {
   width: 20px;
@@ -168,10 +205,10 @@
 .current-song-title h1 {
   overflow: hidden;
   color: var(--ink);
-  font-size: var(--text-xl);
+  font-size: 17px;
   font-weight: 650;
   font-variation-settings: 'wdth' 92;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -181,10 +218,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 10px;
-  margin-top: 4px;
+  margin-top: 1px;
   color: var(--ink-3);
   font-size: var(--text-sm);
-  line-height: 1.6;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -212,7 +249,6 @@
 .song-attribution {
   flex-basis: 100%;
   margin: 0;
-  padding-left: 32px;
   color: var(--ink-3);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
@@ -289,7 +325,7 @@
   right: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   pointer-events: none;
 }
@@ -312,8 +348,8 @@
 
 .scene-empty {
   position: absolute;
-  top: 24px;
-  left: 24px;
+  top: 84px;
+  left: 38px;
   width: min(320px, calc(100% - 48px));
   pointer-events: none;
 }
@@ -423,7 +459,7 @@
 
 .song-notice {
   position: absolute;
-  top: 16px;
+  top: 70px;
   left: 16px;
   display: flex;
   align-items: center;
@@ -495,7 +531,7 @@
 
 .fly-motion-preview {
   position: absolute;
-  top: 16px;
+  top: 70px;
   left: 16px;
   z-index: 2;
   display: flex;
@@ -541,7 +577,7 @@
 .session-timeline {
   display: flex;
   align-items: center;
-  padding: 10px 0 8px;
+  padding: 8px 0 6px;
   border-bottom: 1px solid var(--rule);
 }
 .timeline-controls {
@@ -717,12 +753,8 @@
 
 .session-readouts {
   display: grid;
-  grid-template-columns: 18px repeat(3, minmax(0, 1fr));
-  column-gap: 14px;
-  padding: 12px 0 14px;
-}
-.session-readouts > .panel-letter {
-  padding-top: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px 0 0;
 }
 .readout-block {
   position: relative;
@@ -835,6 +867,7 @@
   color: var(--ink);
 }
 .inspector-tabs [data-slot='tabs-trigger'][data-state='active'] {
+  margin-bottom: -1px;
   border-bottom-color: var(--ink);
   background: transparent;
   box-shadow: none;
@@ -852,83 +885,18 @@
 .activity-tab[data-state='inactive'] {
   display: none;
 }
-.brain-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 0 0;
-}
-.brain-title h2 {
-  color: var(--ink);
-  font-size: var(--text-lg);
-  font-weight: 650;
-  font-variation-settings: 'wdth' 92;
-  line-height: 1.2;
-}
-.brain-title p {
-  margin-top: 3px;
-  color: var(--ink-3);
-  font-size: var(--text-sm);
-}
-.brain-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 10px;
-  padding: 12px 0 0;
-}
-.brain-filters label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-  color: var(--ink-3);
-  font-size: var(--text-xs);
-}
-.brain-filters select {
-  width: 100%;
-  min-width: 0;
-  height: 32px;
-  padding: 0 7px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  background: var(--sheet);
-  color: var(--ink);
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-}
-.brain-filters select:focus-visible,
-.brain-stage-3d:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.neuron-count {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 34px;
-  padding: 6px 0;
-  color: var(--ink-3);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-}
-.neuron-count button {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-}
 
+/* The neuron view mirrors the game view: label top-left, tools docked inside. */
 .brain-stage {
   position: relative;
-  flex: 1;
   min-height: 280px;
+  overflow: hidden;
   border-radius: 2px;
   background: var(--field);
   color: var(--field-ink);
 }
 .brain-stage-3d {
-  flex: none;
-  height: 360px;
-  min-height: 360px;
+  height: 440px;
 }
 .brain-stage-3d canvas {
   cursor: grab;
@@ -936,6 +904,10 @@
 }
 .brain-stage-3d canvas:active {
   cursor: grabbing;
+}
+.brain-stage-3d:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .brain-stage-3d:fullscreen {
   width: 100dvw;
@@ -945,11 +917,9 @@
 }
 .brain-stage-toolbar {
   position: absolute;
-  inset: 8px 8px auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
   pointer-events: none;
 }
 .brain-stage-toolbar > div {
@@ -958,47 +928,142 @@
   pointer-events: auto;
 }
 .brain-stage-toolbar button {
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 2px;
   background: var(--field-2);
   color: var(--field-ink-2);
 }
-.brain-display-controls {
+.brain-stage-toolbar svg {
+  width: 15px;
+  height: 15px;
+}
+
+.inset-dock {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
-  left: 8px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+.inset-dock > * {
+  pointer-events: auto;
+}
+.brain-dock {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 16px;
-  padding: 6px 10px;
-  border-radius: 2px;
+  align-items: center;
+  align-self: stretch;
+  gap: 4px 14px;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid var(--field-rule);
+  border-radius: 3px;
   background: var(--field-2);
   color: var(--field-ink-2);
+}
+.brain-camera-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.brain-camera-controls button {
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 2px;
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+}
+.brain-camera-controls button:hover,
+.neuron-selection-heading button:hover {
+  background: var(--field-rule);
+  color: var(--field-ink);
+}
+.brain-display-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-left: auto;
   font-size: var(--text-xs);
 }
 .brain-display-controls label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .brain-display-controls input {
-  width: 64px;
+  width: 56px;
   accent-color: var(--field-ink);
 }
 .brain-display-controls input:focus-visible {
   outline: 2px solid var(--signal-green-bright);
   outline-offset: 3px;
 }
-.brain-stage-3d:fullscreen .brain-display-controls {
-  right: auto;
+.brain-stage-3d:fullscreen .inset-dock {
+  right: 24px;
   bottom: 24px;
-  left: 50%;
-  width: max-content;
-  max-width: calc(100% - 24px);
-  transform: translateX(-50%);
+  left: 24px;
 }
+
+/* Neuron inspector reads as a callout on the specimen. */
+.neuron-inspector {
+  width: min(300px, 100%);
+  max-height: 220px;
+  padding: 6px 6px 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--field-rule);
+  border-radius: 3px;
+  background: var(--field-2);
+  color: var(--field-ink);
+}
+.neuron-selection-heading,
+.neuron-selection-heading > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.neuron-selection-heading h3 {
+  color: var(--field-ink);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.neuron-selection-heading button {
+  color: var(--field-ink-2);
+}
+/* The empty-state hint repeats the legend below the view. */
+.neuron-inspector > p {
+  display: none;
+  padding: 2px 4px 0 0;
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.neuron-metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+  padding: 4px 4px 0 0;
+}
+.neuron-metadata > div:last-child {
+  grid-column: 1 / -1;
+}
+.neuron-metadata dt {
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+}
+.neuron-metadata dd {
+  color: var(--field-ink);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
 .brain-fallback {
   position: absolute;
   inset: 0;
@@ -1031,30 +1096,68 @@
   font-size: var(--text-sm);
   pointer-events: none;
 }
-
-.brain-camera-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 0 0;
-}
-.brain-camera-controls button {
-  color: var(--ink-2);
-  font-size: var(--text-xs);
-}
 .brain-camera-help {
-  padding: 6px 0 8px;
+  padding: 6px 0 0;
   color: var(--ink-2);
   font-size: var(--text-xs);
   line-height: 1.5;
+}
+
+/* Tools for the neuron view, on paper below it. */
+.brain-details {
+  min-width: 0;
+  padding-top: 10px;
+}
+.brain-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 10px;
+}
+.brain-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+.brain-filters select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+.brain-filters select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.neuron-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  padding: 4px 0;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.neuron-count button {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
 }
 .brain-color-legend {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 0;
-  border-block: 1px solid var(--rule);
+  padding: 6px 0;
+  border-top: 1px solid var(--rule);
   color: var(--ink-2);
   font-size: var(--text-xs);
 }
@@ -1068,53 +1171,11 @@
   flex-shrink: 0;
   border-radius: 50%;
 }
-.neuron-inspector {
-  padding: 10px 0;
-}
-.neuron-selection-heading,
-.neuron-selection-heading > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.neuron-selection-heading h3 {
-  color: var(--ink);
-  font-size: var(--text-md);
-  font-weight: 650;
-}
-.neuron-inspector > p {
-  padding-top: 6px;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  line-height: 1.55;
-}
-.neuron-metadata {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
-  padding-top: 8px;
-}
-.neuron-metadata > div:last-child {
-  grid-column: 1 / -1;
-}
-.neuron-metadata dt {
-  margin-bottom: 1px;
-  color: var(--ink-3);
-  font-size: var(--text-xs);
-}
-.neuron-metadata dd {
-  color: var(--ink);
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
 .brain-backend-note {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: auto;
-  padding: 8px 0;
+  padding: 6px 0 0;
   border-top: 1px solid var(--rule);
   color: var(--ink-2);
   font-size: var(--text-xs);
@@ -1558,39 +1619,7 @@
   }
 }
 
-/* ---------- Figure caption ---------- */
-
-.figure-caption {
-  flex-shrink: 0;
-  margin: 0 20px;
-  padding: 10px 0 12px;
-  border-top: 1.5px solid var(--ink);
-}
-.figure-caption p {
-  max-width: 190ch;
-  color: var(--ink-2);
-  font-family: var(--font-serif);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-.figure-caption strong,
-.figure-caption b {
-  color: var(--ink);
-  font-weight: 650;
-}
-.figure-caption .key-green {
-  color: var(--signal-green);
-  font-weight: 600;
-}
-.figure-caption .key-magenta {
-  color: var(--signal-magenta);
-  font-weight: 600;
-}
-.figure-caption .caption-status {
-  color: var(--ink-3);
-}
-
-/* ---------- Desktop: the plate fits one screen ---------- */
+/* ---------- Desktop: one screen, shared rows ---------- */
 
 @media (min-width: 900px) {
   .app-shell {
@@ -1600,67 +1629,43 @@
   .workspace {
     min-height: 0;
   }
-  .observation-workspace {
-    min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-  }
   .inspector,
   .brain-inspector {
+    display: grid;
+    grid-row: 1 / -1;
+    grid-template-rows: subgrid;
     min-height: 0;
   }
-  .brain-inspector {
-    overflow: hidden;
+  /* Tabs stretch to the song row so both bottom rules sit on one line. */
+  .inspector-tabs {
+    grid-row: 1;
+    align-self: stretch;
+    height: auto;
+    min-height: 44px;
+    margin-bottom: 12px;
+  }
+  .brain-inspector > [role='tabpanel'] {
+    grid-row: 2 / -1;
+    min-height: 0;
   }
   .activity-tab {
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto auto;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'title'
-      'filters'
-      'count'
-      'stage'
-      'camera'
-      'help'
-      'legend'
-      'selection'
-      'note';
-    min-height: 0;
+    grid-template-rows: subgrid;
   }
-  .brain-title {
-    grid-area: title;
-  }
-  .brain-filters {
-    grid-area: filters;
-  }
-  .neuron-count {
-    grid-area: count;
+  .activity-tab[data-state='inactive'] {
+    display: none;
   }
   .brain-stage-3d {
-    grid-area: stage;
-    height: 100%;
+    height: auto;
     min-height: 0;
   }
   .brain-stage-3d:fullscreen {
     height: 100dvh;
   }
-  .brain-camera-controls {
-    grid-area: camera;
-  }
-  .brain-camera-help {
-    grid-area: help;
-  }
-  .brain-color-legend {
-    grid-area: legend;
-  }
-  .neuron-inspector {
-    grid-area: selection;
-    min-height: 0;
-    overflow: auto;
-  }
-  .brain-backend-note {
-    grid-area: note;
-    margin: 0;
+  .songs-tab,
+  .session-tab,
+  .inspector-prose {
+    overflow-y: auto;
   }
 }
 
@@ -1672,14 +1677,12 @@
   .inspector-tabs {
     height: 36px;
   }
-  .brain-title {
-    padding-top: 8px;
+  .song-header,
+  .inspector-tabs {
+    margin-bottom: 8px;
   }
-  .brain-filters {
-    padding-top: 8px;
-  }
-  .figure-caption p {
-    font-size: 12.5px;
+  .brain-details {
+    padding-top: 6px;
   }
 }
 
@@ -1720,7 +1723,7 @@
     padding: 0 16px;
   }
   .observation-workspace {
-    grid-template-rows: auto 440px auto auto;
+    grid-template-rows: auto 440px auto;
   }
   .current-song-title {
     flex-wrap: wrap;
@@ -1733,8 +1736,9 @@
     overflow-wrap: anywhere;
   }
   .scene-empty {
-    top: 18px;
-    left: 18px;
+    top: 72px;
+    left: 38px;
+    width: calc(100% - 54px);
   }
   .scene-empty h2 {
     font-size: var(--text-xl);
@@ -1757,11 +1761,8 @@
     overflow: hidden;
   }
   .session-readouts {
-    grid-template-columns: 18px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     row-gap: 12px;
-  }
-  .session-readouts > .panel-letter {
-    grid-row: 1 / span 3;
   }
   .readout-block,
   .readout-block:first-of-type {
@@ -1782,11 +1783,17 @@
     gap: 40px;
   }
   .inspector {
-    margin-top: 12px;
-    border-top: 1px solid var(--rule);
+    margin-top: 16px;
   }
   .brain-inspector {
-    min-height: 560px;
+    min-height: 0;
+  }
+  .brain-stage-3d {
+    height: 460px;
+    margin-top: 12px;
+  }
+  .neuron-inspector {
+    max-height: 170px;
   }
   .inspector-tabs [data-slot='tabs-trigger'] {
     min-height: 40px;
@@ -1801,9 +1808,6 @@
   }
   .song-search-input input {
     font-size: 16px;
-  }
-  .figure-caption {
-    margin: 8px 16px 0;
   }
   .fly-motion-preview {
     display: grid;

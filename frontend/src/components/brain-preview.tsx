@@ -190,67 +190,6 @@ export function BrainPreview() {
         <SongLibrary />
       </TabsContent>
       <TabsContent value="activity" className="activity-tab">
-        <div className="brain-title">
-          <PanelLetter>b</PanelLetter>
-          <div>
-            <h2>Fly brain neurons</h2>
-            <p>MaleCNS v1.0 subgraph · soma positions, µm</p>
-          </div>
-        </div>
-        <div className="brain-filters">
-          <label htmlFor="brain-group">
-            Neuron group
-            <select
-              id="brain-group"
-              aria-label="Neuron group"
-              value={group}
-              disabled={!data}
-              onChange={(event) => selectGroup(event.target.value)}
-            >
-              <option value="">All groups</option>
-              {data &&
-                Object.entries(data.groups).map(([name, members]) => (
-                  <option key={name} value={name}>
-                    {name.replaceAll('_', ' ')} ({number.format(members.length)})
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label htmlFor="brain-type">
-            Cell type
-            <select
-              id="brain-type"
-              aria-label="Cell type"
-              value={cellType}
-              disabled={!data}
-              onChange={(event) => selectType(event.target.value)}
-            >
-              <option value="">All cell types</option>
-              {availableCellTypes.map((index) => (
-                <option key={index} value={index}>
-                  {asset?.cell_types[index]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="neuron-count" role="status">
-          {asset
-            ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
-            : 'Loading authentic neuron coordinates…'}
-          {(group || cellType) && (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => {
-                selectGroup('')
-                selectType('')
-              }}
-            >
-              Clear filters
-            </Button>
-          )}
-        </div>
         <div
           className="brain-stage brain-stage-3d"
           ref={stageRef}
@@ -259,6 +198,13 @@ export function BrainPreview() {
           aria-label="Interactive 3D fly neuron view"
           onKeyDown={onCameraKey}
         >
+          <div className="inset-label">
+            <PanelLetter>b</PanelLetter>
+            <div>
+              <h2>Fly brain neurons</h2>
+              <p>MaleCNS v1.0 subgraph · soma positions, µm</p>
+            </div>
+          </div>
           {error ? (
             <SceneFallback
               message={error}
@@ -309,31 +255,151 @@ export function BrainPreview() {
               </Button>
             </div>
           </div>
-          <div className="brain-display-controls">
-            <label>
-              Point size
-              <input
-                aria-label="Neuron point size"
-                type="range"
-                min="1"
-                max="5"
-                step="0.5"
-                value={pointSize}
-                onChange={(event) => setPointSize(Number(event.target.value))}
-              />
-            </label>
-            <label>
-              Opacity
-              <input
-                aria-label="Neuron point opacity"
-                type="range"
-                min="0.15"
-                max="1"
-                step="0.05"
-                value={opacity}
-                onChange={(event) => setOpacity(Number(event.target.value))}
-              />
-            </label>
+          <div className="inset-dock">
+            <div className="neuron-inspector">
+              <div className="neuron-selection-heading">
+                <h3>Neuron inspector</h3>
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={!indices.length}
+                    onClick={() => stepSelection(-1)}
+                    aria-label="Select previous neuron"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={!indices.length}
+                    onClick={() => stepSelection(1)}
+                    aria-label="Select next neuron"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
+              {selected === null || !asset ? (
+                <p>
+                  Click a neuron or use the previous/next buttons to inspect its identity and
+                  position.
+                </p>
+              ) : (
+                <dl className="neuron-metadata" aria-live="polite">
+                  <div>
+                    <dt>Cell type</dt>
+                    <dd>{asset.cell_types[asset.type[selected]]}</dd>
+                  </div>
+                  <div>
+                    <dt>Body ID / index</dt>
+                    <dd>
+                      {String(asset.body_id[selected])} / {selected}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Side / role</dt>
+                    <dd>
+                      {asset.sides[asset.side[selected]]} / {asset.roles[asset.role[selected]]}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Transmitter</dt>
+                    <dd>{asset.nts[asset.nt[selected]]}</dd>
+                  </div>
+                  <div>
+                    <dt>Class</dt>
+                    <dd>{asset.superclasses[asset.superclass[selected]].replaceAll('_', ' ')}</dd>
+                  </div>
+                  <div>
+                    <dt>Position (µm)</dt>
+                    <dd>
+                      {asset.position_um
+                        .slice(selected * 3, selected * 3 + 3)
+                        .map((v) => v.toFixed(1))
+                        .join(', ')}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Position source</dt>
+                    <dd>
+                      {provenance[asset.position_sources[asset.position_source[selected]]] ??
+                        asset.position_sources[asset.position_source[selected]]}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+            </div>
+            <div className="brain-dock">
+              <div className="brain-camera-controls" aria-label="Brain camera controls">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={!cameraReady}
+                  onClick={() => navigate.current?.('reset')}
+                  title="Reset camera (Home)"
+                >
+                  <RotateCcw aria-hidden="true" />
+                  Reset
+                </Button>
+                {(['x', 'y', 'z'] as const).map((axis) => (
+                  <Button
+                    key={axis}
+                    variant="ghost"
+                    size="xs"
+                    disabled={!cameraReady}
+                    onClick={() => navigate.current?.(axis)}
+                    title={`View along display ${axis.toUpperCase()} axis`}
+                  >
+                    {axis.toUpperCase()} view
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={!cameraReady}
+                  aria-label="Zoom in"
+                  onClick={() => navigate.current?.('in')}
+                >
+                  <ZoomIn aria-hidden="true" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={!cameraReady}
+                  aria-label="Zoom out"
+                  onClick={() => navigate.current?.('out')}
+                >
+                  <ZoomOut aria-hidden="true" />
+                </Button>
+              </div>
+              <div className="brain-display-controls">
+                <label>
+                  Point size
+                  <input
+                    aria-label="Neuron point size"
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="0.5"
+                    value={pointSize}
+                    onChange={(event) => setPointSize(Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  Opacity
+                  <input
+                    aria-label="Neuron point opacity"
+                    type="range"
+                    min="0.15"
+                    max="1"
+                    step="0.05"
+                    value={opacity}
+                    onChange={(event) => setOpacity(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         {fullscreenError && (
@@ -341,136 +407,79 @@ export function BrainPreview() {
             {fullscreenError}
           </p>
         )}
-        <div className="brain-camera-controls" aria-label="Brain camera controls">
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={!cameraReady}
-            onClick={() => navigate.current?.('reset')}
-            title="Reset camera (Home)"
-          >
-            <RotateCcw aria-hidden="true" />
-            Reset
-          </Button>
-          {(['x', 'y', 'z'] as const).map((axis) => (
-            <Button
-              key={axis}
-              variant="ghost"
-              size="xs"
-              disabled={!cameraReady}
-              onClick={() => navigate.current?.(axis)}
-              title={`View along display ${axis.toUpperCase()} axis`}
-            >
-              {axis.toUpperCase()} view
-            </Button>
-          ))}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            disabled={!cameraReady}
-            aria-label="Zoom in"
-            onClick={() => navigate.current?.('in')}
-          >
-            <ZoomIn aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            disabled={!cameraReady}
-            aria-label="Zoom out"
-            onClick={() => navigate.current?.('out')}
-          >
-            <ZoomOut aria-hidden="true" />
-          </Button>
-        </div>
-        <div className="brain-color-legend">
-          <span
-            className="type-swatch"
-            style={{
-              background:
-                selected === null || !asset ? 'var(--ink-3)' : cellTypeColor(asset.type[selected]),
-            }}
-          />
-          <span>Color identifies cell type</span>
-          <span>Click a point to inspect</span>
-        </div>
-        <div className="neuron-inspector">
-          <div className="neuron-selection-heading">
-            <h3>Neuron inspector</h3>
-            <div>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                disabled={!indices.length}
-                onClick={() => stepSelection(-1)}
-                aria-label="Select previous neuron"
+        <div className="brain-details">
+          <div className="brain-filters">
+            <label htmlFor="brain-group">
+              Neuron group
+              <select
+                id="brain-group"
+                aria-label="Neuron group"
+                value={group}
+                disabled={!data}
+                onChange={(event) => selectGroup(event.target.value)}
               >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                disabled={!indices.length}
-                onClick={() => stepSelection(1)}
-                aria-label="Select next neuron"
+                <option value="">All groups</option>
+                {data &&
+                  Object.entries(data.groups).map(([name, members]) => (
+                    <option key={name} value={name}>
+                      {name.replaceAll('_', ' ')} ({number.format(members.length)})
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label htmlFor="brain-type">
+              Cell type
+              <select
+                id="brain-type"
+                aria-label="Cell type"
+                value={cellType}
+                disabled={!data}
+                onChange={(event) => selectType(event.target.value)}
               >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
+                <option value="">All cell types</option>
+                {availableCellTypes.map((index) => (
+                  <option key={index} value={index}>
+                    {asset?.cell_types[index]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          {selected === null || !asset ? (
-            <p>
-              Click a neuron or use the previous/next buttons to inspect its identity and position.
-            </p>
-          ) : (
-            <dl className="neuron-metadata" aria-live="polite">
-              <div>
-                <dt>Cell type</dt>
-                <dd>{asset.cell_types[asset.type[selected]]}</dd>
-              </div>
-              <div>
-                <dt>Body ID / index</dt>
-                <dd>
-                  {String(asset.body_id[selected])} / {selected}
-                </dd>
-              </div>
-              <div>
-                <dt>Side / role</dt>
-                <dd>
-                  {asset.sides[asset.side[selected]]} / {asset.roles[asset.role[selected]]}
-                </dd>
-              </div>
-              <div>
-                <dt>Transmitter</dt>
-                <dd>{asset.nts[asset.nt[selected]]}</dd>
-              </div>
-              <div>
-                <dt>Class</dt>
-                <dd>{asset.superclasses[asset.superclass[selected]].replaceAll('_', ' ')}</dd>
-              </div>
-              <div>
-                <dt>Position (µm)</dt>
-                <dd>
-                  {asset.position_um
-                    .slice(selected * 3, selected * 3 + 3)
-                    .map((v) => v.toFixed(1))
-                    .join(', ')}
-                </dd>
-              </div>
-              <div>
-                <dt>Position source</dt>
-                <dd>
-                  {provenance[asset.position_sources[asset.position_source[selected]]] ??
-                    asset.position_sources[asset.position_source[selected]]}
-                </dd>
-              </div>
-            </dl>
-          )}
+          <div className="neuron-count" role="status">
+            {asset
+              ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
+              : 'Loading authentic neuron coordinates…'}
+            {(group || cellType) && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => {
+                  selectGroup('')
+                  selectType('')
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+          <div className="brain-color-legend">
+            <span
+              className="type-swatch"
+              style={{
+                background:
+                  selected === null || !asset
+                    ? 'var(--ink-3)'
+                    : cellTypeColor(asset.type[selected]),
+              }}
+            />
+            <span>Color identifies cell type</span>
+            <span>Click a point to inspect</span>
+          </div>
+          <p className="brain-backend-note">
+            <span className="status-dot amber" />
+            <span>Firing activity is awaiting backend data.</span>
+          </p>
         </div>
-        <p className="brain-backend-note">
-          <span className="status-dot amber" />
-          <span>Firing activity is awaiting backend data.</span>
-        </p>
       </TabsContent>
       <TabsContent value="session" className="session-tab">
         <SessionOverview />

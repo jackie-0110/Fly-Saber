@@ -1,6 +1,5 @@
 import { BackendStatus } from '@/components/backend-status'
 import { BrainPreview } from '@/components/brain-preview'
-import { FigureCaption } from '@/components/figure'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
@@ -27,14 +26,15 @@ export default function App() {
         <section className="observation-workspace" aria-label="Fly Saber observation workspace">
           <SongHeader />
           <GamePreview />
-          <SessionTimeline />
-          <SessionReadouts />
+          <div className="transport">
+            <SessionTimeline />
+            <SessionReadouts />
+          </div>
         </section>
         <aside className="inspector" aria-label="Brain and session inspector">
           <BrainPreview />
         </aside>
       </main>
-      <FigureCaption />
     </div>
   )
 }

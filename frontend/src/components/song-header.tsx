@@ -1,7 +1,6 @@
 import { ArrowUpRight, Music2 } from 'lucide-react'
 import { difficultyLabel, formatTime } from '@/game/chart'
 import { liveMapId, usePlayer } from '@/game/store'
-import { PanelLetter } from '@/components/figure'
 
 export function SongHeader() {
   const song = usePlayer((s) => s.song)
@@ -11,7 +10,6 @@ export function SongHeader() {
   const live = usePlayer((s) => !!liveMapId(s))
   return (
     <section className="song-header" aria-label="Selected song information">
-      <PanelLetter>a</PanelLetter>
       {song && (
         <div className="current-song-cover">
           <Music2 aria-hidden="true" />

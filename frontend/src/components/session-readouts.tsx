@@ -1,4 +1,3 @@
-import { PanelLetter } from '@/components/figure'
 import { useSession } from '@/game/session'
 
 export function SessionReadouts() {
@@ -8,7 +7,6 @@ export function SessionReadouts() {
   const status = useSession((s) => s.status)
   return (
     <section className="session-readouts" aria-label="Session readouts">
-      <PanelLetter>d</PanelLetter>
       <div className="readout-block">
         <h2>Visual input</h2>
         <p className="readout-status">
