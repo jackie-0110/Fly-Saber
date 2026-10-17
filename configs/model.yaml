@@ -1,1 +1,26 @@
-# model.yaml (owner: Person 1). Loaded into a dataclass; no magic numbers in code.
+# Connectome rate network (owner: Person 1). See FLYARCADE_HANDOFF.md section 6.
+subgraph_dir: data/processed/malecns_subgraph
+
+# Timing: one game frame at 30 Hz, split into Euler substeps.
+frame_ms: 33.333
+substeps: 4
+tau_init_ms: 20.0
+tau_min_ms: 10.0      # keeps dt / tau < 1 so Euler stays stable
+
+# Resting drive per neuron (trainable bias starts here). Must be positive: photoreceptors
+# inhibit the lamina, so with zero rest the relu clamps everything past the eye to 0.
+bias_init: 0.5
+
+# f(v): relu or softplus.
+activation: relu
+
+# Each neuron's incoming weights sum to this in absolute value (before trainable scales).
+# Below 1 keeps the untrained network from running away.
+in_weight_scale: 0.9
+
+# Eye luminance (0 to 1) times this is the current into input neurons.
+input_scale: 1.0
+
+# Action heads, from the Fly Saber env (Person 2 contract): per saber, 12 cells + idle
+# and 4 directions + no_cut. Red saber first, then blue.
+action_heads: [13, 5, 13, 5]
