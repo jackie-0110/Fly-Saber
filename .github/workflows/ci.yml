@@ -118,7 +118,7 @@ jobs:
       - name: Verify container frontend and API
         run: |
           docker run --detach --name fly-saber-smoke --publish 127.0.0.1:8000:8000 fly-saber:ci
-          curl --fail --retry 30 --retry-delay 2 --retry-connrefused http://127.0.0.1:8000/api/games
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 120 --connect-timeout 5 --max-time 10 http://127.0.0.1:8000/api/games
           curl --fail http://127.0.0.1:8000/ | grep -q '<div id="root">'
           curl --fail http://127.0.0.1:8000/api/maps
           docker exec fly-saber-smoke python -c "from fly_saber.config import load_config; from fly_saber.eye import EyeConfig; load_config(EyeConfig, 'eye')"
