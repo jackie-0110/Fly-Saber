@@ -138,7 +138,11 @@ class SaberEnv:
     def reset(
         self, notes: NoteArrays, speed_mps: jax.Array, start_sec: jax.Array, end_sec: jax.Array
     ) -> tuple[jax.Array, SaberState]:
-        """Start at `start_sec` with notes outside [start_sec, end_sec) already judged."""
+        """Start at `start_sec` with notes outside [start_sec, end_sec) already judged.
+
+        The episode ends two timing windows after the last note in play, which can be
+        up to that much past `end_sec`, so every note in play is judged.
+        """
         if notes.time_sec.shape[-1] < self.cfg.max_visible_notes:
             raise ValueError("pad notes to at least max_visible_notes rows")
         window = self.cfg.timing_window_sec
@@ -150,7 +154,7 @@ class SaberEnv:
             judged=~in_play,
             removed=~in_play,
             start_sec=jnp.asarray(start_sec, jnp.float32),
-            end_sec=jnp.minimum(end_sec, last_note + 2 * window),
+            end_sec=last_note + 2 * window,
             speed_mps=jnp.asarray(speed_mps, jnp.float32),
             step=zero,
             saber_cell=jnp.full((self.cfg.n_sabers,), IDLE_CELL, jnp.int32),
