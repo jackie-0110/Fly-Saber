@@ -11,6 +11,7 @@ Cell = Annotated[int, Field(ge=0, le=11)]
 Cut = Annotated[int, Field(ge=0, le=3)]
 Color = Annotated[int, Field(ge=0, le=1)]
 Slot = Annotated[int, Field(ge=0, le=1)]
+Fraction = Annotated[float, Field(ge=0.0, le=1.0)]
 
 
 class Message(BaseModel):
@@ -105,11 +106,23 @@ class Reset(Message):
     type: Literal["reset"] = "reset"
 
 
+class EyeSettings(Message):
+    """Live eye controls (fly_saber.eye.EyeControls); the defaults see normally."""
+
+    blind_left: Fraction = 0.0
+    blind_right: Fraction = 0.0
+    blur_deg: Annotated[float, Field(ge=0.0)] = 0.0
+    facet_dropout: Fraction = 0.0
+    noise: Annotated[float, Field(ge=0.0)] = 0.0
+    seed: Annotated[int, Field(ge=0, lt=2**32)] = 0
+
+
 class SetInterventions(Message):
     type: Literal["set_interventions"] = "set_interventions"
     slot: Slot
-    # Schema is PROTOCOL.md section 4 (Person 1), not pinned yet.
-    interventions: dict[str, Any]
+    interventions: dict[str, Any] = {}
+    """Brain controls, PROTOCOL.md section 4; validated by brain.model.controls.from_controls."""
+    eye: EyeSettings = EyeSettings()
 
 
 class HumanAction(Message):

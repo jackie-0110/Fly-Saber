@@ -29,6 +29,7 @@ from server.protocol import (
     Ready,
     RenderState,
     Reset,
+    SetInterventions,
     SlotInfo,
     Start,
     client_message_adapter,
@@ -58,6 +59,8 @@ class Sim(Protocol):
     def reset(self, song_t: float) -> RenderState: ...
 
     def step(self) -> StepOutput: ...
+
+    def set_interventions(self, controls: Mapping[str, Any], eye: Mapping[str, Any]) -> None: ...
 
 
 class SimFactory(Protocol):
@@ -94,6 +97,7 @@ class Session:
         self.session_id = uuid.uuid4().hex
         self.start: Start | None = None
         self.slots: list[SlotRun] = []
+        self.interventions: dict[int, SetInterventions] = {}
         self.ticker: asyncio.Task[None] | None = None
         self.anchor_song_t = 0.0
         self.anchor_wall_t = 0.0
@@ -117,6 +121,7 @@ class Session:
     async def handle(self, message: ClientMessage) -> None:
         match message:
             case Start():
+                self.interventions = {}
                 await self.load(message)
             case Reset() if self.start:
                 await self.load(self.start)
@@ -127,7 +132,9 @@ class Session:
             case Pause():
                 self.anchor_song_t, self.anchor_wall_t = self.song_t(), self.now()
                 self.paused = message.paused
-            case Reset() | Play():
+            case SetInterventions() if self.start:
+                await self.set_interventions(message)
+            case Reset() | Play() | SetInterventions():
                 await self.send(Error(message="send start first"))
             case _:
                 await self.send(Error(message=f"{message.type} is not implemented yet"))
@@ -150,6 +157,8 @@ class Session:
         for make_sim in factories:
             sim = make_sim(map_data, start.seed)
             self.slots.append(SlotRun(sim, sim.reset(0.0)))
+        for slot, message in self.interventions.items():  # kept through reset
+            self.slots[slot].sim.set_interventions(message.interventions, message.eye.model_dump())
         # Versus pairs brains on one subgraph, or a brain with the brainless expert.
         neural = max(factories, key=lambda f: f.n_neurons)
         await self.send(
@@ -163,6 +172,19 @@ class Session:
                 cell_types=neural.cell_types,
             )
         )
+
+    async def set_interventions(self, message: SetInterventions) -> None:
+        """Replace one slot's brain and eye controls, live (PROTOCOL.md section 3)."""
+        if message.slot >= len(self.slots):
+            await self.send(Error(message=f"no slot {message.slot} in this session"))
+            return
+        try:
+            sim = self.slots[message.slot].sim
+            sim.set_interventions(message.interventions, message.eye.model_dump())
+        except ValueError as error:
+            await self.send(Error(message=str(error)))
+            return
+        self.interventions[message.slot] = message
 
     async def play(self, song_t: float) -> None:
         await self.stop_ticker()

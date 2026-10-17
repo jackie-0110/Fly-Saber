@@ -120,7 +120,7 @@ Text messages are JSON objects with a `type` field. Binary messages carry activi
 | `clock` | `song_t: float` | Sent about once a second from `AudioContext.currentTime`. Server resyncs the sim to it (spec 14). |
 | `pause` | `paused: bool` | Client pauses audio at the same time. |
 | `reset` | | Back to `ready` state, same map and brains. |
-| `set_interventions` | `slot`, `interventions` | `interventions` schema is section 4. Applies immediately, no retraining. |
+| `set_interventions` | `slot`, `interventions`, `eye` | Both optional. `interventions` is the brain payload of section 4 (lesion, stimulate, mood, noise). `eye` is `{blind_left, blind_right, blur_deg, facet_dropout, noise, seed}`, all optional, default 0 (sees normally): `blind_*` and `facet_dropout` 0 to 1, `blur_deg` and `noise` at least 0, `seed` a uint32 (section 2, eye controls). Applies from the next frame, no retraining or recompiling. |
 | `human_action` | `color`, `cell`, `cut` | You vs. the Fly (stretch). Same encoding as a saber in `render_state`. |
 | `narrate` | `slot` | Ask for an explanation of the last miss (Person 3). |
 
@@ -128,7 +128,8 @@ Server behaviour:
 
 - Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
-- `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
+- `set_interventions` replaces that slot's brain and eye controls (it does not add to the previous message). They last through `play` and `reset`; a new `start` clears them. It answers `error` (and changes nothing) for a slot the session does not have, a slot playing `expert` (no brain or eyes to change), unknown groups or moods, and out-of-range eye values. Send it before or after `play`. There is no reply on success.
+- `human_action` and `narrate` answer `error` until they are implemented.
 - Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
 - Each served brain loads from its bundle (`training.play_eval.load_trained` with the bundle's `subgraph/`), never from a local subgraph build. A bundle that fails to load (missing file, fingerprint mismatch) is logged and left out of `/api/brains`; the server still starts.
 - The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
