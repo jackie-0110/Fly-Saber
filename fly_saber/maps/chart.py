@@ -10,6 +10,10 @@ class UnsupportedMapError(ValueError):
     """The map uses a feature or format version we do not parse."""
 
 
+# What a malformed level raises from reading through normalization.
+MAP_ERRORS = (ValueError, KeyError, TypeError, AttributeError, OSError, StopIteration)
+
+
 @dataclass(frozen=True)
 class ChartNote:
     beat: float

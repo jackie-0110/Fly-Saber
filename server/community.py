@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from fly_saber.maps.beatsaver_client import download_level, make_client, map_metadata
+from fly_saber.maps.chart import MAP_ERRORS
 from fly_saber.maps.normalize import normalize_level
 
 KEY_PATTERN = re.compile(r"[a-f0-9]{1,8}")
@@ -82,8 +83,7 @@ class CommunityMaps:
                 duration_sec=float(meta["metadata"]["duration"]),
                 allowed=None,
             )
-        except (ValueError, KeyError, StopIteration, TypeError) as error:
-            # UnsupportedMapError is a ValueError: legacy offsets, rotating charts, unknown formats.
+        except MAP_ERRORS as error:
             raise MapImportError(422, f"the fly cannot play this map yet: {error}") from error
         if not maps:
             raise MapImportError(422, "the map has no Standard difficulty for the fly to play")

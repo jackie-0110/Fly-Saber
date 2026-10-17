@@ -154,7 +154,10 @@ def read_info_v2(info: dict[str, Any]) -> LevelInfo:
 def read_info_v4(info: dict[str, Any], level_dir: Path) -> LevelInfo:
     standard = [b for b in info["difficultyBeatmaps"] if b["characteristic"] == "Standard"]
     mappers = dict.fromkeys(
-        m for b in standard for m in b.get("beatmapAuthors", {}).get("mappers", [])
+        m.strip()
+        for b in standard
+        for m in b.get("beatmapAuthors", {}).get("mappers", [])
+        if isinstance(m, str) and m.strip()
     )
     beatmaps = [
         Beatmap(

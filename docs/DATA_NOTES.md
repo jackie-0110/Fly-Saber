@@ -92,13 +92,13 @@ Not downloaded yet.
 
 **R1-R6 coverage is sparse.** Only 48 of 217 left and 97 of 220 right kept columns have a traced R1-R6; others have only R7/R8 or no photoreceptor. In those columns L1 and L2 take the luminance input directly with inverted sign (photoreceptor synapses onto them are inhibitory). 1,648 neurons take eye input in total.
 
-## Beat Saber map formats, v2 and v3 (Person 2)
+## Beat Saber map formats, v2, v3 and v4 (Person 2)
 
 Inspected 5 BeatSaver levels of Kevin MacLeod songs (keys 53af, 2dd26, 304be, 4fd1b, 4f4de): 11 Standard difficulties, difficulty formats 2.0.0, 2.2.0, 2.6.0, and 3.3.0.
 
 - **BeatSaver API has no license field.** Licensing comes from the song itself, so demo maps are songs with a known Creative Commons license (Kevin MacLeod, CC BY 4.0), recorded in `demo_allowlist.json`. Each allowlisted song was matched by title in incompetech's catalog (`pieces.json`) and links to its incompetech page; Bathroom Ballet (4fd1b) is not in the catalog and was dropped. The audio is the mapper's upload, so its length can differ from incompetech's by a few seconds (trimmed intros or tails).
 - `song.duration_sec` comes from BeatSaver's `metadata.duration`, the length of the uploaded audio.
-- Every Info file seen is the v2 layout (`_version` 2.x, `_difficultyBeatmapSets`), even when the difficulty files are v3. The filename case varies (`info.dat` and `Info.dat`). Info v4 is rejected.
+- Every Info file seen is the v2 layout (`_version` 2.x, `_difficultyBeatmapSets`), even when the difficulty files are v3. The filename case varies (`info.dat` and `Info.dat`). Info v4 (`Info.dat` with `difficultyBeatmaps`) is read too: its difficulty objects index their `*Data` arrays through `i`, and timing comes from the AudioData file's `bpmData` sample regions. Rotating charts (`r` != 0) are rejected.
 - Files may start with a UTF-8 BOM; read with `utf-8-sig`.
 - v2 notes: `_type` 0 red, 1 blue, 3 bomb. v2 walls: `_type` 0 full height, 1 crouch; we convert to the v3 `(layer, height)` the game uses, `(0, 5)` and `(2, 3)`.
 - v3 notes: `colorNotes {b, x, y, c, d, a}`, bombs in a separate `bombNotes {b, x, y}`, walls `obstacles {b, x, y, d, w, h}`. v3 writers may omit zero-valued fields, so every read defaults to 0. The angle offset `a` was 0 in every file and is ignored.

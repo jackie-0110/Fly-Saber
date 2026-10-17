@@ -1,5 +1,8 @@
 """On-demand community maps: fetched once, charts only, playable by key, errors mapped."""
 
+import io
+import json
+import zipfile
 from pathlib import Path
 
 import httpx
@@ -77,3 +80,25 @@ def test_unsupported_map_is_422(tmp_path: Path) -> None:
     response = client.post("/api/community/abc1")
     assert response.status_code == 422
     assert "cannot play" in response.json()["detail"]
+
+
+def test_v4_map_missing_its_audio_data_is_422(tmp_path: Path) -> None:
+    info = {
+        "version": "4.0.1",
+        "song": {"title": "T", "author": "A"},
+        "audio": {"songFilename": "song.ogg", "bpm": 120, "audioDataFilename": "AudioData.dat"},
+        "difficultyBeatmaps": [
+            {
+                "characteristic": "Standard",
+                "difficulty": "Easy",
+                "beatmapDataFilename": "Easy.dat",
+            }
+        ],
+    }
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Info.dat", json.dumps(info))
+        archive.writestr("Easy.dat", "{}")
+    beatsaver = FakeBeatSaver([[meta("abc2", "Easy")]], {"abc2": buffer.getvalue()})
+    response = make_client(tmp_path, beatsaver).post("/api/community/abc2")
+    assert response.status_code == 422
