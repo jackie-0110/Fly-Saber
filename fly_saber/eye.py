@@ -6,8 +6,10 @@ Coordinates: the eye is at the origin, x right, y up, z forward. Azimuth is
 positive to the right, elevation positive up.
 """
 
+import dataclasses
 import math
 from dataclasses import dataclass
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -61,8 +63,12 @@ def lattice(cfg: EyeConfig) -> tuple[np.ndarray, int]:
     return np.radians(np.concatenate([left_deg, right_deg])), len(left_deg)
 
 
-def render(directions: jax.Array, patches: Patches, cfg: EyeConfig) -> jax.Array:
+def render(
+    directions: jax.Array, patches: Patches, cfg: EyeConfig, blur_deg: jax.Array | float = 0.0
+) -> jax.Array:
     """Luminance per ommatidium, (N,), from patches on a uniform background.
+
+    `blur_deg` widens the acceptance FWHM beyond `cfg.acceptance_fwhm_deg`.
 
     Each patch's coverage is its angular box convolved with the Gaussian
     acceptance (separable erf), using a small-angle tangent plane per patch.
@@ -75,7 +81,7 @@ def render(directions: jax.Array, patches: Patches, cfg: EyeConfig) -> jax.Array
 
     d_az = (directions[:, None, 0] - patch_az[None, :]) * jnp.cos(patch_el)[None, :]
     d_el = directions[:, None, 1] - patch_el[None, :]
-    scale = math.sqrt(2.0) * math.radians(cfg.acceptance_fwhm_deg) / FWHM_PER_SIGMA
+    scale = math.sqrt(2.0) * jnp.radians(cfg.acceptance_fwhm_deg + blur_deg) / FWHM_PER_SIGMA
 
     def box(offset: jax.Array, half: jax.Array) -> jax.Array:
         return 0.5 * (erf((offset + half) / scale) - erf((offset - half) / scale))
@@ -83,3 +89,54 @@ def render(directions: jax.Array, patches: Patches, cfg: EyeConfig) -> jax.Array
     coverage = box(d_az, half_angle[None, :, 0]) * box(d_el, half_angle[None, :, 1])
     contrast = patches.luminance - cfg.background_luminance
     return jnp.clip(cfg.background_luminance + coverage @ contrast, 0.0, 1.0)
+
+
+@jax.tree_util.register_dataclass
+@dataclass(frozen=True)
+class EyeControls:
+    """Live eye perturbations (spec 7.1), all scalar arrays; `eye_controls()` sees normally."""
+
+    blind_left: jax.Array
+    """Fraction of contrast the left eye loses, 0 to 1."""
+    blind_right: jax.Array
+    blur_deg: jax.Array
+    """Added to the acceptance FWHM."""
+    facet_dropout: jax.Array
+    """Fraction of columns that read as background; the same columns for a given seed."""
+    noise: jax.Array
+    """Std of Gaussian noise on the luminance channel, fresh each frame."""
+    seed: jax.Array
+    """Picks the dropped columns and the noise."""
+
+
+def eye_controls(controls: EyeControls | None = None, **values: Any) -> EyeControls:
+    """`controls` (default: none applied) with `values` replaced.
+
+    Values are cast to the fields' dtypes, so a jitted step never retraces when they change.
+    """
+    if controls is None:
+        zero = jnp.zeros((), jnp.float32)
+        controls = EyeControls(zero, zero, zero, zero, zero, jnp.zeros((), jnp.uint32))
+    fields = {k: jnp.asarray(v, getattr(controls, k).dtype) for k, v in values.items()}
+    return dataclasses.replace(controls, **fields)
+
+
+def apply_eye_controls(
+    image: jax.Array,
+    controls: EyeControls,
+    left_eye: jax.Array,
+    step: jax.Array,
+    background: float,
+) -> jax.Array:
+    """Noise, then blinding and dropout, on a (channels, N) image; `left_eye` is (N,) bool.
+
+    Lost contrast fades to `background`, so a blinded column looks like empty sky, not
+    a black object the brain would react to.
+    """
+    drop_key, noise_key = jax.random.split(jax.random.PRNGKey(controls.seed))
+    noise = controls.noise * jax.random.normal(jax.random.fold_in(noise_key, step), left_eye.shape)
+    image = image.at[0].set(jnp.clip(image[0] + noise, 0.0, 1.0))
+    kept = jax.random.uniform(drop_key, left_eye.shape) >= controls.facet_dropout
+    blind = jnp.where(left_eye, controls.blind_left, controls.blind_right)
+    gain = kept * (1.0 - blind)
+    return image * gain + background * (1.0 - gain)
