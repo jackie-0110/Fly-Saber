@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "key": "53af",
+    "title": "Le Grand Chase",
+    "artist": "Kevin MacLeod",
+    "license": "CC BY 4.0",
+    "song_url": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1800021",
+    "split": "train"
+  },
+  {
+    "key": "304be",
+    "title": "Pop Goes the Weasel",
+    "artist": "Kevin MacLeod",
+    "license": "CC BY 4.0",
+    "song_url": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100724",
+    "split": "train"
+  },
+  {
+    "key": "4f4de",
+    "title": "Fluffing a Duck",
+    "artist": "Kevin MacLeod",
+    "license": "CC BY 4.0",
+    "song_url": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100768",
+    "split": "train"
+  },
+  {
+    "key": "2dd26",
+    "title": "Sneaky Adventure",
+    "artist": "Kevin MacLeod",
+    "license": "CC BY 4.0",
+    "song_url": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100644",
+    "split": "heldout"
+  }
+]

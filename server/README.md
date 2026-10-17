@@ -7,6 +7,7 @@
 | `app.py` | Person 2 | FastAPI app, REST endpoints, `WS /ws/session` |
 | `session.py` | Person 2 | Steps env and brain at 30 Hz, Versus backend |
 | `protocol.py` | Person 2 | Message types; must match `docs/PROTOCOL.md` |
+| `catalog.py` | Person 2 | Normalized maps and allowlisted audio on disk |
 | `narrator.py` | Person 3 | Gemini narrator (optional, app works without it) |
 | `replay.py` | Person 3 | Replay recording and serving (demo safety net) |
 
