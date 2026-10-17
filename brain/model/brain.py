@@ -29,8 +29,12 @@ from jax import Array
 from brain.config import ModelConfig
 from brain.model.interventions import Interventions
 
-PHOTORECEPTOR_TYPES = r"R1-R6|R7.*|R8.*"
-FALLBACK_INPUT_TYPES = ("L1", "L2")  # driven directly in columns with no photoreceptor
+# Eye channels (Person 2 contract): 0 luminance, 1 color (red notes high, blue low).
+LUMINANCE, COLOR = 0, 1
+N_EYE_CHANNELS = 2
+LUMINANCE_TYPES = r"R1-R6"
+COLOR_TYPES = r"R7.*|R8.*"
+FALLBACK_INPUT_TYPES = ("L1", "L2")  # take luminance in columns with no traced R1-R6
 
 
 class Graph(NamedTuple):
@@ -43,6 +47,7 @@ class Graph(NamedTuple):
     dn: Array  # (D,) int32 descending neuron indices
     input_neuron: Array  # (M,) int32 neurons that receive eye input
     input_column: Array  # (M,) int32 eye column feeding each input neuron
+    input_channel: Array  # (M,) int32 0 luminance (R1-R6, fallback), 1 color (R7, R8)
     input_sign: Array  # (M,) float32 +1 photoreceptor, -1 lamina fallback
 
 
@@ -73,7 +78,8 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
     """Build the Graph from subgraph files.
 
     Also returns the eye column table (column id -> side, hex1, hex2), and the
-    neuron count. The eye passes one luminance value per column, in this order.
+    neuron count. The eye passes (2, n_columns): luminance and color per column,
+    columns in this order.
     """
     d = Path(cfg.subgraph_dir)
     neurons = pd.read_parquet(d / "neurons.parquet")
@@ -87,22 +93,27 @@ def load_graph(cfg: ModelConfig) -> tuple[Graph, pd.DataFrame, int]:
     types = neurons["type"].to_numpy()
     pair_ids, _ = pd.factorize(pd.Series(types[edges["pre"]]) + ">" + types[edges["post"]])
 
-    columns, input_neuron, input_column, input_sign = _eye_inputs(neurons)
+    columns, inputs = eye_inputs(neurons)
     graph = Graph(
         pre=jnp.asarray(edges["pre"], dtype=jnp.int32),
         post=jnp.asarray(edges["post"], dtype=jnp.int32),
         weight=jnp.asarray(w, dtype=jnp.float32),
         pair=jnp.asarray(pair_ids, dtype=jnp.int32),
         dn=jnp.asarray(np.flatnonzero(neurons["role"] == "descending"), dtype=jnp.int32),
-        input_neuron=jnp.asarray(input_neuron, dtype=jnp.int32),
-        input_column=jnp.asarray(input_column, dtype=jnp.int32),
-        input_sign=jnp.asarray(input_sign, dtype=jnp.float32),
+        input_neuron=jnp.asarray(inputs["neuron"], dtype=jnp.int32),
+        input_column=jnp.asarray(inputs["column"], dtype=jnp.int32),
+        input_channel=jnp.asarray(inputs["channel"], dtype=jnp.int32),
+        input_sign=jnp.asarray(inputs["sign"], dtype=jnp.float32),
     )
     return graph, columns, len(neurons)
 
 
-def _eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
-    """Map eye columns to input neurons (see docs/DATA_NOTES.md, deviation 6)."""
+def eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Map eye columns to input neurons (see docs/DATA_NOTES.md, deviation 6).
+
+    Returns the column table and one row per input neuron: neuron index,
+    column, channel (0 luminance, 1 color), and sign.
+    """
     col = neurons[neurons["role"] == "columnar"].dropna(subset=["hex1", "side"])
     columns = (
         col[["side", "hex1", "hex2"]].drop_duplicates().sort_values(["side", "hex1", "hex2"])
@@ -111,17 +122,20 @@ def _eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, np.nda
     key = list(zip(col["side"], col["hex1"], col["hex2"], strict=True))
     col = col.assign(column=[column_id[k] for k in key])
 
-    photo = col[col["type"].str.fullmatch(PHOTORECEPTOR_TYPES)]
-    lit = set(photo["column"])
-    fallback = col[col["type"].isin(FALLBACK_INPUT_TYPES) & ~col["column"].isin(lit)]
-
-    inputs = pd.concat([photo.assign(sign=1.0), fallback.assign(sign=-1.0)])
-    return (
-        columns,
-        inputs.index.to_numpy(),
-        inputs["column"].to_numpy(),
-        inputs["sign"].to_numpy(),
+    luminance = col[col["type"].str.fullmatch(LUMINANCE_TYPES)]
+    color = col[col["type"].str.fullmatch(COLOR_TYPES)]
+    fallback = col[
+        col["type"].isin(FALLBACK_INPUT_TYPES) & ~col["column"].isin(set(luminance["column"]))
+    ]
+    inputs = pd.concat(
+        [
+            luminance.assign(channel=LUMINANCE, sign=1.0),
+            color.assign(channel=COLOR, sign=1.0),
+            fallback.assign(channel=LUMINANCE, sign=-1.0),
+        ]
     )
+    inputs = inputs.rename_axis("neuron").reset_index()[["neuron", "column", "channel", "sign"]]
+    return columns, inputs
 
 
 def init_params(key: Array, graph: Graph, cfg: ModelConfig, n_neurons: int) -> Params:
@@ -150,7 +164,8 @@ def init_state(n_neurons: int) -> Array:
 def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
     """One game frame: `substeps` Euler steps of the dynamics, then the readout.
 
-    `eye` is (n_columns,) luminance in [0, 1], ordered like load_graph's column table.
+    `eye` is (2, n_columns) in [0, 1]: row 0 luminance, row 1 color, columns ordered
+    like load_graph's column table.
     """
     act = {"relu": jax.nn.relu, "softplus": jax.nn.softplus}[cfg.activation]
     dt = cfg.frame_ms / cfg.substeps
@@ -163,7 +178,7 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
         eye_current = (
             jnp.zeros(n_neurons)
             .at[graph.input_neuron]
-            .add(graph.input_sign * eye[graph.input_column] * cfg.input_scale)
+            .add(graph.input_sign * eye[graph.input_channel, graph.input_column] * cfg.input_scale)
         )
         drive = eye_current + params.bias + iv.opto
         alpha = dt / (cfg.tau_min_ms + jnp.exp(params.log_tau))
