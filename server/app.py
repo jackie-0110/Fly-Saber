@@ -10,18 +10,41 @@ from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from fly_saber.config import load_config
+from fly_saber.env import SaberConfig, SaberEnv
+from fly_saber.experts import saber_expert
+from fly_saber.eye import EyeConfig
 from server.catalog import Catalog
 from server.protocol import Brain, Game, MapSummary
-from server.session import BRAINS, GAMES, FakeSaberSim, Session, SimFactory
+from server.saber_sim import LiveSaber
+from server.session import BRAINS, GAMES, Session, SimFactory
+
+
+def expert_sims() -> LiveSaber:
+    """The real env played by the scripted expert."""
+    env = SaberEnv.create(load_config(SaberConfig, "saber"), load_config(EyeConfig, "eye"))
+    return LiveSaber(env, saber_expert)
+
+
+def warm_up(catalog: Catalog, make_sim: SimFactory) -> None:
+    """Compile the sim for every map size now; a first session would stall the event loop."""
+    for summary in catalog.list_maps():
+        map_data = catalog.get_map(summary.map_id)
+        if map_data is not None:
+            sim = make_sim(map_data, BRAINS[0].id, 0)
+            sim.reset(0.0)
+            sim.step()
 
 
 def create_app(
     maps_dir: Path = Path("data/maps"),
-    make_sim: SimFactory = FakeSaberSim,
+    make_sim: SimFactory | None = None,
     frontend_dir: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="FlyArcade")
+    make_sim = make_sim or expert_sims()
     catalog = Catalog(maps_dir)
+    warm_up(catalog, make_sim)
 
     @app.get("/api/games")
     def games() -> list[Game]:

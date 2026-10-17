@@ -43,8 +43,8 @@ docker run --rm -p 8000:8000 \
 
 That maps directory should contain `demo_allowlist.json`, `normalized/`, and
 `audio/` as described in [PROTOCOL.md](PROTOCOL.md). Without downloaded maps the
-UI and API still start, and the map list is empty. Backend sessions currently
-default to `FakeSaberSim`; container delivery does not change that behavior.
+UI and API still start, and the map list is empty. Backend sessions use the live Fly Saber environment played by the scripted expert.
+Container delivery preserves that simulation behavior.
 
 ## Publish a release
 

@@ -16,11 +16,14 @@ def test_api_starts_without_frontend_or_map_downloads(tmp_path: Path) -> None:
 
 
 def test_frontend_mount_preserves_api_and_websocket(tmp_path: Path) -> None:
+    maps = tmp_path / "maps"
+    maps.mkdir()
+    (maps / "demo_allowlist.json").write_text("[]")
     frontend = tmp_path / "dist"
     frontend.mkdir()
     (frontend / "index.html").write_text("<!doctype html><title>FlyArcade</title>")
     (frontend / "app.js").write_text("console.log('FlyArcade')")
-    with TestClient(create_app(maps_dir=tmp_path / "maps", frontend_dir=frontend)) as client:
+    with TestClient(create_app(maps_dir=maps, frontend_dir=frontend)) as client:
         homepage = client.get("/")
         assert homepage.status_code == 200
         assert "text/html" in homepage.headers["content-type"]
