@@ -63,3 +63,22 @@ def test_rejects_mismatch(tmp_path: Path) -> None:
 def test_config_hash_is_order_independent() -> None:
     assert config_hash({"a": {"x": 1, "y": 2}}) == config_hash({"a": {"y": 2, "x": 1}})
     assert config_hash({"a": {"x": 1}}) != config_hash({"a": {"x": 2}})
+
+
+def test_fingerprint_catches_reordered_neurons(tmp_path: Path) -> None:
+    import json
+
+    import pandas as pd
+
+    from training.checkpoints import subgraph_fingerprint, subgraph_mismatch
+
+    for name, order in (("a", [11, 12, 13]), ("b", [12, 11, 13])):
+        d = tmp_path / name
+        d.mkdir()
+        pd.DataFrame({"body_id": order}).to_parquet(d / "neurons.parquet")
+        pd.DataFrame({"pre": [0], "post": [1], "weight": [5]}).to_parquet(d / "edges.parquet")
+        (d / "meta.json").write_text(json.dumps({"n_neurons": 3, "n_edges": 1, "n_synapses": 5}))
+    a, b = subgraph_fingerprint(tmp_path / "a"), subgraph_fingerprint(tmp_path / "b")
+    assert subgraph_mismatch(a, b) == ["neurons_sha256"]  # same counts, different slots
+    old_style = {"n_neurons": 3, "n_edges": 1, "n_synapses": 5}
+    assert subgraph_mismatch(old_style, b) == []  # older checkpoints: counts only

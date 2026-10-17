@@ -24,7 +24,7 @@ llm = ["google-genai>=1.0"]
 cuda = ["jax[cuda12]>=0.4.30"]
 
 [dependency-groups]
-dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8", "types-PyYAML"]
+dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8", "types-PyYAML", "matplotlib>=3.9"]
 
 [build-system]
 requires = ["hatchling"]
