@@ -5,10 +5,10 @@ import type { Chart, Song } from './chart.ts'
 import { downloadSong, importSongFile } from './songs.ts'
 import type { SongResult } from './songs.ts'
 import { loadCatalog, loadServerSong, withLiveCharts } from './catalog.ts'
-import type { BrainOption, ServerMap } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
 import { useSession } from './session.ts'
+import type { BrainOption, ServerMap } from './catalog.ts'
 
 type InspectorTab = 'activity' | 'songs' | 'session' | 'details' | 'next'
 
