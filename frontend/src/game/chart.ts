@@ -78,18 +78,18 @@ interface BpmChange {
 }
 
 // Precompute segments once, then binary-search them for each note and wall.
+// Any finite positive tempo is valid, matching the server's normalizer. Mappers use
+// brief extreme tempos (e.g. 100,000 BPM for a fraction of a beat) to snap the grid.
+const validBpm = (bpm: number) => Number.isFinite(bpm) && bpm > 0
+
 export function beatClock(bpm: number, changes: BpmChange[] = [], offset = 0) {
-  if (!(bpm > 0 && bpm <= 10000)) throw new Error('The song has an invalid BPM.')
+  if (!validBpm(bpm)) throw new Error('The song has an invalid BPM.')
   let previousBeat = 0
   let seconds = offset
   let currentBpm = bpm
   const segments = [{ beat: 0, seconds, bpm }]
   for (const change of [...changes].sort((a, b) => a.beat - b.beat)) {
-    if (
-      !Number.isFinite(change.beat) ||
-      change.beat < 0 ||
-      !(change.bpm > 0 && change.bpm <= 10000)
-    )
+    if (!Number.isFinite(change.beat) || change.beat < 0 || !validBpm(change.bpm))
       throw new Error('The chart contains an invalid BPM change.')
     seconds += ((change.beat - previousBeat) * 60) / currentBpm
     segments.push({ beat: change.beat, seconds, bpm: change.bpm })
