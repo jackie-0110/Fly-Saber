@@ -6,7 +6,7 @@ The interactive brain currently loads real neuron positions, identities, and gro
 
 - Match each activity value to the original neuron array index in `neurons.json`. Filtering only changes displayed points; it must never change the underlying index mapping.
 - Verify the asset identity/version, neuron count, and cell-type order against the session. `schema_version: 1` is a format version, not a unique identity for the subgraph. Agree on an asset identifier or hash before streaming.
-- Use the binary header, session slot, and simulation step defined in `docs/PROTOCOL.md`. Check the actual backend payload and quantization/scale semantics before implementing the decoder; do not infer hertz from raw rates.
+- Use the binary header, session slot, and simulation step defined in `docs/reference/PROTOCOL.md`. Check the actual backend payload and quantization/scale semantics before implementing the decoder; do not infer hertz from raw rates.
 - Reject incompatible lengths, stale sessions, and out-of-order updates. Keep activity buffers outside React state, preserve the camera and selection during updates, and keep original backend indices when applying group/type filters.
 - Leave anatomy visible when disconnected, mark activity as unavailable or stale, and never substitute random firing patterns.
 

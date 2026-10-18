@@ -1,5 +1,5 @@
 {
- "checkpoint": "bundles/real/bc_950.npz",
+ "checkpoint": "data/bundles/real/bc_950.npz",
  "meta": {
   "update": 950,
   "loss": 2.382662057876587,

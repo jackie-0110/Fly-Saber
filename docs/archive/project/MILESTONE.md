@@ -1,6 +1,6 @@
 # Fly Saber Milestones
 
-What stands between us and the MVP: the fly playing Fly Saber on stage and at a public URL. Companion to `docs/project/FLY_SABER_HANDOFF.md` (the spec) and `docs/project/FLY_SABER_TEAM_SPLIT.md` (who owns what).
+What stands between us and the MVP: the fly playing Fly Saber on stage and at a public URL. Companion to `docs/archive/project/FLY_SABER_HANDOFF.md` (the spec) and `docs/archive/project/FLY_SABER_TEAM_SPLIT.md` (who owns what).
 
 **For people and agents:** keep this file current. When you close an item, tick it in the same PR and name the PR. When you find a new blocker, add it under the right milestone with an owner. Status below is as of 2026-10-17, after #43.
 
@@ -35,9 +35,9 @@ Front-end work is split: Person 2 builds the client plumbing (session client and
 ## Done
 
 - **Milestone A, a brain playing in the browser:** server plays checkpointed brains, per-slot state, `ready` with `n_neurons`/`cell_types` (A1, #28, #35); session client, server catalog, HUD score and events, brain picker (A2 to A5, #29); integration run with the trained `real` brain: live e2e passes and a full `2dd26_expert` plays at 29.7 Hz (A6, #29 + #35).
-- **Milestone B, the trained fly in the server:** trained checkpoint, 32.9% held-out hits under Person 1's eval (B1, #30); bundled with its own subgraph (B2, #27, #30); server serves `real`, `shuffled_layers`, `shuffled_signs` from `bundles/` (B3, #35, #37). Always load a bundle's own `subgraph/`, never a local rebuild.
+- **Milestone B, the trained fly in the server:** trained checkpoint, 32.9% held-out hits under Person 1's eval (B1, #30); bundled with its own subgraph (B2, #27, #30); server serves `real`, `shuffled_layers`, `shuffled_signs` from `data/bundles/` (B3, #35, #37). Always load a bundle's own `subgraph/`, never a local rebuild.
 - **Lesion Mode on the server:** `set_interventions` applies lesion, opto, mood and eye controls live, per slot (C1 server, #36, #38).
-- **Image has its data:** the Docker image ships `bundles/` and `frontend/dist`; maps and audio download into a volume via `scripts/data/fetch_maps.py` (D2, #42); CI plays a full session with `real` inside the container (on `p2/integration`, not yet on main).
+- **Image has its data:** the Docker image ships `data/bundles/` and `frontend/dist`; maps and audio download into a volume via `scripts/data/fetch_maps.py` (D2, #42); CI plays a full session with `real` inside the container (on `p2/integration`, not yet on main).
 - **Load:** per-session sim threads, `MAX_SESSIONS` cap (D4, #43).
 - **Expert at 7.0 m/s:** 100% on all 10 demo maps, 2325 of 2325 notes (acceptance test 4).
 - **Fly plays from vision:** with both eyes blinded it hits 0%.
@@ -52,7 +52,7 @@ Front-end work is split: Person 2 builds the client plumbing (session client and
 ## Milestone D: public URL
 
 - [x] **D1. Hosting decision.** The front end is at https://flysaber.jackie-courtney.com, a Cloudflare Worker (#41) that proxies `/api/*` and `/ws/*` to its `BACKEND_URL` secret, so the browser stays same-origin and the server needs no CORS. Person 1 runs the backend on Vultr with `infra/deploy/deploy_vultr.sh` (#42).
-- [ ] **D3. Backend hostname and TLS** (Person 1). `docs/CI_CD.md` sets `BACKEND_URL=http://<server ip>:8000`; check that the Worker can fetch a bare IP and port, and if it can't, give the host a DNS name. Use a single-level name such as `flysaber-api.jackie-courtney.com`: Cloudflare's free certificate doesn't cover `api.flysaber.jackie-courtney.com`.
+- [ ] **D3. Backend hostname and TLS** (Person 1). `docs/development/CI_CD.md` sets `BACKEND_URL=http://<server ip>:8000`; check that the Worker can fetch a bare IP and port, and if it can't, give the host a DNS name. Use a single-level name such as `flysaber-api.jackie-courtney.com`: Cloudflare's free certificate doesn't cover `api.flysaber.jackie-courtney.com`.
 - **D5. Allowlisted audio only: dropped** (2026-10-17). This is a non-commercial demo; spec 8.4 no longer applies, and BeatSaver audio plays in the browser.
 - [ ] **D6. Size the public host** (Person 1). The real brain runs about 2.1x real time on a laptop CPU, so a laptop keeps about two brain sessions at 30 Hz. Set `MAX_SESSIONS` to what the Vultr host keeps at 30 Hz with activity streaming.
 - [ ] **D7. Fix the "Workers Builds: flysaber" check** (whoever set up Cloudflare). It fails on every PR.
@@ -66,7 +66,7 @@ Front-end work is split: Person 2 builds the client plumbing (session client and
 
 ## Milestone F: ship
 
-- [x] **F1. README results with real numbers** (Person 3 owns `results/README.md`): held-out hit rate, the looming lesion, the blindfold. [`results/SUMMARY.md`](../../results/SUMMARY.md) has them with the full lesion matrix, mood validation and live eye-control ranges; still unmeasured: a random-policy baseline (acceptance test 5).
+- [x] **F1. README results with real numbers** (Person 3 owns `docs/results/README.md`): held-out hit rate, the looming lesion, the blindfold. [`docs/results/SUMMARY.md`](../../results/SUMMARY.md) has them with the full lesion matrix, mood validation and live eye-control ranges; still unmeasured: a random-policy baseline (acceptance test 5).
 - [ ] **F2. Acceptance tests** (handoff section 18) pass on the public host, including 30 Hz with activity streaming. The replay and allowlisted-audio tests are dropped with E1 and D5.
 - [ ] **F3. Rehearse the demo** (all).
 

@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-This plan follows [`docs/project/FLY_SABER_HANDOFF.md`](../project/FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The chart preview is now interactive. Single-player sessions now connect to the backend for fly actions, score and note events. Neuron firing still requires the activity stream.
+This plan follows [`docs/archive/project/FLY_SABER_HANDOFF.md`](../project/FLY_SABER_HANDOFF.md), especially sections 7, 13, and 14, and the supplied reference image. The chart preview is now interactive. Single-player sessions now connect to the backend for fly actions, score and note events. Neuron firing still requires the activity stream.
 
 The current implementation is in `frontend/`, per the frontend owner's request. The repository has since been reorganized around this directory. Keep build, Docker, and deployment paths aligned with it.
 

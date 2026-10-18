@@ -9,7 +9,7 @@ This document is the full spec. Read all of it before writing code. Work milesto
 ## 0. Ground rules
 
 1. **Hackathon timing.** This is for SwampHacks (24 hours). Most hackathons ban code written before hacking starts. Do not start writing project code until the event begins. Before the event, the only allowed prep is downloading datasets, reading documentation, and inspecting data formats. Confirm the event rules with the team.
-2. **Never invent data schemas.** Connectome exports and Beat Saber map formats vary by version. Always inspect real files first (print columns, keys, row counts) and write code against what is actually there. If a field this doc mentions does not exist, find the equivalent and note the difference in `docs/DATA_NOTES.md`.
+2. **Never invent data schemas.** Connectome exports and Beat Saber map formats vary by version. Always inspect real files first (print columns, keys, row counts) and write code against what is actually there. If a field this doc mentions does not exist, find the equivalent and note the difference in `docs/reference/DATA_NOTES.md`.
 3. **No third-party branding.** Do not use the names, logos, art, or audio of Beat Saber, Subway Surfers, or any other commercial game. Our games are **Fly Runner** and **Fly Saber**.
 4. **Code quality is judged.** The Best Use of AI/ML prize scores coding conventions. Use type hints, small modules, config files instead of magic numbers, tests for core logic, `ruff` and `mypy` clean, and a strong README.
 5. **Always have a demo.** Build the replay fallback early (Milestone 4). A crashed server or training job must never kill the demo.
@@ -185,7 +185,7 @@ fly_saber/
 - **MaleCNS v1.0** (primary): Janelia neuPrint (`neuprint-python`, requires a free token). Also check for bulk downloads (Parquet or CSV) on the Janelia / Google release pages, which are faster than querying.
 - **FlyWire** (female brain, for Versus Mode): FlyWire Codex bulk downloads (connections, neurotransmitter predictions, cell types, classification, soma coordinates).
 
-Inspect what each source actually provides and record it in `docs/DATA_NOTES.md`. Required per neuron: id, cell type, coarser class or superclass, predicted neurotransmitter, 3D soma (or centroid) position, side (left/right). Required per edge: pre id, post id, synapse count.
+Inspect what each source actually provides and record it in `docs/reference/DATA_NOTES.md`. Required per neuron: id, cell type, coarser class or superclass, predicted neurotransmitter, 3D soma (or centroid) position, side (left/right). Required per edge: pre id, post id, synapse count.
 
 ### 5.2 Subgraph extraction
 Extract the visual-to-motor pathway, target **5,000 to 20,000 neurons** (configurable in `subgraph.yaml`):
@@ -245,7 +245,7 @@ Recurrent state `v` carries over between frames. Reset at episode start. Return 
 All applied at inference time, no retraining:
 - **Lesion:** set `gain_i = 0` and block output for neurons in selected groups.
 - **Optogenetics:** add a large positive constant to `opto_i` for selected groups.
-- **Mood sliders:** each slider is a named, documented mapping, for example `arousal` scales DN input gain and adds input noise; `reward_sensitivity` scales the dopaminergic group gains. Define them in config with clear descriptions; validate each one changes behavior in the predicted direction (`evaluate.py`) and put the validation plot in `results/README.md`.
+- **Mood sliders:** each slider is a named, documented mapping, for example `arousal` scales DN input gain and adds input noise; `reward_sensitivity` scales the dopaminergic group gains. Define them in config with clear descriptions; validate each one changes behavior in the predicted direction (`evaluate.py`) and put the validation plot in `docs/results/README.md`.
 - **Eye controls:** masks and transforms on the ommatidia input (Section 7.1).
 
 Interventions are a single pytree passed to the step function so the server can update them live.
@@ -333,7 +333,7 @@ Each env exposes a `render_state(state)` returning plain object positions, types
 - **Stretch, "upload a song":** `autogen.py` uses `librosa` beat and onset detection on user-uploaded audio to generate a playable map. Uploaded audio is processed in memory and not stored or redistributed.
 
 ### 8.5 Evaluation
-Hold out a set of maps never used in training. Report hit rate on train vs. held-out maps per brain variant in `results/README.md`.
+Hold out a set of maps never used in training. Report hit rate on train vs. held-out maps per brain variant in `docs/results/README.md`.
 
 ---
 
@@ -371,7 +371,7 @@ Arduino or Raspberry Pi with toggle switches (lesion groups) and potentiometers 
 - Lesion matrix: score drop per group per game.
 - Mood slider and knob validation.
 - Held-out map performance (Fly Saber).
-- Write plots to `docs/figures/` and a summary to `results/README.md`. Report honestly whatever the result is; "wiring did not help" is a valid finding.
+- Write plots to `docs/figures/` and a summary to `docs/results/README.md`. Report honestly whatever the result is; "wiring did not help" is a valid finding.
 
 ---
 
@@ -382,7 +382,7 @@ Arduino or Raspberry Pi with toggle switches (lesion groups) and potentiometers 
 - **Client to server messages:** `start {game, brain, map_id, seed}`, `set_interventions {...}`, `human_action {...}` (You vs. the Fly), `pause`, `reset`, `narrate`.
 - **Server to client messages:** `frame {render_state, score, t}`, `activity` (binary: uint8-quantized rates for all subgraph neurons, at 15 Hz, plus per-cell-type means at 30 Hz), `eye` (ommatidia image), `event {crash|miss|hit}`, `narration {...}`.
 - Versus Mode runs two brains on identically seeded envs in one session.
-- Spec everything in `docs/PROTOCOL.md`.
+- Spec everything in `docs/reference/PROTOCOL.md`.
 
 ### Replay fallback (`replay.py`, `scripts/training/record_replays.py`)
 Record full sessions (frames, activity, eye images, events) for every game and brain variant plus key lesions to compressed files. The front end plays them with no server. Build this in Milestone 4, before polish.
@@ -431,7 +431,7 @@ Roles: **A** connectome and model, **B** sim and training, **C** server, maps, a
 | 4 to 8 | **M2 Brain plays** | Brain forward pass benchmarked, rewired variant built (A). BC on easy maps with position-only scoring produces a fly that hits clearly more notes than random (B). Server streams a live Fly Saber session from a real checkpoint (C). 3D neuron cloud shows live activity (D). |
 | 8 to 14 | **M3 Must-ship complete** | Direction scoring enabled, PPO fine-tuning, all variants with multiple seeds on HiPerGator (B). Lesion and interventions wired end to end (A, C). Versus Mode real vs. scrambled on the same song (D). BeatSaver scraper building a larger training set with a held-out split (C). **Hour 14 tier decision.** |
 | 14 to 18 | **M4 Target features and safety net** | Replay recording for every demo map and variant (C). Curriculum training on the large map set, held-out map evaluation (B). Brain Explorer, opto, mood sliders, fly's-eye view, eye controls (D, A). Deployed to Vultr with domain (C). |
-| 18 to 22 | **M5 Polish and stretch** | Gemini narrator (C). Evaluation figures and results/README.md (A, B). UI polish, You vs. the Fly, upload-a-song (D, C). Fly Runner only if everything else is done. |
+| 18 to 22 | **M5 Polish and stretch** | Gemini narrator (C). Evaluation figures and docs/results/README.md (A, B). UI polish, You vs. the Fly, upload-a-song (D, C). Fly Runner only if everything else is done. |
 | 22 to 24 | **M6 Ship** | README complete, Devpost submission with public repo link, demo rehearsed, replay fallback verified offline. |
 
 ---

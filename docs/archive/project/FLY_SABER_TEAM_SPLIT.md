@@ -1,6 +1,6 @@
 # Fly Saber: 3-Person Work Split
 
-Companion to `docs/project/FLY_SABER_HANDOFF.md`. That file is the full spec; this one says who builds what.
+Companion to `docs/archive/project/FLY_SABER_HANDOFF.md`. That file is the full spec; this one says who builds what.
 
 **Principle:** every person owns one piece of the AI/ML work plus one piece of the engineering. Nobody is "just front end" or "just infra," everyone can explain the ML to judges, and training waits never leave someone idle.
 
@@ -27,7 +27,7 @@ Companion to `docs/project/FLY_SABER_HANDOFF.md`. That file is the full spec; th
 - Multi-seed runs for every variant.
 
 ### Engineering
-- Connectome download and inspection, `docs/DATA_NOTES.md`.
+- Connectome download and inspection, `docs/reference/DATA_NOTES.md`.
 - Subgraph extraction, signs, `groups.json`, `explorer.json` metadata and cell-type descriptions.
 - HiPerGator SLURM scripts and job management.
 
@@ -79,14 +79,14 @@ Companion to `docs/project/FLY_SABER_HANDOFF.md`. That file is the full spec; th
 ### Delivers
 - Hour 4: game scene playing a map JSON with synced audio.
 - Hour 12: lesion panel working live.
-- Hour 18: figures and `results/README.md` draft.
+- Hour 18: figures and `docs/results/README.md` draft.
 - Hour 20: demo GIF.
 
 ---
 
 ## Hour 0 contracts (30 minutes, all three)
 
-Write these into `docs/PROTOCOL.md` and `docs/DATA_NOTES.md` before real code, so everyone builds against fake data in parallel:
+Write these into `docs/reference/PROTOCOL.md` and `docs/reference/DATA_NOTES.md` before real code, so everyone builds against fake data in parallel:
 
 | Contract | Owner | Consumers |
 |---|---|---|
@@ -109,7 +109,7 @@ Write these into `docs/PROTOCOL.md` and `docs/DATA_NOTES.md` before real code, s
 | 8 to 14 | PPO from BC checkpoint, all variants, multi-seed on HiPerGator | Direction scoring in curriculum, interventions over WebSocket, Versus backend, BeatSaver scraper | Lesion panel live, Versus split screen, first learning-curve plots |
 | **14** | **Tier decision (all)** | | |
 | 14 to 18 | Monitor runs, write Brain Explorer descriptions, help Person 3 with probes | Large-map curriculum training, held-out eval, deploy and domain | Lesion matrix, slider validation, interpretability probes, Brain Explorer, opto, sliders, fly's-eye view |
-| 18 to 22 | README brain and training sections | Gemini narrator handoff support, bug fixes, README data and deploy sections | Replay recording and player, Gemini narrator, `results/README.md`, UI polish, demo GIF |
+| 18 to 22 | README brain and training sections | Gemini narrator handoff support, bug fixes, README data and deploy sections | Replay recording and player, Gemini narrator, `docs/results/README.md`, UI polish, demo GIF |
 | 22 to 24 | Pitch rehearsal, Devpost, offline replay check (all) | | |
 
 ---

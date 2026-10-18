@@ -38,7 +38,7 @@ ZIPs and individual expanded files are capped at 64 MB, total expanded bytes at 
 | `frontend/src/features/songs/components/song-header.tsx` | Current song metadata |
 | `frontend/src/features/session/components/session-timeline.tsx` | Playback, seek, density, time, volume |
 
-Note `time_sec` is the instant it crosses the hit plane. Notes stay sorted and IDs are their sorted indices, matching `docs/PROTOCOL.md`. Standard community map IDs retain `{key}_{difficulty}`; other characteristics include their mode to avoid collisions.
+Note `time_sec` is the instant it crosses the hit plane. Notes stay sorted and IDs are their sorted indices, matching `docs/reference/PROTOCOL.md`. Standard community map IDs retain `{key}_{difficulty}`; other characteristics include their mode to avoid collisions.
 
 The display looks along negative Z, with the hit plane at Z = 0:
 
