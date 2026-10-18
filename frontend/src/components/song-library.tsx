@@ -5,6 +5,7 @@ import { difficultyLabel, formatTime } from '@/game/chart'
 import { searchSongs } from '@/game/songs'
 import type { SongResult } from '@/game/songs'
 import { usePlayer } from '@/game/store'
+import { LivePlay } from '@/components/live-play'
 
 export function SongLibrary() {
   const active = usePlayer((s) => s.inspectorTab === 'songs')
@@ -88,12 +89,13 @@ export function SongLibrary() {
 
   return (
     <div className="song-library">
+      <LivePlay />
       <div className="library-heading">
         <h2>Community maps</h2>
       </div>
       <p className="library-intro">
-        Browse community maps. The server fetches the chart when you load one, so the fly can play
-        its Standard difficulties.
+        Browse community maps. The server imports the chart when you load one so the fly can play
+        it; maps it cannot read play as previews, and the fly stays still.
       </p>
       <form
         className="song-search"

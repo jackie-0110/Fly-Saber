@@ -1026,3 +1026,44 @@
     width: min(280px, calc(100% - 36px));
   }
 }
+.live-play {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.brain-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #adb8be;
+  font-size: 11px;
+}
+.brain-picker select {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #2b3034;
+  color: #dce6df;
+  font:
+    12px 'DM Sans',
+    sans-serif;
+}
+.brain-picker select:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+}
+.brain-description {
+  margin-top: -4px;
+  color: #a8b7b8;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.server-song-copy {
+  padding: 12px 4px 8px;
+}
+.preview-only {
+  color: #d2c4a8;
+}
