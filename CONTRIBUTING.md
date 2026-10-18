@@ -4,6 +4,9 @@ Use a branch for each change and open a pull request into `main`. Keep PRs focus
 explain the resulting behavior, and include validation results in the PR template.
 Bug and feature forms are available under GitHub Issues.
 
+Branch with your owner prefix (`p1/`, `p2/`, `p3/`); `main` always runs the demo.
+Don't use em dashes in user-facing text or docs.
+
 ## Setup and checks
 
 Use Python 3.11 (the default in `.python-version`), uv, and Node 22 (`nvm use`).
