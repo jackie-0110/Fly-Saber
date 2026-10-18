@@ -174,9 +174,15 @@ export async function withLiveCharts(song: Song, key: string, signal: AbortSigna
     charts = await Promise.all(body.map((id: string) => loadServerChart(id, signal)))
   } catch (cause) {
     signal.throwIfAborted()
-    const reason = cause instanceof Error ? cause.message : 'the server is unavailable'
+    // The server words its refusals as "the fly cannot play this map yet: <why>"; keep the why.
+    const reason = (cause instanceof Error ? cause.message : 'the server is unavailable').replace(
+      /^the fly cannot play this map yet:\s*/i,
+      '',
+    )
     for (const chart of song.charts)
-      chart.warnings.push(`Preview only, the fly can’t play this map: ${reason}.`)
+      chart.warnings.push(
+        `Preview only, so the fly stays still. The server can’t play it: ${reason}.`,
+      )
     return song
   }
   const live = new Map(charts.map((c) => [c.difficulty.name, c]))
