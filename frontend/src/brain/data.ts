@@ -194,16 +194,38 @@ export interface MoodControl {
   min: number
   max: number
 }
+/** Several moods set at once; a preset may go past a mood slider's range (within -1..1). */
+export interface MoodPreset {
+  name: string
+  label: string
+  description: string
+  mood: Record<string, number>
+}
+export interface ControlRange {
+  min: number
+  max: number
+}
 export interface Controls {
   sections: ControlSection[]
   moods: MoodControl[]
+  presets: MoodPreset[]
+  /** Opto current a user can apply to a section. */
+  stimulation: ControlRange
+  /** Neural noise std, the "jitter" slider. */
+  noise: ControlRange
 }
 
 function isText(value: unknown, ...keys: string[]) {
   return isRecord(value) && keys.every((key) => typeof value[key] === 'string')
 }
 
-/** The lesionable sections and moods the UI offers (docs/PROTOCOL.md section 4). */
+const isRange = (value: unknown): value is ControlRange =>
+  isRecord(value) &&
+  Number.isFinite(value.min) &&
+  Number.isFinite(value.max) &&
+  (value.min as number) <= (value.max as number)
+
+/** The sections, moods, presets and ranges the UI offers (docs/PROTOCOL.md section 4). */
 export function parseControls(raw: unknown): Controls {
   if (
     !isRecord(raw) ||
@@ -220,10 +242,33 @@ export function parseControls(raw: unknown): Controls {
         Number.isFinite(m.max) &&
         m.min <= 0 &&
         m.max >= 0,
-    )
+    ) ||
+    !isRange(raw.stimulation) ||
+    !isRange(raw.noise)
   )
     throw new Error('Unsupported brain controls. Expected controls schema version 1.')
-  return { sections: raw.sections, moods: raw.moods } as Controls
+  const moods = new Set((raw.moods as MoodControl[]).map((m) => m.name))
+  // Presets are optional in the export; one naming an unknown mood is a bad export.
+  const presets = Array.isArray(raw.presets) ? raw.presets : []
+  if (
+    !presets.every(
+      (p) =>
+        isText(p, 'name', 'label', 'description') &&
+        isRecord(p.mood) &&
+        Object.entries(p.mood).every(
+          ([name, level]) =>
+            moods.has(name) && typeof level === 'number' && level >= -1 && level <= 1,
+        ),
+    )
+  )
+    throw new Error('Unsupported brain controls: a mood preset names an unknown mood.')
+  return {
+    sections: raw.sections,
+    moods: raw.moods,
+    presets,
+    stimulation: { min: raw.stimulation.min, max: raw.stimulation.max },
+    noise: { min: raw.noise.min, max: raw.noise.max },
+  } as Controls
 }
 
 async function fetchJson(file: string, signal: AbortSignal): Promise<unknown> {

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { describeControls, useBrainControls } from '@/game/controls-state'
+import { describeControls, useBrainControls, useControlsConfigState } from '@/game/controls-state'
 import { difficultyLabel } from '@/game/chart'
 import { liveMapId, usePlayer } from '@/game/store'
 import { useSession } from '@/game/session'
@@ -15,7 +15,8 @@ export function SessionOverview() {
   const error = useSession((s) => s.error)
   const score = useSession((s) => s.score)
   const controls = useBrainControls((s) => s.controls)
-  const interventions = describeControls(controls)
+  const { config } = useControlsConfigState()
+  const interventions = describeControls(controls, config)
   const idle = status === 'idle'
 
   return (

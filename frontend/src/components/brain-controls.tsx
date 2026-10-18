@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { create } from 'zustand'
 import { RotateCcw } from 'lucide-react'
-import { AROUSAL, LOOMING, useBrainControls } from '@/game/controls-state'
+import { AROUSAL, LOOMING, useBrainControls, useControlsConfigState } from '@/game/controls-state'
 import { Button } from '@/components/ui/button'
-import { loadControls } from '@/brain/data'
 import type { Controls } from '@/brain/data'
 import { isUntouched, noControls } from '@/game/interventions'
 import { useSession } from '@/game/session'
@@ -20,24 +18,8 @@ const SLIDER_SETTLE_MS = 250
 // Every mood range in controls.json is a multiple of this, so the slider can land on 0.
 const MOOD_STEP = 0.05
 
-// controls.json, loaded once and shared by both halves of the controls.
-const useControlsConfig = create<{ config: Controls | null; failed: boolean }>(() => ({
-  config: null,
-  failed: false,
-}))
-let configRequest: Promise<void> | null = null
-function requestConfig() {
-  configRequest ??= loadControls(new AbortController().signal)
-    .then((config) => useControlsConfig.setState({ config, failed: false }))
-    .catch(() => {
-      configRequest = null
-      useControlsConfig.setState({ failed: true })
-    })
-}
-
 function useControlsState() {
-  const { config, failed } = useControlsConfig()
-  useEffect(requestConfig, [])
+  const { config, failed } = useControlsConfigState()
   const controls = useBrainControls((s) => s.controls)
   const change = useBrainControls((s) => s.change)
   const brain = usePlayer((s) => s.brain)
