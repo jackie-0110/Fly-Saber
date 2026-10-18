@@ -119,7 +119,8 @@ test('live unsigned eye pixels fill both mosaics and inset, survive pause and cl
   await page.getByRole('button', { name: 'Blindfold left eye', exact: true }).click()
   await expect(left.locator('polygon').first()).toHaveAttribute('fill', 'rgb(128, 128, 128)')
   await expect(
-    compact
+    page
+      .locator('.eye-toggles')
       .getByRole('img', { name: 'Right eye: 3 live facets', exact: true })
       .locator('polygon')
       .first(),
