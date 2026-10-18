@@ -2,6 +2,8 @@ import { decodeActivity } from './activity.ts'
 import type { ActivityFrame } from './activity.ts'
 import { flyMotion } from './fly-motion.ts'
 import type { SaberAction } from './fly-motion.ts'
+import { interventionsMessage, isUntouched, noControls } from './interventions.ts'
+import type { BrainControls } from './interventions.ts'
 
 export interface Score {
   score: number
@@ -16,6 +18,8 @@ export type SessionStatus =
 export interface SessionSnapshot {
   status: SessionStatus
   error: string
+  /** A rejected message once the session is ready; the session keeps running. */
+  controlsError: string
   score: Score | null
   sabers: SaberAction[]
   removed: ReadonlySet<number>
@@ -24,6 +28,7 @@ export interface SessionSnapshot {
 export const emptySession: SessionSnapshot = {
   status: 'idle',
   error: '',
+  controlsError: '',
   score: null,
   sabers: [],
   removed: new Set(),
@@ -67,6 +72,7 @@ export class SessionClient {
   private started = false
   private activitySizes = { neurons: 0, types: 0 }
   private activitySteps = new Map<number, number>()
+  private controls = noControls
   private readonly options: ClientOptions
 
   constructor(options: ClientOptions) {
@@ -79,6 +85,16 @@ export class SessionClient {
   }
   private send(message: object) {
     if (this.socket?.readyState === 1) this.socket.send(JSON.stringify(message))
+  }
+  private sendControls() {
+    if (this.activitySizes.neurons > 0 && ['ready', 'playing', 'paused'].includes(this.status))
+      this.send(interventionsMessage(this.controls))
+  }
+  /** Replace the brain and eye controls now, and on every later start until changed. */
+  setInterventions(controls: BrainControls) {
+    this.controls = controls
+    this.update({ controlsError: '' })
+    this.sendControls()
   }
   private stopClock() {
     clearInterval(this.clock)
@@ -147,7 +163,9 @@ export class SessionClient {
           const message = JSON.parse(event.data)
           if (!message || typeof message !== 'object') return
           if (message.type === 'error' && typeof message.message === 'string') {
-            this.fail(`Live session: ${message.message}. Press play to retry.`)
+            if (this.status === 'connecting')
+              this.fail(`Live session: ${message.message}. Press play to retry.`)
+            else this.update({ controlsError: message.message })
           } else if (message.type === 'ready' && this.status === 'connecting') {
             if (
               message.map_id !== mapId ||
@@ -166,6 +184,7 @@ export class SessionClient {
               types: Array.isArray(message.cell_types) ? message.cell_types.length : 0,
             }
             this.update({ status: 'ready' })
+            if (!isUntouched(this.controls)) this.sendControls()
             resolve()
           } else if (message.slot === 0 && this.status === 'playing') {
             if (

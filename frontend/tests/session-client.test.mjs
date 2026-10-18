@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { emptySession, SessionClient } from '../src/game/session-client.ts'
 import { flyMotion } from '../src/game/fly-motion.ts'
+import { interventionsMessage, noControls } from '../src/game/interventions.ts'
 
 class Socket extends EventTarget {
   readyState = 0
@@ -21,6 +22,7 @@ class Socket extends EventTarget {
 }
 const score = { score: 75, combo: 3, max_combo: 3, hits: 3, misses: 1, accuracy: 0.75 }
 const ready = { type: 'ready', map_id: 'abc12_hard', slots: [{ slot: 0, brain: 'expert' }] }
+const brainReady = { ...ready, slots: [{ slot: 0, brain: 'real' }], n_neurons: 3, cell_types: ['a', 'b'] }
 const frame = { type: 'frame', slot: 0, render_state: { t: 2, step: 60, score, sabers: [{ color: 0, cell: 3, cut: 1 }] } }
 function setup() {
   const sockets = []
@@ -141,4 +143,40 @@ test('passes brain activity on while playing, in step order, and again after a s
   s.client.seek()
   socket.receiveActivity(2, 3, [2, 2])
   assert.deepEqual(s.activity.at(-1), [2, 3, [2, 2]])
+})
+
+test('brain controls go out live and again after every ready, for brains only', async (t) => {
+  const s = setup()
+  t.after(() => s.client.disconnect())
+  const lesioned = { ...noControls, lesion: ['looming_detectors'], blindLeft: true }
+  s.client.setInterventions(lesioned)
+  const pending = s.client.prepare('abc12_hard', 'real')
+  const socket = s.sockets[0]
+  socket.open(); socket.receive(brainReady); await pending
+  assert.deepEqual(socket.sent.at(-1), interventionsMessage(lesioned), 'a new start clears them on the server')
+  s.client.play()
+  const aroused = { ...lesioned, mood: { arousal: 0.2 } }
+  s.client.setInterventions(aroused)
+  assert.deepEqual(socket.sent.at(-1), interventionsMessage(aroused))
+
+  const expert = s.client.prepare('abc12_hard', 'expert')
+  s.sockets[1].open(); s.sockets[1].receive(ready); await expert
+  s.client.setInterventions(lesioned)
+  assert.equal(s.sockets[1].sent.some((m) => m.type === 'set_interventions'), false, 'the expert has no brain')
+})
+
+test('a server error after ready is shown without ending the session', async (t) => {
+  const s = setup()
+  t.after(() => s.client.disconnect())
+  const pending = s.client.prepare('abc12_hard', 'real')
+  const socket = s.sockets[0]
+  socket.open(); socket.receive(brainReady); await pending; s.client.play()
+  socket.receive({ type: 'error', message: 'unknown group' })
+  assert.equal(s.state.status, 'playing')
+  assert.match(s.state.controlsError, /unknown group/)
+  assert.equal(s.failures(), 0)
+  socket.receive(frame)
+  assert.deepEqual(s.state.score, score)
+  s.client.setInterventions(noControls)
+  assert.equal(s.state.controlsError, '')
 })

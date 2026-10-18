@@ -9,7 +9,7 @@ What stands between us and the MVP: the fly playing Fly Saber on stage and at a 
 The stage demo, on the public URL. The MVP is done when all four hold there:
 
 1. The trained fly plays a song in the browser, audio in sync, score in the HUD. **Works locally**; public host pending (D).
-2. A judge lesions the looming detectors or blindfolds the fly mid-song, and it visibly misses. **Server done**, UI missing (C1), looming lesion measured (C6).
+2. A judge lesions the looming detectors or blindfolds the fly mid-song, and it visibly misses. **Works locally**: server (#36, #38) and panel (C1, #64); looming lesion measured (C6).
 3. The 3D neuron cloud lights up with live activity. **Not started** (C3).
 4. Anyone picks any BeatSaver map and the fly plays it, including maps it has never seen. **Works locally**; brain picker UI pending (C5).
 
@@ -44,7 +44,7 @@ Front-end work is split: Person 2 builds the client plumbing (session client and
 
 ## Milestone C: the must-ship demo features
 
-- [ ] **C1. Lesion Mode UI** (Person 3). `SessionClient` sends `set_interventions` (PROTOCOL.md section 3; payload in section 4) and treats its `error` as non-fatal. Panel: lesion looming detectors, blind left/right eye, an arousal slider (mood rides the same message). `frontend/public/data/brain/controls.json` lists the groups and moods.
+- [x] **C1. Lesion Mode UI** (#64). A Brain controls row under the readouts: lesion looming detectors, blindfold either eye, arousal (range from `controls.json`), reset. Controls carry over to the next song; a rejected change is shown without ending the session. Blindfolding both eyes mid-song took the real brain from 19 hits in 15 s to 0.
 - [ ] **C3. Live neuron activity.** Pin the binary layout in PROTOCOL.md section 6 (Person 1); stream kinds 1 and 2 (Person 2); decode them and light the neuron cloud (Person 3). Neuron order matches `neurons.json` and `ready.cell_types`. Must hold 30 Hz on the public host (F2). Server side and client plumbing in #50: kinds 1 and 2 stream as int8 change from rest, layout pinned in PROTOCOL.md section 6, `SessionClient` `onActivity`. Left (Person 3): pass `onActivity` from `store.ts` and light `brain-scene.tsx`.
 - [ ] **C5. The fly plays any BeatSaver map.** Server and store done: `POST /api/community/{key}` fetches a map's charts on demand and the browser plays the server's charts (#46); the normalizer reads v4 maps and play defaults to the `real` brain (p2/beatsaver-play). Left: a brain picker in the Community view (Person 3); an e2e test that a Community map starts a session with `real`, since #44 removed the live-session specs.
 - [x] **C6. Looming lesion measurably lowers hit rate.** `real` (bc_950), held out, 64 × 10 s windows, after #36: untouched 32.9%, looming detectors lesioned 14.1%. Not selective: eye_left 7.1%, eye_right 7.6%, motion_detectors 2.1%, LC_all 6.1%, giant_fiber 16.8%; arousal −1 gives 4.8%, +1 gives 5.4%, so the arousal slider hurts in both directions.

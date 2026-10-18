@@ -1347,6 +1347,52 @@
   font-weight: 600;
 }
 
+/* ---------- Brain controls: lesion, blindfold, mood, live ---------- */
+
+.brain-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.brain-controls h2 {
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 650;
+  line-height: 1.2;
+}
+.brain-controls-status {
+  flex-basis: 100%;
+  color: var(--signal-red);
+  font-size: var(--text-sm);
+}
+.brain-controls-status:empty {
+  display: none;
+}
+.brain-controls [aria-pressed='true'] {
+  border-color: var(--signal-red);
+  background: var(--signal-red);
+  color: var(--sheet);
+}
+.mood-slider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+.mood-slider .mood-end {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+.mood-slider input {
+  width: 84px;
+  accent-color: var(--ink);
+}
+
 /* ---------- Signal path pieces: eye lattice, saber grid, status popover ---------- */
 
 .eye-lattice {

@@ -6,6 +6,7 @@ import {
   filterNeuronIndices,
   neuronConnectionStats,
   parseBrainData,
+  parseControls,
 } from '../src/brain/data.ts'
 
 const asset = JSON.parse(
@@ -157,4 +158,14 @@ test('rejects mismatched neuron order and malformed or incomplete edge exports',
   assert.throws(() => parse({ ...edges, weight: [0.5, ...edges.weight.slice(1)] }), /synapse/)
   assert.throws(() => parse({ ...edges, sign: [2, ...edges.sign.slice(1)] }), /sign/)
   assert.throws(() => parse({ ...edges, n_synapses: edges.n_synapses + 1 }), /total synapse/)
+})
+
+test('controls.json gives the lesionable sections and each mood with its range', () => {
+  const raw = JSON.parse(readFileSync(new URL('../public/data/brain/controls.json', import.meta.url)))
+  const controls = parseControls(raw)
+  assert.ok(controls.sections.some((s) => s.group === 'looming_detectors'))
+  const arousal = controls.moods.find((m) => m.name === 'arousal')
+  assert.ok(arousal.min < 0 && arousal.max > 0)
+  const inverted = { ...raw, moods: [{ ...raw.moods[0], min: 1, max: -1 }] }
+  assert.throws(() => parseControls(inverted), /controls/)
 })
