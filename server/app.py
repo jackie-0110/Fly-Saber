@@ -60,17 +60,13 @@ def serving_brains(modes: list[Brain], bundles_dir: Path) -> list[LiveBrain]:
     return brains
 
 
-def warm_up(catalog: Catalog, brains: list[LiveBrain]) -> None:
-    """Compile every player's sim for every map size now; a first session would stall the
-    event loop."""
-    for summary in catalog.list_maps():
-        map_data = catalog.get_map(summary.map_id)
-        if map_data is None:
-            continue
-        for brain in brains:
-            sim = brain.make_sim(map_data, 0)
-            sim.reset(0.0)
-            sim.step()
+def warm_up(brains: list[LiveBrain]) -> None:
+    """Compile every player's sim now. Every map pads to the same size, so no session
+    compiles; one would freeze the fly mid-song."""
+    for brain in brains:
+        sim = brain.make_sim({"notes": []}, 0)
+        sim.reset(0.0)
+        sim.step()
 
 
 def create_app(
@@ -87,7 +83,7 @@ def create_app(
     brains = brains or [LiveBrain(EXPERT, expert_sims())]
     by_id = {b.info.id: b for b in brains}
     catalog = Catalog(maps_dir, community)
-    warm_up(catalog, brains)
+    warm_up(brains)
 
     @app.get("/api/games")
     def games() -> list[Game]:

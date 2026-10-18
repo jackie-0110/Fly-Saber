@@ -43,6 +43,9 @@ EVENT_KINDS: dict[int, Literal["hit", "miss", "bad_cut", "bomb"]] = {
 }
 # Past any song: the episode ends on its own after the last note.
 OPEN_END_SEC = 1.0e6
+# Every map pads to this one size, so the step compiles once, at startup; a new size would
+# compile on the first frame, after the audio has started. Step time does not grow with it.
+MAX_NOTES = 4096
 # Rate change from rest that maps to int8 +-127 (PROTOCOL.md section 6). Live rates move by
 # hundredths around ~0.7, so a full 0-to-rate_max scale would show a frozen brain.
 ACTIVITY_SCALE = 0.25
@@ -54,7 +57,7 @@ def no_activity(rates: jax.Array) -> tuple[jax.Array, jax.Array]:
 
 
 class LiveSaber:
-    """Sim factory for one player; the env step is compiled once per padded map size."""
+    """Sim factory for one player; the env step compiles once, for `MAX_NOTES` notes."""
 
     def __init__(
         self,
@@ -171,10 +174,7 @@ class EnvSaberSim:
     def __init__(self, live: LiveSaber, map_data: dict[str, Any], seed: int) -> None:
         self.live = live
         self.seed = seed
-        notes = map_data["notes"]
-        # Powers of two bound how many map sizes the step function compiles for.
-        padded = max(live.env.cfg.max_visible_notes, 1 << max(len(notes) - 1, 0).bit_length())
-        self.notes = note_arrays(notes, padded)
+        self.notes = note_arrays(map_data["notes"], MAX_NOTES)
         self.state: SaberState | None = None
         self.obs: jax.Array | None = None
         self.carry = live.carry
