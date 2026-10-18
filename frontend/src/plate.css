@@ -1164,10 +1164,6 @@
   color: var(--ink-2);
   font-size: var(--text-xs);
 }
-.brain-color-legend > span:last-child {
-  margin-left: auto;
-  color: var(--ink-3);
-}
 .type-swatch {
   width: 8px;
   height: 8px;

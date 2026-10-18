@@ -51,9 +51,7 @@ function ActivityNote() {
     <p className="brain-backend-note">
       <span className={`status-dot ${live ? 'green' : 'amber'}`} />
       <span>
-        {live
-          ? 'Live: brightness is each neuron’s firing change from rest.'
-          : 'Firing activity appears while a brain plays a song.'}
+        {live ? 'Live: activity is change from rest.' : 'Activity shows during live play.'}
       </span>
     </p>
   )
@@ -279,7 +277,7 @@ export function BrainPreview() {
             <PanelLetter>b</PanelLetter>
             <div>
               <h2>Fly brain neurons</h2>
-              <p>MaleCNS v1.0 subgraph · soma positions, µm</p>
+              <p>MaleCNS v1.0 subgraph</p>
             </div>
           </div>
           {error ? (
@@ -584,8 +582,7 @@ export function BrainPreview() {
                     : cellTypeColor(asset.type[selected]),
               }}
             />
-            <span>Color identifies cell type</span>
-            <span>Click a point to inspect</span>
+            <span>Color: cell type</span>
           </div>
           <div className="brain-connection-summary" role="status">
             <span>
@@ -621,9 +618,9 @@ export function BrainPreview() {
             {edges && showConnections && selected === null && (
               <span>
                 {cameraMoving && detail === 'all' && edgeIndices.length > MOVING_EDGE_LIMIT
-                  ? 'Movement preview; full detail returns when still.'
+                  ? 'Movement preview.'
                   : detail === 'sample' && filteredEdges.length > SAMPLE_EDGE_LIMIT
-                    ? 'Evenly spaced sample; choose All to draw every connection.'
+                    ? 'Evenly spaced sample.'
                     : 'Select a neuron to trace its connections.'}
               </span>
             )}

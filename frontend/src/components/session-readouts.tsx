@@ -28,10 +28,12 @@ const SABERS = [
   { color: 1, name: 'Right', tone: 'green' },
 ] as const
 
+const plural = (count: number, one: string, many = `${one}s`) =>
+  `${count} ${count === 1 ? one : many}`
+
 export function SessionReadouts() {
   const score = useSession((s) => s.score)
   const sabers = useSession((s) => s.sabers)
-  const lastEvent = useSession((s) => s.lastEvent)
   const status = useSession((s) => s.status)
   return (
     <section className="session-readouts" aria-label="Session readouts">
@@ -71,11 +73,11 @@ export function SessionReadouts() {
             {status === 'ended' ? 'Session complete' : 'Awaiting simulation'}
           </p>
         )}
-        <span className="readout-caption">
-          {score
-            ? `${score.hits} hits · ${score.misses} misses${lastEvent ? ` · ${lastEvent.kind.replace('_', ' ')} #${lastEvent.note_id}` : ''}`
-            : 'Saber targets and cuts appear here during live play.'}
-        </span>
+        {score && (
+          <span className="readout-caption">
+            {plural(score.hits, 'hit')} · {plural(score.misses, 'miss', 'misses')}
+          </span>
+        )}
       </div>
       <div className="readout-block">
         <h2>Performance</h2>
