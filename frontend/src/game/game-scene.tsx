@@ -19,6 +19,7 @@ import { transport, usePlayer } from './store'
 import { FlyModel } from './fly-model'
 import { flyMotion, previewMotion } from './fly-motion'
 import { useSession } from './session'
+import { useScenePalette } from '@/lib/theme'
 
 export type GameCameraAction =
   'reset' | 'overview' | 'player' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
@@ -149,6 +150,7 @@ function Navigation({ onNavigateReady }: Pick<SceneProps, 'onNavigateReady'>) {
 }
 
 function Track() {
+  const palette = useScenePalette()
   const lines = useMemo(() => {
     const vertices: number[] = []
     for (let z = -80; z <= 8; z += 4) vertices.push(-3.2, -0.18, z, 3.2, -0.18, z)
@@ -159,19 +161,19 @@ function Track() {
     <group>
       <mesh position={[0, -0.31, -32]}>
         <boxGeometry args={[7, 0.22, 88]} />
-        <meshStandardMaterial color="#f4f8f6" roughness={0.9} metalness={0} />
+        <meshStandardMaterial color={palette.floor} roughness={0.9} metalness={0} />
       </mesh>
       <lineSegments>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[lines, 3]} />
         </bufferGeometry>
-        <lineBasicMaterial color="#6a7474" transparent opacity={0.28} />
+        <lineBasicMaterial color={palette.floorLine} transparent opacity={0.28} />
       </lineSegments>
       {[-1, 1].map((side) => (
         <group key={side}>
           <mesh position={[side * 3.4, -0.12, -32]}>
             <boxGeometry args={[0.12, 0.18, 88]} />
-            <meshStandardMaterial color="#a5ada9" metalness={0.1} roughness={0.6} />
+            <meshStandardMaterial color={palette.rail} metalness={0.1} roughness={0.6} />
           </mesh>
           <mesh position={[side * 3.4, -0.015, -32]}>
             <boxGeometry args={[0.035, 0.015, 88]} />
@@ -181,7 +183,7 @@ function Track() {
             <group key={z} position={[side * 5.2, 0, z]}>
               <mesh position={[0, 3.2, 0]}>
                 <boxGeometry args={[0.35, 7, 0.35]} />
-                <meshStandardMaterial color="#d0d6d3" roughness={0.8} metalness={0} />
+                <meshStandardMaterial color={palette.lane} roughness={0.8} metalness={0} />
               </mesh>
               <mesh position={[side * -0.19, 3.2, 0.19]}>
                 <boxGeometry args={[0.04, 4.7, 0.015]} />
@@ -193,11 +195,11 @@ function Track() {
       ))}
       <mesh position={[0, -0.16, 0]}>
         <boxGeometry args={[6.5, 0.03, 0.08]} />
-        <meshBasicMaterial color="#162021" />
+        <meshBasicMaterial color={palette.selection} />
       </mesh>
       <mesh position={[0, -0.42, -20]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#dfe4e2" roughness={1} />
+        <meshStandardMaterial color={palette.track} roughness={1} />
       </mesh>
     </group>
   )
@@ -376,6 +378,7 @@ function SceneLifecycle({ onFailure }: Pick<SceneProps, 'onFailure'>) {
 
 export default function GameScene(props: SceneProps) {
   const playing = usePlayer((s) => s.playing)
+  const palette = useScenePalette()
   return (
     <Canvas
       frameloop={playing ? 'always' : 'demand'}
@@ -387,12 +390,12 @@ export default function GameScene(props: SceneProps) {
       }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <color attach="background" args={['#e9eeec']} />
-      <fog attach="fog" args={['#e9eeec', 30, 110]} />
+      <color attach="background" args={[palette.field]} />
+      <fog attach="fog" args={[palette.field, 30, 110]} />
       <ambientLight intensity={0.7} />
-      <hemisphereLight args={['#ffffff', '#bec6c2', 1.3]} />
+      <hemisphereLight args={[palette.hemiSky, palette.hemiGround, 1.3]} />
       <directionalLight position={[5, 12, 10]} intensity={1.8} color="#ffffff" />
-      <directionalLight position={[-8, 5, -10]} intensity={0.6} color="#e6eeeb" />
+      <directionalLight position={[-8, 5, -10]} intensity={0.6} color={palette.fill} />
       <SceneLifecycle onFailure={props.onFailure} />
       <Navigation onNavigateReady={props.onNavigateReady} />
       <Track />

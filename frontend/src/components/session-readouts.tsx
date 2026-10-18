@@ -1,25 +1,7 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 import type { SaberAction } from '@/game/fly-motion'
+import { BrainStage, EyeToggles } from '@/components/brain-controls'
 import { useSession } from '@/game/session'
-
-// Ghost hex lattice for the two compound eyes. Shape only: the live stream fills the
-// brain's 437 eye columns (docs/PROTOCOL.md, section 2).
-const OMMATIDIA = (() => {
-  const points: [number, number][] = []
-  const spacing = 4.2
-  const rowHeight = spacing * 0.866
-  for (const cx of [42, 118]) {
-    for (let row = -11; row <= 11; row++) {
-      const y = row * rowHeight
-      const offset = row % 2 ? spacing / 2 : 0
-      for (let col = -9; col <= 9; col++) {
-        const x = col * spacing + offset
-        if ((x / 30) ** 2 + (y / 37) ** 2 <= 1) points.push([cx + x, 45 + y])
-      }
-    }
-  }
-  return points
-})()
 
 // Cut directions as the protocol numbers them: 0 up, 1 down, 2 left, 3 right.
 const CUTS = [ArrowUp, ArrowDown, ArrowLeft, ArrowRight]
@@ -39,21 +21,13 @@ export function SessionReadouts() {
     <section className="session-readouts" aria-label="Session readouts">
       <div className="readout-block">
         <h2>Visual input</h2>
-        <svg
-          className="eye-lattice"
-          viewBox="0 0 160 90"
-          preserveAspectRatio="xMinYMid meet"
-          aria-hidden="true"
-        >
-          {OMMATIDIA.map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" />
-          ))}
-        </svg>
+        <EyeToggles />
         <p className="readout-status">
           <span className="status-dot" />
           Awaiting fly's-eye stream
         </p>
       </div>
+      <BrainStage />
       <div className="readout-block">
         <h2>Motor output</h2>
         {sabers.length ? (

@@ -1,52 +1,105 @@
 import { useEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
+import { RotateCcw } from 'lucide-react'
+import { AROUSAL, LOOMING, useBrainControls } from '@/game/controls-state'
 import { Button } from '@/components/ui/button'
 import { loadControls } from '@/brain/data'
 import type { Controls } from '@/brain/data'
 import { isUntouched, noControls } from '@/game/interventions'
-import type { BrainControls } from '@/game/interventions'
 import { useSession } from '@/game/session'
-import { liveSession, usePlayer } from '@/game/store'
+import { usePlayer } from '@/game/store'
 
-const LOOMING = 'looming_detectors'
-const AROUSAL = 'arousal'
+/*
+ * Brain controls sit in the signal path where they act: the blindfolds on the two eyes in
+ * Visual input, the lesion and mood in the Brain stage between input and motor output.
+ */
+
 // Each change re-centres the brain's readout on the server, a few frames' work, so a
 // dragged slider sends once it settles instead of on every step.
 const SLIDER_SETTLE_MS = 250
 // Every mood range in controls.json is a multiple of this, so the slider can land on 0.
 const MOOD_STEP = 0.05
 
-const useBrainControls = create<{
-  controls: BrainControls
-  change: (next: Partial<BrainControls>) => void
-}>((set, get) => ({
-  controls: noControls,
-  change: (next) => {
-    const controls = { ...get().controls, ...next }
-    set({ controls })
-    liveSession.setInterventions(controls)
-  },
+// controls.json, loaded once and shared by both halves of the controls.
+const useControlsConfig = create<{ config: Controls | null; failed: boolean }>(() => ({
+  config: null,
+  failed: false,
 }))
+let configRequest: Promise<void> | null = null
+function requestConfig() {
+  configRequest ??= loadControls(new AbortController().signal)
+    .then((config) => useControlsConfig.setState({ config, failed: false }))
+    .catch(() => {
+      configRequest = null
+      useControlsConfig.setState({ failed: true })
+    })
+}
 
-export function BrainControlsPanel() {
-  const [config, setConfig] = useState<Controls | null>(null)
-  const [failed, setFailed] = useState(false)
-  useEffect(() => {
-    const controller = new AbortController()
-    loadControls(controller.signal)
-      .then(setConfig)
-      .catch(() => {
-        if (!controller.signal.aborted) setFailed(true)
-      })
-    return () => controller.abort()
-  }, [])
+function useControlsState() {
+  const { config, failed } = useControlsConfig()
+  useEffect(requestConfig, [])
   const controls = useBrainControls((s) => s.controls)
   const change = useBrainControls((s) => s.change)
   const brain = usePlayer((s) => s.brain)
+  return { config, failed, controls, change, brain, disabled: !config || brain === 'expert' }
+}
+
+// Ghost hex lattice for one compound eye, centred in an 80 × 90 box. Shape only: the live
+// stream fills the brain's 437 eye columns (docs/PROTOCOL.md, section 2).
+const OMMATIDIA = (() => {
+  const points: [number, number][] = []
+  const spacing = 4.2
+  const rowHeight = spacing * 0.866
+  for (let row = -11; row <= 11; row++) {
+    const y = row * rowHeight
+    const offset = row % 2 ? spacing / 2 : 0
+    for (let col = -9; col <= 9; col++) {
+      const x = col * spacing + offset
+      if ((x / 30) ** 2 + (y / 37) ** 2 <= 1) points.push([40 + x, 45 + y])
+    }
+  }
+  return points
+})()
+
+/** The fly's two eyes; pressing one blindfolds it. */
+export function EyeToggles() {
+  const { controls, change, disabled } = useControlsState()
+  const eyes = [
+    { side: 'left', label: 'L', blind: controls.blindLeft, key: 'blindLeft' },
+    { side: 'right', label: 'R', blind: controls.blindRight, key: 'blindRight' },
+  ] as const
+  return (
+    <div className="eye-toggles">
+      {eyes.map((eye) => (
+        <button
+          key={eye.side}
+          type="button"
+          className="eye-toggle"
+          aria-label={`Blindfold ${eye.side} eye`}
+          aria-pressed={eye.blind}
+          disabled={disabled}
+          title={eye.blind ? `Remove the ${eye.side} blindfold` : `Blindfold the ${eye.side} eye`}
+          onClick={() => change({ [eye.key]: !eye.blind })}
+        >
+          <svg viewBox="0 0 80 90" aria-hidden="true">
+            {OMMATIDIA.map(([x, y]) => (
+              <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" />
+            ))}
+            {eye.blind && <path className="eye-blindfold" d="M6 52 L74 30" />}
+          </svg>
+          <span>{eye.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The Brain stage of the signal path: lesions and mood, between eyes and sabers. */
+export function BrainStage() {
+  const { config, failed, controls, change, brain, disabled } = useControlsState()
   const controlsError = useSession((s) => s.controlsError)
   const looming = config?.sections.find((s) => s.group === LOOMING)
   const arousal = config?.moods.find((m) => m.name === AROUSAL)
-  const disabled = !config || brain === 'expert'
   const lesioned = controls.lesion.includes(LOOMING)
 
   const message = failed
@@ -58,11 +111,24 @@ export function BrainControlsPanel() {
         : ''
 
   return (
-    <section className="brain-controls" aria-label="Brain controls">
-      <h2>Brain controls</h2>
-      <Button
-        variant="outline"
-        size="xs"
+    <section className="readout-block brain-stage-block" aria-label="Brain controls">
+      <div className="brain-stage-heading">
+        <h2>Brain</h2>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="brain-reset"
+          title="Controls carry over to the next song until reset."
+          disabled={disabled || isUntouched(controls)}
+          onClick={() => change(noControls)}
+        >
+          <RotateCcw aria-hidden="true" />
+          Reset controls
+        </Button>
+      </div>
+      <button
+        type="button"
+        className="lesion-toggle"
         aria-label="Lesion looming detectors"
         aria-pressed={lesioned}
         disabled={disabled || !looming}
@@ -75,28 +141,9 @@ export function BrainControlsPanel() {
           })
         }
       >
-        Lesion looming
-      </Button>
-      <Button
-        variant="outline"
-        size="xs"
-        aria-label="Blindfold left eye"
-        aria-pressed={controls.blindLeft}
-        disabled={disabled}
-        onClick={() => change({ blindLeft: !controls.blindLeft })}
-      >
-        Blind left
-      </Button>
-      <Button
-        variant="outline"
-        size="xs"
-        aria-label="Blindfold right eye"
-        aria-pressed={controls.blindRight}
-        disabled={disabled}
-        onClick={() => change({ blindRight: !controls.blindRight })}
-      >
-        Blind right
-      </Button>
+        <span className="lesion-box" aria-hidden="true" />
+        Lesion looming detectors
+      </button>
       {arousal && (
         <MoodSlider
           mood={arousal}
@@ -107,15 +154,6 @@ export function BrainControlsPanel() {
           }
         />
       )}
-      <Button
-        variant="ghost"
-        size="xs"
-        title="Controls carry over to the next song until reset."
-        disabled={disabled || isUntouched(controls)}
-        onClick={() => change(noControls)}
-      >
-        Reset controls
-      </Button>
       <p className="brain-controls-status" role="status">
         {message}
       </p>
@@ -139,8 +177,7 @@ function MoodSlider({
   useEffect(() => () => clearTimeout(timer.current), [])
   return (
     <label className="mood-slider" title={mood.description}>
-      <span>{mood.label}</span>
-      <span className="mood-end">{mood.low_label}</span>
+      <span className="mood-name">{mood.label}</span>
       <input
         type="range"
         min={mood.min}
@@ -160,7 +197,10 @@ function MoodSlider({
           }, SLIDER_SETTLE_MS)
         }}
       />
-      <span className="mood-end">{mood.high_label}</span>
+      <span className="mood-ends">
+        <span>{mood.low_label}</span>
+        <span>{mood.high_label}</span>
+      </span>
     </label>
   )
 }
