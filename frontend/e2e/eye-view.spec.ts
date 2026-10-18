@@ -80,7 +80,8 @@ test('live unsigned eye pixels fill both mosaics and inset, survive pause and cl
           JSON.stringify({
             type: 'ready',
             map_id: map.map_id,
-            slots: [{ slot: 0, brain: 'real' }],
+            // One slot per brain asked for: the page may add an untouched twin in slot 1.
+            slots: message.brains.map((brain: string, slot: number) => ({ slot, brain })),
             step_hz: 30,
             n_neurons: 3,
             cell_types: ['a'],

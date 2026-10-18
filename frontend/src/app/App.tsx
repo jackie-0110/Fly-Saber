@@ -1,4 +1,8 @@
 import { BackendStatus } from '@/features/session/components/backend-status'
+import {
+  BrainControlsButton,
+  BrainControlsPanel,
+} from '@/features/brain/components/brain-controls-panel'
 import { BrainPreview } from '@/features/brain/components/brain-preview'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/features/game/components/game-preview'
@@ -20,6 +24,7 @@ export default function App() {
         </a>
         <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
+          <BrainControlsButton />
           <BackendStatus />
           <ThemeToggle />
         </div>
@@ -37,6 +42,7 @@ export default function App() {
           <BrainPreview />
         </aside>
       </main>
+      <BrainControlsPanel />
     </div>
   )
 }

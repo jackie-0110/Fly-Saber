@@ -1,4 +1,4 @@
-"""Export neurons, full directed wiring, groups, eye columns, and UI controls for the browser.
+"""Export neurons, wiring, groups, eye columns, UI controls and Explorer text for the browser.
 
 Owner: Person 1. Usage: uv run python scripts/web/export_web.py
 For the committed trained model: uv run python scripts/web/export_web.py --bundle bundles/real_fast
@@ -11,9 +11,17 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
 from brain.config import SubgraphConfig, load_config
-from brain.connectome.metadata import web_columns, web_controls, web_edges, web_neurons
+from brain.connectome.metadata import (
+    cell_types,
+    web_columns,
+    web_controls,
+    web_edges,
+    web_explorer,
+    web_neurons,
+)
 from brain.model.brain import eye_inputs
 from brain.model.controls import load_controls
 from fly_saber.eye import EyeConfig
@@ -39,6 +47,9 @@ def export_web(sub: Path, out: Path = OUT_DIR) -> None:
     groups = json.loads((sub / "groups.json").read_text())
     ui = web_controls(load_controls(), groups)
     (out / "controls.json").write_text(json.dumps(ui, indent=1))
+    entries = yaml.safe_load(Path("configs/cell_types.yaml").read_text())["entries"]
+    explorer = web_explorer(cell_types(neurons), entries)
+    (out / "explorer.json").write_text(json.dumps(explorer, indent=1))
     for f in sorted(out.iterdir()):
         print(f"wrote {f} ({f.stat().st_size / 1e6:.2f} MB)")
 

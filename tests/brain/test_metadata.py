@@ -1,9 +1,43 @@
 """Front end neuron export."""
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import pytest
+import yaml
 
-from brain.connectome.metadata import web_neurons
+from brain.connectome.metadata import web_explorer, web_neurons
+
+
+def test_web_explorer_describes_subtypes_and_rejects_unknown_types() -> None:
+    entries = [
+        {"name": "T4", "types": ["T4a", "T4b"], "description": "Direction\n  selective."},
+        {"name": "Giant fiber", "types": ["DNp01"], "description": "Escape."},
+    ]
+    out = web_explorer(["DNp01", "T4a", "T4b", "Tm3"], entries)
+    assert out["descriptions"][0] == {
+        "name": "T4",
+        "types": ["T4a", "T4b"],
+        "description": "Direction selective.",
+    }
+    with pytest.raises(ValueError, match="not in the subgraph"):
+        web_explorer(["DNp01"], entries)
+    with pytest.raises(ValueError, match="described twice"):
+        web_explorer(["DNp01", "T4a", "T4b"], [*entries, {**entries[1], "name": "GF"}])
+
+
+def test_committed_explorer_matches_config_and_covers_the_spec_types() -> None:
+    """The exported explorer.json is current, and has the 15 types spec 5.5 names."""
+    types = json.loads(Path("frontend/public/data/brain/neurons.json").read_text())["cell_types"]
+    entries = yaml.safe_load(Path("configs/cell_types.yaml").read_text())["entries"]
+    committed = json.loads(Path("frontend/public/data/brain/explorer.json").read_text())
+    assert committed == web_explorer(types, entries)
+    described = {t for d in committed["descriptions"] for t in d["types"]}
+    spec = ["T4a", "T5a", "L1", "L2", "Mi1", "Tm3", "LPLC2", "LC4", "LC11", "HSE", "VS"]
+    spec += ["DNp01", "R1-R6", "R7p", "R8p"]
+    assert set(spec) <= described
 
 
 def test_web_neurons() -> None:

@@ -1,0 +1,181 @@
+{
+ "schema_version": 1,
+ "descriptions": [
+  {
+   "name": "R1 to R6",
+   "types": [
+    "R1-R6"
+   ],
+   "description": "Outer photoreceptors of each ommatidium, broadly sensitive to green light. They carry most of the brightness signal that motion vision is built on, via the lamina neurons L1 to L3."
+  },
+  {
+   "name": "R7",
+   "types": [
+    "R7d",
+    "R7p",
+    "R7y",
+    "R7_unclear",
+    "R7R8_unclear"
+   ],
+   "description": "Inner photoreceptors sensitive to ultraviolet light, used for color vision. The pale (p) and yellow (y) subtypes carry different opsins; R7d sits in the dorsal rim and detects polarized light."
+  },
+  {
+   "name": "R8",
+   "types": [
+    "R8d",
+    "R8p",
+    "R8y",
+    "R8_unclear"
+   ],
+   "description": "Inner photoreceptors sensitive to blue or green light, paired with R7 for color vision. R8d sits in the dorsal rim and detects polarized light."
+  },
+  {
+   "name": "L1",
+   "types": [
+    "L1"
+   ],
+   "description": "Lamina monopolar neuron fed by R1 to R6. Main input to the ON pathway, which detects brightening edges and leads to T4."
+  },
+  {
+   "name": "L2",
+   "types": [
+    "L2"
+   ],
+   "description": "Lamina monopolar neuron fed by R1 to R6. Main input to the OFF pathway, which detects darkening edges and leads to T5."
+  },
+  {
+   "name": "L3",
+   "types": [
+    "L3"
+   ],
+   "description": "Lamina monopolar neuron that feeds both the ON and OFF motion pathways and color-related medulla circuits."
+  },
+  {
+   "name": "Mi1",
+   "types": [
+    "Mi1"
+   ],
+   "description": "Medulla neuron with a fast ON response. One of the main inputs to T4, where motion direction is computed from inputs offset in space and time."
+  },
+  {
+   "name": "Tm3",
+   "types": [
+    "Tm3"
+   ],
+   "description": "Medulla neuron with a fast ON response, an input to T4 alongside Mi1."
+  },
+  {
+   "name": "Mi4",
+   "types": [
+    "Mi4"
+   ],
+   "description": "Inhibitory medulla neuron with a slower ON response, an input to T4 that helps make it direction selective."
+  },
+  {
+   "name": "Mi9",
+   "types": [
+    "Mi9"
+   ],
+   "description": "Medulla neuron with an OFF response, an input to T4 that helps make it direction selective."
+  },
+  {
+   "name": "Tm1",
+   "types": [
+    "Tm1"
+   ],
+   "description": "Medulla neuron with an OFF response, one of the main inputs to T5."
+  },
+  {
+   "name": "Tm2",
+   "types": [
+    "Tm2"
+   ],
+   "description": "Medulla neuron with an OFF response, one of the main inputs to T5."
+  },
+  {
+   "name": "Tm4",
+   "types": [
+    "Tm4"
+   ],
+   "description": "Medulla neuron with an OFF response, an input to T5."
+  },
+  {
+   "name": "Tm9",
+   "types": [
+    "Tm9"
+   ],
+   "description": "Medulla neuron with a sustained OFF response, an input to T5 that helps make it direction selective."
+  },
+  {
+   "name": "T4",
+   "types": [
+    "T4a",
+    "T4b",
+    "T4c",
+    "T4d"
+   ],
+   "description": "The first direction-selective neurons for brightening (ON) edges. Each of the four subtypes prefers one direction (front to back, back to front, up, down) and sends it to its own layer of the lobula plate."
+  },
+  {
+   "name": "T5",
+   "types": [
+    "T5a",
+    "T5b",
+    "T5c",
+    "T5d"
+   ],
+   "description": "The first direction-selective neurons for darkening (OFF) edges, the OFF counterpart of T4, with the same four preferred directions."
+  },
+  {
+   "name": "HS cells",
+   "types": [
+    "HSE",
+    "HSN",
+    "HSS"
+   ],
+   "description": "Horizontal-system tangential cells. Large neurons that pool T4 and T5 across the eye to sense wide-field horizontal motion, as when the fly turns, and help stabilize its course and gaze."
+  },
+  {
+   "name": "VS cells",
+   "types": [
+    "VS"
+   ],
+   "description": "Vertical-system tangential cells. They pool vertical motion across the eye to sense the fly's own rotations, and help stabilize its course and gaze."
+  },
+  {
+   "name": "LPLC2",
+   "types": [
+    "LPLC2"
+   ],
+   "description": "Looming detector. Responds to an object expanding as it approaches on a collision course, and drives escape through the giant fiber."
+  },
+  {
+   "name": "LC4",
+   "types": [
+    "LC4"
+   ],
+   "description": "Looming detector that signals how fast an approaching object is expanding. With LPLC2 it drives the giant fiber and the timing of escape takeoffs."
+  },
+  {
+   "name": "LPLC1",
+   "types": [
+    "LPLC1"
+   ],
+   "description": "Responds to objects approaching on a collision course and is involved in collision avoidance."
+  },
+  {
+   "name": "LC11",
+   "types": [
+    "LC11"
+   ],
+   "description": "Responds to small moving objects, such as another fly, more than to large or wide-field motion."
+  },
+  {
+   "name": "Giant fiber",
+   "types": [
+    "DNp01"
+   ],
+   "description": "The giant fiber, the escape command neuron. One spike can trigger a fast takeoff jump by driving the jump muscle through a short, fast pathway."
+  }
+ ]
+}

@@ -1,5 +1,8 @@
 # Results (Person 1)
 
+The headline numbers with sources, the lesion matrix, mood validation and live control
+measurements are summarised in [SUMMARY.md](SUMMARY.md).
+
 Behavior cloning runs on HiPerGator (one NVIDIA L4 each). One folder per run:
 `bc/<variant>/<run_name>/seed<n>/` with `bc_log.json` (a row every 50 updates),
 `config.json`, and `eval_bc_<update>.json` (greedy play on held-out and training songs,

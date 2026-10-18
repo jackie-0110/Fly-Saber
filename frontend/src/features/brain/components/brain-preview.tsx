@@ -35,9 +35,12 @@ import {
   filterNeuronIndices,
   loadBrainData,
   loadBrainEdges,
+  loadExplorer,
   neuronConnectionStats,
+  topPartnerTypes,
 } from '@/features/brain/data'
-import type { BrainData, BrainEdges } from '@/features/brain/data'
+import type { BrainData, BrainEdges, CellTypeDescription, PartnerType } from '@/features/brain/data'
+import { NeuronTrace } from '@/features/brain/components/neuron-trace'
 import type { CameraAction } from '@/features/brain/brain-scene'
 import { MOVING_EDGE_LIMIT, SAMPLE_EDGE_LIMIT, sampleEdges } from '@/features/brain/rendering'
 import type { ConnectionDetail } from '@/features/brain/rendering'
@@ -91,6 +94,10 @@ function ColorLegend({ swatch }: { swatch: string }) {
   )
 }
 const number = new Intl.NumberFormat('en-US')
+const partnerText = (partners: PartnerType[], types: string[]) =>
+  partners.length
+    ? partners.map((p) => `${types[p.type]} (${number.format(p.synapses)})`).join(', ')
+    : 'None in this subgraph'
 // The camera tip shows until the first drag, zoom or selection, then stays dismissed.
 const HINT_KEY = 'fly-saber-brain-hint'
 const provenance: Record<string, string> = {
@@ -214,6 +221,18 @@ export function BrainPreview() {
     return () => controller.abort()
   }, [attempt])
 
+  // What each cell type does (configs/cell_types.yaml). Optional: the view works without it.
+  const [explorer, setExplorer] = useState<Map<string, CellTypeDescription> | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    loadExplorer(controller.signal)
+      .then((loaded) => {
+        if (!controller.signal.aborted) setExplorer(loaded)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
+
   // Fetch the connection table only once connections are shown, after the neurons render.
   const asset = data?.asset
   const wantEdges = !!asset && showConnections && !edges
@@ -249,6 +268,14 @@ export function BrainPreview() {
         : filteredEdges,
     [detail, filteredEdges, selected],
   )
+  const partners = useMemo(
+    () => (graph && selected !== null ? topPartnerTypes(graph, selected) : null),
+    [graph, selected],
+  )
+  const about =
+    selected !== null && asset && explorer
+      ? explorer.get(asset.cell_types[asset.type[selected]])
+      : undefined
   const connections = useMemo(
     () => (graph && selected !== null ? neuronConnectionStats(graph, selected) : null),
     [graph, selected],
@@ -515,6 +542,27 @@ export function BrainPreview() {
                     </Button>
                   </div>
                 </div>
+                {about && (
+                  <p className="neuron-about">
+                    {about.name !== asset.cell_types[asset.type[selected]] && (
+                      <strong>{about.name}. </strong>
+                    )}
+                    {about.description}
+                  </p>
+                )}
+                <NeuronTrace index={selected} />
+                {partners && (partners.inputs.length > 0 || partners.outputs.length > 0) && (
+                  <dl className="neuron-partners">
+                    <div>
+                      <dt>Top inputs</dt>
+                      <dd>{partnerText(partners.inputs, asset.cell_types)}</dd>
+                    </div>
+                    <div>
+                      <dt>Top outputs</dt>
+                      <dd>{partnerText(partners.outputs, asset.cell_types)}</dd>
+                    </div>
+                  </dl>
+                )}
                 <dl className="neuron-metadata" aria-live="polite">
                   <div>
                     <dt>Body ID / index</dt>

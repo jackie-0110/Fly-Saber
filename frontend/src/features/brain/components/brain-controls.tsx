@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { create } from 'zustand'
 import { RotateCcw } from 'lucide-react'
-import { AROUSAL, LOOMING, useBrainControls } from '@/features/session/controls-state'
+import {
+  AROUSAL,
+  LOOMING,
+  useBrainControls,
+  useControlsConfigState,
+} from '@/features/session/controls-state'
 import { Button } from '@/components/ui/button'
-import { loadControls } from '@/features/brain/data'
-import type { Controls } from '@/features/brain/data'
+import { RangeControl } from '@/components/range-control'
 import { isUntouched, noControls } from '@/features/session/interventions'
 import { useSession } from '@/features/session/session'
 import { usePlayer } from '@/features/session/store'
@@ -13,32 +15,15 @@ import { EyeMosaic } from '@/features/eye/eye-mosaic'
 /*
  * Brain controls sit in the signal path where they act: the blindfolds on the two eyes in
  * Visual input, the lesion and mood in the Brain stage between input and motor output.
+ * The Brain stage keeps the two demo favourites; the header's Brain controls button opens
+ * the full panel.
  */
 
-// Each change re-centres the brain's readout on the server, a few frames' work, so a
-// dragged slider sends once it settles instead of on every step.
-const SLIDER_SETTLE_MS = 250
 // Every mood range in controls.json is a multiple of this, so the slider can land on 0.
 const MOOD_STEP = 0.05
 
-// controls.json, loaded once and shared by both halves of the controls.
-const useControlsConfig = create<{ config: Controls | null; failed: boolean }>(() => ({
-  config: null,
-  failed: false,
-}))
-let configRequest: Promise<void> | null = null
-function requestConfig() {
-  configRequest ??= loadControls(new AbortController().signal)
-    .then((config) => useControlsConfig.setState({ config, failed: false }))
-    .catch(() => {
-      configRequest = null
-      useControlsConfig.setState({ failed: true })
-    })
-}
-
 function useControlsState() {
-  const { config, failed } = useControlsConfig()
-  useEffect(requestConfig, [])
+  const { config, failed } = useControlsConfigState()
   const controls = useBrainControls((s) => s.controls)
   const change = useBrainControls((s) => s.change)
   const brain = usePlayer((s) => s.brain)
@@ -95,14 +80,14 @@ export function BrainStage() {
         <h2>Brain</h2>
         <Button
           variant="ghost"
-          size="xs"
+          size="icon-xs"
           className="brain-reset"
-          title="Controls carry over to the next song until reset."
+          aria-label="Reset controls"
+          title="Reset every brain and eye control. They carry over to the next song until reset."
           disabled={disabled || isUntouched(controls)}
           onClick={() => change(noControls)}
         >
           <RotateCcw aria-hidden="true" />
-          Reset controls
         </Button>
       </div>
       <button
@@ -124,10 +109,18 @@ export function BrainStage() {
         Lesion looming detectors
       </button>
       {arousal && (
-        <MoodSlider
-          mood={arousal}
-          level={controls.mood[AROUSAL] ?? 0}
+        <RangeControl
+          className="mood-slider"
+          label={arousal.label}
+          min={arousal.min}
+          max={arousal.max}
+          step={MOOD_STEP}
+          value={controls.mood[AROUSAL] ?? 0}
           disabled={disabled}
+          lowLabel={arousal.low_label}
+          highLabel={arousal.high_label}
+          format={(v) => (v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2))}
+          title={arousal.description}
           onCommit={(level) =>
             change({ mood: { ...useBrainControls.getState().controls.mood, [AROUSAL]: level } })
           }
@@ -137,49 +130,5 @@ export function BrainStage() {
         {message}
       </p>
     </section>
-  )
-}
-
-function MoodSlider({
-  mood,
-  level,
-  disabled,
-  onCommit,
-}: {
-  mood: Controls['moods'][number]
-  level: number
-  disabled: boolean
-  onCommit: (level: number) => void
-}) {
-  const [draft, setDraft] = useState<number | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => () => clearTimeout(timer.current), [])
-  return (
-    <label className="mood-slider" title={mood.description}>
-      <span className="mood-name">{mood.label}</span>
-      <input
-        type="range"
-        min={mood.min}
-        max={mood.max}
-        step={MOOD_STEP}
-        value={draft ?? level}
-        disabled={disabled}
-        onChange={(event) => {
-          const next = Number(
-            (Math.round(Number(event.target.value) / MOOD_STEP) * MOOD_STEP).toFixed(2),
-          )
-          setDraft(next)
-          clearTimeout(timer.current)
-          timer.current = setTimeout(() => {
-            onCommit(next)
-            setDraft(null)
-          }, SLIDER_SETTLE_MS)
-        }}
-      />
-      <span className="mood-ends">
-        <span>{mood.low_label}</span>
-        <span>{mood.high_label}</span>
-      </span>
-    </label>
   )
 }

@@ -398,3 +398,107 @@ test('brain controls toggle before a song and reset together', async ({ page }) 
   await expect(lesion).toHaveAttribute('aria-pressed', 'false')
   await expect(leftEye).toHaveAttribute('aria-pressed', 'false')
 })
+
+test('the full controls panel sets moods, lesions, stimulation, jitter and eyes, then resets', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
+  const sheet = page.getByRole('dialog', { name: 'Brain controls panel' })
+  const summary = sheet.locator('.controls-title-text p')
+  await expect(summary).toHaveText(/untouched brain/)
+  await expect(sheet.locator('.section-row')).toHaveCount(12)
+
+  // A preset sets several moods at once. The summary capitalizes whichever change leads.
+  const anxious = sheet.getByRole('button', { name: 'Anxious', exact: true })
+  await anxious.click()
+  await expect(anxious).toHaveAttribute('aria-pressed', 'true')
+  await expect(summary).toContainText(/arousal \+0\.30/i)
+  await expect(summary).toContainText(/calm -0\.30/i)
+
+  // A lesion wins over stimulation, so that section's slider goes inactive.
+  await sheet.getByRole('button', { name: /^Lesion Motion detectors/ }).click()
+  await expect(sheet.getByRole('slider', { name: /^Stimulate Motion detectors/ })).toBeDisabled()
+  await expect(summary).toContainText(/motion detectors lesioned/i)
+
+  // Trigger escape drives the giant fiber only while held.
+  await sheet.getByRole('button', { name: 'Hold to trigger escape' }).hover()
+  await page.mouse.down()
+  await expect(summary).toContainText(/giant fiber stimulated at 5\.0/i)
+  await page.mouse.up()
+  await expect(summary).not.toContainText(/giant fiber/i)
+
+  // Neural noise is a switch: any amount swamps this fly's motor readout.
+  await sheet.getByRole('button', { name: 'Neural noise' }).click()
+  await expect(summary).toContainText(/neural noise on/i)
+
+  // Sliders commit once the drag settles.
+  await sheet.getByRole('slider', { name: /Blur/ }).focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(summary).toContainText(/vision blurred 0\.5°/i)
+  await sheet.getByRole('button', { name: 'Right eye blindfold' }).click()
+  await expect(summary).toContainText(/right eye blindfolded/i)
+  await expect(page.getByRole('button', { name: 'Blindfold right eye' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  await sheet.getByRole('button', { name: 'Reset all' }).click()
+  await expect(summary).toHaveText(/untouched brain/)
+  await expect(anxious).toHaveAttribute('aria-pressed', 'false')
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+})
+
+test('the header button opens the controls and counts the changes in force', async ({ page }) => {
+  await page.goto('/')
+  const button = page.getByRole('button', { name: /^Brain controls/ })
+  await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await page.getByRole('button', { name: 'Lesion looming detectors' }).click()
+  await page.getByRole('button', { name: 'Blindfold left eye' }).click()
+  await expect(button).toHaveAccessibleName('Brain controls 2 active')
+  await button.click()
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toBeVisible()
+  await button.click()
+  await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toHaveCount(0)
+})
+
+test('the controls float beside the neuron view, move, resize and remember their place', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'phones get a sheet under the header instead')
+  await page.goto('/')
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
+  const win = page.getByRole('dialog', { name: 'Brain controls panel' })
+  const box = async () => (await win.boundingBox())!
+  const stage = (await page.locator('.brain-stage').boundingBox())!
+  const opened = await box()
+  expect(opened.x + opened.width, 'opens clear of the neuron view').toBeLessThanOrEqual(stage.x)
+
+  const title = (await win.locator('.floating-window-title').boundingBox())!
+  await page.mouse.move(title.x + 30, title.y + 20)
+  await page.mouse.down()
+  await page.mouse.move(title.x - 170, title.y + 50, { steps: 6 })
+  await page.mouse.up()
+  const moved = await box()
+  expect(moved.x).toBeCloseTo(opened.x - 200, 0)
+  expect(moved.y).toBeCloseTo(opened.y + 30, 0)
+
+  const corner = (await win.locator('.resize-handle[data-edge="se"]').boundingBox())!
+  await page.mouse.move(corner.x + 7, corner.y + 7)
+  await page.mouse.down()
+  await page.mouse.move(corner.x + 67, corner.y - 53, { steps: 6 })
+  await page.mouse.up()
+  const resized = await box()
+  expect(resized.width).toBeCloseTo(moved.width + 60, 0)
+  expect(resized.height).toBeCloseTo(moved.height - 60, 0)
+
+  await page.reload()
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
+  expect(await box()).toEqual(resized)
+  await win.getByRole('button', { name: 'Collapse brain controls' }).click()
+  await expect(win.getByRole('button', { name: 'Hold to trigger escape' })).toHaveCount(0)
+  expect((await box()).height).toBeLessThan(120)
+})

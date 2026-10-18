@@ -3,6 +3,7 @@ import type { SaberAction } from '@/features/game/fly-motion'
 import { BrainStage } from '@/features/brain/components/brain-controls'
 import { useSession } from '@/features/session/session'
 import { EyeReadout } from '@/features/eye/eye-view'
+import { BaselineReadout } from '@/features/session/components/baseline-compare'
 
 // Cut directions as the protocol numbers them: 0 up, 1 down, 2 left, 3 right.
 const CUTS = [ArrowUp, ArrowDown, ArrowLeft, ArrowRight]
@@ -65,6 +66,7 @@ export function SessionReadouts() {
             <span>Score</span>
           </div>
         </div>
+        <BaselineReadout />
       </div>
     </section>
   )

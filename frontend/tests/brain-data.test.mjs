@@ -7,6 +7,8 @@ import {
   neuronConnectionStats,
   parseBrainData,
   parseControls,
+  parseExplorer,
+  topPartnerTypes,
 } from '../src/features/brain/data.ts'
 
 const asset = JSON.parse(
@@ -140,6 +142,58 @@ test('edge filtering requires both endpoints and selection respects edge directi
   })
 })
 
+test('top partner types sum synapses by cell type, inputs and outputs apart', () => {
+  // Neuron 0 receives from 1 (5 synapses) and itself (6); it sends to 1 (4) and itself (6).
+  const topology = {
+    ...edges,
+    n_edges: 5,
+    n_synapses: 30,
+    pre: [0, 1, 0, 2, 3],
+    post: [1, 0, 0, 1, 4],
+    weight: [4, 5, 6, 7, 8],
+    sign: [0, 1, 0, 2, 3].map((i) => asset.sign[i]),
+  }
+  const data = parseBrainData(asset, groups, topology)
+  const sum = (pairs) => {
+    const totals = new Map()
+    for (const [neuron, w] of pairs)
+      totals.set(asset.type[neuron], (totals.get(asset.type[neuron]) ?? 0) + w)
+    return [...totals]
+      .map(([type, synapses]) => ({ type, synapses }))
+      .sort((a, b) => b.synapses - a.synapses || a.type - b.type)
+  }
+  assert.deepEqual(topPartnerTypes(data, 0), {
+    inputs: sum([
+      [1, 5],
+      [0, 6],
+    ]),
+    outputs: sum([
+      [1, 4],
+      [0, 6],
+    ]),
+  })
+  assert.deepEqual(topPartnerTypes(data, 1), {
+    inputs: sum([
+      [0, 4],
+      [2, 7],
+    ]),
+    outputs: sum([[0, 5]]),
+  })
+  assert.deepEqual(topPartnerTypes(data, 1, 1).inputs.length, 1, 'the limit caps each list')
+  assert.equal(topPartnerTypes(parseBrainData(asset, groups), 0), null, 'null before edges load')
+})
+
+test('explorer.json describes real cell types and covers subtypes', () => {
+  const raw = JSON.parse(
+    readFileSync(new URL('../public/data/brain/explorer.json', import.meta.url)),
+  )
+  const byType = parseExplorer(raw)
+  assert.equal(byType.get('T4a'), byType.get('T4d'), 'one entry covers all four T4 subtypes')
+  assert.equal(byType.get('DNp01').name, 'Giant fiber')
+  for (const type of byType.keys()) assert.ok(asset.cell_types.includes(type), type)
+  assert.throws(() => parseExplorer({ ...raw, schema_version: 2 }), /explorer/)
+})
+
 test('rejects mismatched neuron order and malformed or incomplete edge exports', () => {
   const parse = (changed) => parseBrainData(asset, groups, changed)
   // Neurons render before edges.json arrives; an absent table is not an error.
@@ -161,11 +215,35 @@ test('rejects mismatched neuron order and malformed or incomplete edge exports',
 })
 
 test('controls.json gives the lesionable sections and each mood with its range', () => {
-  const raw = JSON.parse(readFileSync(new URL('../public/data/brain/controls.json', import.meta.url)))
+  const raw = JSON.parse(
+    readFileSync(new URL('../public/data/brain/controls.json', import.meta.url)),
+  )
   const controls = parseControls(raw)
   assert.ok(controls.sections.some((s) => s.group === 'looming_detectors'))
   const arousal = controls.moods.find((m) => m.name === 'arousal')
   assert.ok(arousal.min < 0 && arousal.max > 0)
   const inverted = { ...raw, moods: [{ ...raw.moods[0], min: 1, max: -1 }] }
   assert.throws(() => parseControls(inverted), /controls/)
+})
+
+test('controls.json gives the presets and the stimulation and noise ranges', () => {
+  const raw = JSON.parse(
+    readFileSync(new URL('../public/data/brain/controls.json', import.meta.url)),
+  )
+  const controls = parseControls(raw)
+  assert.equal(controls.sections.length, 12)
+  assert.deepEqual(controls.stimulation, { min: 0, max: 5 })
+  assert.deepEqual(controls.noise, { min: 0, max: 0.5 })
+  assert.deepEqual(
+    controls.presets.map((p) => p.name),
+    ['depressed', 'anxious', 'excited', 'content'],
+  )
+  assert.deepEqual(
+    parseControls({ ...raw, presets: undefined }).presets,
+    [],
+    'presets are optional',
+  )
+  const unknown = { ...raw, presets: [{ ...raw.presets[0], mood: { boredom: 0.2 } }] }
+  assert.throws(() => parseControls(unknown), /unknown mood/)
+  assert.throws(() => parseControls({ ...raw, stimulation: { min: 5, max: 0 } }), /controls/)
 })

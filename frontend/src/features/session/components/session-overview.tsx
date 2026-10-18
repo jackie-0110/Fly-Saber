@@ -1,6 +1,11 @@
 import { Button } from '@/components/ui/button'
-import { describeControls, useBrainControls } from '@/features/session/controls-state'
+import {
+  describeControls,
+  useBrainControls,
+  useControlsConfigState,
+} from '@/features/session/controls-state'
 import { difficultyLabel } from '@/features/songs/chart'
+import { BaselineCompare } from '@/features/session/components/baseline-compare'
 import { liveMapId, usePlayer } from '@/features/session/store'
 import { useSession } from '@/features/session/session'
 
@@ -15,7 +20,8 @@ export function SessionOverview() {
   const error = useSession((s) => s.error)
   const score = useSession((s) => s.score)
   const controls = useBrainControls((s) => s.controls)
-  const interventions = describeControls(controls)
+  const { config } = useControlsConfigState()
+  const interventions = describeControls(controls, config)
   const idle = status === 'idle'
 
   return (
@@ -62,6 +68,8 @@ export function SessionOverview() {
           </div>
         </dl>
       )}
+
+      <BaselineCompare />
 
       <section className="session-overview" aria-labelledby="overview-heading">
         <div className="inspector-section-heading">

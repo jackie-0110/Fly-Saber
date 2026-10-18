@@ -66,7 +66,7 @@ Front-end work is split: Person 2 builds the client plumbing (session client and
 
 ## Milestone F: ship
 
-- [ ] **F1. README results with real numbers** (Person 3 owns `results/README.md`): held-out hit rate, the looming lesion, the blindfold.
+- [x] **F1. README results with real numbers** (Person 3 owns `results/README.md`): held-out hit rate, the looming lesion, the blindfold. [`results/SUMMARY.md`](../../results/SUMMARY.md) has them with the full lesion matrix, mood validation and live eye-control ranges; still unmeasured: a random-policy baseline (acceptance test 5).
 - [ ] **F2. Acceptance tests** (handoff section 18) pass on the public host, including 30 Hz with activity streaming. The replay and allowlisted-audio tests are dropped with E1 and D5.
 - [ ] **F3. Rehearse the demo** (all).
 

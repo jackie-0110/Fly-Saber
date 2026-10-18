@@ -188,22 +188,46 @@ export interface ControlSection {
 export interface MoodControl {
   name: string
   label: string
+  /** The modulatory group the mood drives; lesioning it silences the mood. */
+  group?: string
   low_label: string
   high_label: string
   description: string
   min: number
   max: number
 }
+/** Several moods set at once; a preset may go past a mood slider's range (within -1..1). */
+export interface MoodPreset {
+  name: string
+  label: string
+  description: string
+  mood: Record<string, number>
+}
+export interface ControlRange {
+  min: number
+  max: number
+}
 export interface Controls {
   sections: ControlSection[]
   moods: MoodControl[]
+  presets: MoodPreset[]
+  /** Opto current a user can apply to a section. */
+  stimulation: ControlRange
+  /** Neural noise std, the "jitter" slider. */
+  noise: ControlRange
 }
 
 function isText(value: unknown, ...keys: string[]) {
   return isRecord(value) && keys.every((key) => typeof value[key] === 'string')
 }
 
-/** The lesionable sections and moods the UI offers (docs/PROTOCOL.md section 4). */
+const isRange = (value: unknown): value is ControlRange =>
+  isRecord(value) &&
+  Number.isFinite(value.min) &&
+  Number.isFinite(value.max) &&
+  (value.min as number) <= (value.max as number)
+
+/** The sections, moods, presets and ranges the UI offers (docs/PROTOCOL.md section 4). */
 export function parseControls(raw: unknown): Controls {
   if (
     !isRecord(raw) ||
@@ -220,10 +244,33 @@ export function parseControls(raw: unknown): Controls {
         Number.isFinite(m.max) &&
         m.min <= 0 &&
         m.max >= 0,
-    )
+    ) ||
+    !isRange(raw.stimulation) ||
+    !isRange(raw.noise)
   )
     throw new Error('Unsupported brain controls. Expected controls schema version 1.')
-  return { sections: raw.sections, moods: raw.moods } as Controls
+  const moods = new Set((raw.moods as MoodControl[]).map((m) => m.name))
+  // Presets are optional in the export; one naming an unknown mood is a bad export.
+  const presets = Array.isArray(raw.presets) ? raw.presets : []
+  if (
+    !presets.every(
+      (p) =>
+        isText(p, 'name', 'label', 'description') &&
+        isRecord(p.mood) &&
+        Object.entries(p.mood).every(
+          ([name, level]) =>
+            moods.has(name) && typeof level === 'number' && level >= -1 && level <= 1,
+        ),
+    )
+  )
+    throw new Error('Unsupported brain controls: a mood preset names an unknown mood.')
+  return {
+    sections: raw.sections,
+    moods: raw.moods,
+    presets,
+    stimulation: { min: raw.stimulation.min, max: raw.stimulation.max },
+    noise: { min: raw.noise.min, max: raw.noise.max },
+  } as Controls
 }
 
 async function fetchJson(file: string, signal: AbortSignal): Promise<unknown> {
@@ -287,6 +334,71 @@ export function neuronConnectionStats(data: BrainData, index: number) {
     }
   }
   return { incoming, outgoing, incomingSynapses, outgoingSynapses }
+}
+
+export interface PartnerType {
+  /** Cell-type index into `asset.cell_types`. */
+  type: number
+  synapses: number
+}
+
+/**
+ * A neuron's strongest partner cell types by synapse count, inputs and outputs, largest
+ * first (spec 5.5's "top inputs and outputs by type"). Null until edges load.
+ */
+export function topPartnerTypes(data: BrainData, index: number, limit = 3) {
+  if (!data.edges) return null
+  const inputs = new Map<number, number>()
+  const outputs = new Map<number, number>()
+  const { pre, post, weight, n_edges } = data.edges
+  const type = data.asset.type
+  for (let edge = 0; edge < n_edges; edge++) {
+    if (post[edge] === index) {
+      const t = type[pre[edge]]
+      inputs.set(t, (inputs.get(t) ?? 0) + weight[edge])
+    }
+    if (pre[edge] === index) {
+      const t = type[post[edge]]
+      outputs.set(t, (outputs.get(t) ?? 0) + weight[edge])
+    }
+  }
+  const top = (totals: Map<number, number>): PartnerType[] =>
+    [...totals]
+      .map(([t, synapses]) => ({ type: t, synapses }))
+      .sort((a, b) => b.synapses - a.synapses || a.type - b.type)
+      .slice(0, limit)
+  return { inputs: top(inputs), outputs: top(outputs) }
+}
+
+/** What a cell type is known to do, written by hand (configs/cell_types.yaml). */
+export interface CellTypeDescription {
+  name: string
+  types: string[]
+  description: string
+}
+
+/** explorer.json as a lookup from cell-type name to its description. */
+export function parseExplorer(raw: unknown): Map<string, CellTypeDescription> {
+  if (
+    !isRecord(raw) ||
+    raw.schema_version !== 1 ||
+    !Array.isArray(raw.descriptions) ||
+    !raw.descriptions.every(
+      (d) =>
+        isText(d, 'name', 'description') &&
+        Array.isArray(d.types) &&
+        d.types.every((t: unknown) => typeof t === 'string'),
+    )
+  )
+    throw new Error('Unsupported Brain Explorer data. Expected explorer schema version 1.')
+  const byType = new Map<string, CellTypeDescription>()
+  for (const entry of raw.descriptions as CellTypeDescription[])
+    for (const type of entry.types) byType.set(type, entry)
+  return byType
+}
+
+export async function loadExplorer(signal: AbortSignal) {
+  return parseExplorer(await fetchJson('explorer.json', signal))
 }
 
 export function filterNeuronIndices(data: BrainData, group: string, cellType: string): number[] {

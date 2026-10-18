@@ -168,6 +168,34 @@ def web_controls(controls: Any, groups: dict[str, list[int]]) -> dict[str, Any]:
     }
 
 
+def web_explorer(types: list[str], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Brain Explorer descriptions (configs/cell_types.yaml) for the subgraph's cell types.
+
+    Raises ValueError for a type the subgraph does not have (a typo would otherwise leave
+    a cell type silently undescribed) or one described twice.
+    """
+    known = set(types)
+    seen: set[str] = set()
+    out = []
+    for entry in entries:
+        names = list(entry["types"])
+        missing = [t for t in names if t not in known]
+        if missing:
+            raise ValueError(f"{entry['name']}: cell types {missing} are not in the subgraph")
+        twice = seen.intersection(names)
+        if twice:
+            raise ValueError(f"{entry['name']}: cell types {sorted(twice)} described twice")
+        seen.update(names)
+        out.append(
+            {
+                "name": entry["name"],
+                "types": names,
+                "description": " ".join(entry["description"].split()),
+            }
+        )
+    return {"schema_version": SCHEMA_VERSION, "descriptions": out}
+
+
 def wiring_stats(
     neurons: pd.DataFrame, edges: pd.DataFrame, real_edges: pd.DataFrame
 ) -> dict[str, Any]:
