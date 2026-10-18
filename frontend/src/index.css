@@ -56,6 +56,9 @@
   --signal-magenta: oklch(0.52 0.19 345);
   --signal-amber: oklch(0.54 0.12 70);
   --signal-red: oklch(0.52 0.16 28);
+  /* Neuron activity, signed change from rest; matches EXCITE/INHIBIT in brain-scene.tsx */
+  --activity-excite: oklch(0.6 0.18 36);
+  --activity-inhibit: oklch(0.52 0.15 258);
   --focus: oklch(0.5 0.13 150);
 
   /* Type */

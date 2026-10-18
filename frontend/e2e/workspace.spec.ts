@@ -168,7 +168,7 @@ test('connections default to a sample, can be hidden, filtered, and traced for t
   // Selection is never sampled.
   const incident = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
   await expect(summary).toContainText(shown(incident))
-  await expect(summary).toContainText('Blue: incoming')
+  await expect(summary).toContainText('Violet: incoming')
   await expect(summary).toContainText('Gold: outgoing')
   const incoming = edges.post.filter((post) => post === 0).length
   await expect(page.locator('.neuron-metadata')).toContainText(`${format(incoming)} connections /`)

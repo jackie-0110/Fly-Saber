@@ -42,11 +42,15 @@ import { liveActivity } from '@/brain/live-activity'
 
 const BrainScene = lazy(() => import('@/brain/brain-scene'))
 
-function ActivityNote() {
-  const live = useSyncExternalStore(
+function useLiveActivity() {
+  return useSyncExternalStore(
     (notify) => liveActivity.subscribe(notify),
     () => liveActivity.live(),
   )
+}
+
+function ActivityNote() {
+  const live = useLiveActivity()
   return (
     <p className="brain-backend-note">
       <span className={`status-dot ${live ? 'green' : 'amber'}`} />
@@ -54,6 +58,30 @@ function ActivityNote() {
         {live ? 'Live: activity is change from rest.' : 'Activity shows during live play.'}
       </span>
     </p>
+  )
+}
+
+/**
+ * Idle, color is cell type. Live, color is the sign of activity, so the same row shows
+ * the diverging scale instead (one row either way, so the view never resizes).
+ */
+function ColorLegend({ swatch }: { swatch: string }) {
+  const live = useLiveActivity()
+  return (
+    <div className="brain-color-legend">
+      {live ? (
+        <span className="activity-scale">
+          <span>Inhibited</span>
+          <i aria-hidden="true" />
+          <span>Excited</span>
+        </span>
+      ) : (
+        <>
+          <span className="type-swatch" style={{ background: swatch }} />
+          <span>Color: cell type</span>
+        </>
+      )}
+    </div>
   )
 }
 const number = new Intl.NumberFormat('en-US')
@@ -572,18 +600,11 @@ export function BrainPreview() {
               </Button>
             )}
           </div>
-          <div className="brain-color-legend">
-            <span
-              className="type-swatch"
-              style={{
-                background:
-                  selected === null || !asset
-                    ? 'var(--ink-3)'
-                    : cellTypeColor(asset.type[selected]),
-              }}
-            />
-            <span>Color: cell type</span>
-          </div>
+          <ColorLegend
+            swatch={
+              selected === null || !asset ? 'var(--ink-3)' : cellTypeColor(asset.type[selected])
+            }
+          />
           <div className="brain-connection-summary" role="status">
             <span>
               {!data || !showConnections
@@ -610,7 +631,7 @@ export function BrainPreview() {
             )}
             {edges && showConnections && selected !== null && (
               <span>
-                <span className="edge-in">Blue: incoming</span>
+                <span className="edge-in">Violet: incoming</span>
                 {' · '}
                 <span className="edge-out">Gold: outgoing</span>
               </span>
