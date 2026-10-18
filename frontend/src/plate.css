@@ -2224,7 +2224,6 @@
     .brain-controls h2,
     .inspector-section-heading h2,
     .library-section-label,
-    .inspector-tabs [data-slot='tabs-trigger'],
     .theme-toggle,
     .backend-status,
     .current-difficulty,
@@ -2262,9 +2261,18 @@
   background: var(--paper);
 }
 
-/* Tabs: inactive at 70% white, active underlined in mint. */
+/*
+ * Tabs read as navigation, like the reference's top nav: General Sans in sentence case,
+ * inactive at 55% white, active underlined in mint. Mono capitals were too heavy here.
+ */
 [data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'] {
   color: rgb(255 255 255 / 0.55);
+  font-size: var(--text-md);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'][data-state='active'] {
+  font-weight: 500;
 }
 [data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger']:hover {
   color: var(--ink);

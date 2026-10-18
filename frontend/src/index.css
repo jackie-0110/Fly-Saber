@@ -118,7 +118,7 @@
   --activity-inhibit: #5b9bff;
   --focus: var(--mint);
   /* The hero grid on replicas.dev: 64px cells in barely-there hairlines */
-  --grid-line: #1a1b1a;
+  --grid-line: #151615;
 
   --font-sans: 'General Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-sans);
