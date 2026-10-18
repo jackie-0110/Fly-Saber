@@ -86,6 +86,52 @@
   scrollbar-color: var(--rule-strong) transparent;
 }
 
+/*
+ * Dark theme, after replicas.dev: near-black #111 sheet, #2a2a2a hairline rules, one mint
+ * accent (#3eeba3), General Sans set light with tight tracking, Geist Mono for small
+ * uppercase labels and buttons, square corners. Mint takes over green's one meaning
+ * (the right saber); magenta stays the left. Plate-level details are in plate.css.
+ */
+:root[data-theme='dark'] {
+  --paper: #111111;
+  --sheet: #161616;
+  --wash: #1f1f1f;
+  --rule: #2a2a2a;
+  --rule-strong: #3d3f3e;
+  --ink: #ededed;
+  --ink-2: #c2c4c3;
+  --ink-3: #8f9391;
+
+  /* Insets; the scene backgrounds match --field (useScenePalette in lib/theme.ts) */
+  --field: #121212;
+  --field-2: #171717;
+  --field-rule: #2b2d2c;
+  --field-ink: #ededed;
+  --field-ink-2: #a3a3a3;
+
+  --mint: #3eeba3;
+  --signal-green: var(--mint);
+  --signal-magenta: oklch(0.72 0.2 345);
+  --signal-amber: oklch(0.8 0.14 75);
+  --signal-red: #ef4444;
+  --activity-excite: #ff7a4d;
+  --activity-inhibit: #5b9bff;
+  --focus: var(--mint);
+  /* The hero grid on replicas.dev: 64px cells in barely-there hairlines */
+  --grid-line: #1a1b1a;
+
+  --font-sans: 'General Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+
+  font-variation-settings: normal;
+  color-scheme: dark;
+}
+:root[data-theme='dark'] ::selection {
+  background: var(--mint);
+  color: #111111;
+}
+
 * {
   box-sizing: border-box;
 }

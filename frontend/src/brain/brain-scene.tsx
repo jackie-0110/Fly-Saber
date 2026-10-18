@@ -17,6 +17,7 @@ import { cellTypeColor } from './data'
 import type { BrainData, BrainEdges } from './data'
 import { liveActivity } from './live-activity'
 import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
+import { useScenePalette } from '@/lib/theme'
 
 /*
  * Live activity is drawn as ink on paper, the light-plate counterpart of a glow on black.
@@ -25,12 +26,8 @@ import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './renderin
  * inhibition blue (a diverging scale, as calcium imaging is printed). Normal blending keeps
  * overlapping actives in their own color; multiplying them turned red over blue to black.
  * Colors match --activity-* in index.css; selection uses amber and violet, never these.
+ * In the dark theme the same scale is drawn brighter on black (see useScenePalette).
  */
-// The view's background, --field in index.css.
-const PAPER = '#e9eeec'
-const REST_INK = '#96a1a1'
-const EXCITE = '#d54c25'
-const INHIBIT = '#2a67bd'
 // |change from rest| (of 127) that draws at full strength. The median active neuron moves
 // about 3, so a linear scale would leave nearly every active neuron as faint as one at rest.
 const FULL_AT = 32
@@ -98,9 +95,9 @@ function cloudMaterial(ink: boolean) {
       uOpacity: { value: 1 },
       uLive: { value: 0 },
       uInk: { value: ink ? 1 : 0 },
-      uRest: { value: new Color(REST_INK) },
-      uExcite: { value: new Color(EXCITE) },
-      uInhibit: { value: new Color(INHIBIT) },
+      uRest: { value: new Color() },
+      uExcite: { value: new Color() },
+      uInhibit: { value: new Color() },
     },
     transparent: true,
     premultipliedAlpha: true,
@@ -138,6 +135,7 @@ function Connections({
   edges: BrainEdges
   moving: MutableRefObject<boolean>
 }) {
+  const palette = useScenePalette()
   const geometry = useMemo(() => {
     const { index, outgoing } = connectionIndex({ asset: data.asset, edges }, edgeIndices, selected)
     const result = new BufferGeometry()
@@ -167,7 +165,7 @@ function Connections({
       {selected === null ? (
         <lineBasicMaterial
           ref={quiet}
-          color="#3f4a4b"
+          color={palette.quietEdge}
           transparent
           opacity={0.022}
           depthWrite={false}
@@ -331,6 +329,7 @@ function NeuronCloud({
   pointSize,
   opacity,
 }: Pick<SceneProps, 'data' | 'indices' | 'selected' | 'onSelect' | 'pointSize' | 'opacity'>) {
+  const palette = useScenePalette()
   const geometry = useMemo(() => {
     const positions = new Float32Array(indices.length * 3)
     const colors = new Float32Array(indices.length * 3)
@@ -356,11 +355,15 @@ function NeuronCloud({
   const invalidate = useThree((state) => state.invalidate)
   const pixelRatio = useThree((state) => state.viewport.dpr)
   useEffect(() => liveActivity.subscribe(invalidate), [invalidate])
+  useEffect(() => invalidate(), [palette, invalidate])
   useFrame((_, delta) => {
     const sketch = sketchRef.current
     const ink = inkRef.current
     if (!sketch || !ink) return
     for (const material of [sketch, ink]) {
+      material.uniforms.uRest.value.set(palette.restInk)
+      material.uniforms.uExcite.value.set(palette.excite)
+      material.uniforms.uInhibit.value.set(palette.inhibit)
       material.uniforms.uSize.value = pointSize
       material.uniforms.uOpacity.value = opacity
       material.uniforms.uPixelRatio.value = pixelRatio
@@ -421,7 +424,7 @@ function NeuronCloud({
       {selectedPosition && (
         <mesh position={selectedPosition} raycast={() => {}}>
           <sphereGeometry args={[0.03, 12, 8]} />
-          <meshBasicMaterial color="#162021" wireframe depthTest={false} />
+          <meshBasicMaterial color={palette.selection} wireframe depthTest={false} />
         </mesh>
       )}
     </>
@@ -429,6 +432,7 @@ function NeuronCloud({
 }
 
 export default function BrainScene(props: SceneProps) {
+  const palette = useScenePalette()
   const moving = useRef(false)
   const [cameraMoving, setCameraMoving] = useState(false)
   const { onMotionChange } = props
@@ -463,7 +467,7 @@ export default function BrainScene(props: SceneProps) {
         if (event.type === 'click') props.onSelect(null)
       }}
     >
-      <color attach="background" args={[PAPER]} />
+      <color attach="background" args={[palette.field]} />
       <ContextMonitor onFailure={props.onFailure} />
       <Navigation
         data={props.data}

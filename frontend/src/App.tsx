@@ -6,6 +6,7 @@ import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
 import { SessionReadouts } from '@/components/session-readouts'
 import { SongHeader } from '@/components/song-header'
+import { ThemeToggle } from '@/components/theme-toggle'
 import './plate.css'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
           <BackendStatus />
+          <ThemeToggle />
         </div>
       </header>
       <main className="workspace">

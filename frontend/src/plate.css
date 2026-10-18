@@ -2120,6 +2120,253 @@
   letter-spacing: -0.02em;
 }
 
+/* ---------- Theme toggle ---------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.theme-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- Dark theme (after replicas.dev) ---------- */
+
+/*
+ * The light plate's tokens flip in index.css; this layer adds what the reference does
+ * beyond color: a faint 64px grid behind the page, square corners, "+" registration
+ * marks on the insets, light display type with tight tracking, and small labels and
+ * buttons set in uppercase Geist Mono. Mint is the only accent.
+ */
+[data-theme='dark'] .app-shell {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: -1px -1px;
+}
+[data-theme='dark'] .app-header {
+  border-bottom-color: var(--rule);
+}
+[data-theme='dark'] .brand {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+[data-theme='dark'] .brand-word {
+  font-weight: 400;
+}
+[data-theme='dark'] .brand-mark {
+  color: var(--mint);
+}
+[data-theme='dark'] .workspace-name {
+  border-left-color: var(--rule);
+}
+
+/* Square corners everywhere except the round status dots and cell-type swatches. */
+[data-theme='dark'] .app-shell :not(.status-dot, .type-swatch),
+[data-theme='dark'] [data-radix-popper-content-wrapper] * {
+  border-radius: 0;
+}
+[data-theme='dark'] .song-search-actions button {
+  background: var(--mint);
+  color: #111111;
+}
+[data-theme='dark'] .song-search-actions button:hover {
+  background: #6ff2bc;
+}
+
+/* Display type: General Sans at regular weight, tracked in like the replicas.dev hero. */
+[data-theme='dark'] .current-song-title h1 {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+[data-theme='dark']
+  :is(
+    .inset-label h2,
+    .scene-empty h2,
+    .library-heading h2,
+    .inspector-prose h2,
+    .neuron-selection-heading h3
+  ) {
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+[data-theme='dark'] .panel-letter {
+  color: var(--mint);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+/* Small section labels and buttons: 11px uppercase Geist Mono, bold, tight. */
+[data-theme='dark']
+  :is(
+    .readout-block h2,
+    .brain-controls h2,
+    .inspector-section-heading h2,
+    .library-section-label,
+    .inspector-tabs [data-slot='tabs-trigger'],
+    .theme-toggle,
+    .backend-status,
+    .current-difficulty,
+    .difficulty-buttons button,
+    .live-tag,
+    .scene-empty button,
+    .song-search-actions button,
+    .brain-controls button,
+    .load-more
+  ) {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+[data-theme='dark'] :is(.backend-status, .library-section-label > span:last-child) {
+  font-weight: 500;
+}
+[data-theme='dark'] .theme-toggle {
+  height: 30px;
+  padding: 0 11px;
+  border-color: rgb(255 255 255 / 0.5);
+  color: rgb(255 255 255 / 0.7);
+}
+[data-theme='dark'] .theme-toggle:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+[data-theme='dark'] .library-section-label {
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+[data-theme='dark'] .readout-block + .readout-block::before {
+  background: var(--paper);
+}
+
+/* Tabs: inactive at 70% white, active underlined in mint. */
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'] {
+  color: rgb(255 255 255 / 0.55);
+}
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger']:hover {
+  color: var(--ink);
+}
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'][data-state='active'] {
+  border-bottom-color: var(--mint);
+  color: var(--ink);
+}
+
+/* Insets: a hairline frame with "+" marks at the corners, as on the reference's hero card. */
+[data-theme='dark'] :is(.game-viewport, .brain-stage) {
+  box-shadow: 0 0 0 1px var(--rule);
+}
+[data-theme='dark'] :is(.game-viewport, .brain-stage)::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: 2;
+  pointer-events: none;
+  --mark: rgb(255 255 255 / 0.32);
+  background:
+    linear-gradient(var(--mark), var(--mark)) 4px 0 / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 0 4px / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) calc(100% - 4px) 0 / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 100% 4px / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) 4px 100% / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 0 calc(100% - 4px) / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) calc(100% - 4px) 100% / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 100% calc(100% - 4px) / 9px 1px;
+  background-repeat: no-repeat;
+}
+[data-theme='dark'] .camera-toolbar {
+  border-color: var(--field-rule);
+  background: var(--paper);
+}
+
+/* Primary actions read like "Get started": solid mint, near-black text. */
+[data-theme='dark'] .playback-buttons button {
+  border-color: var(--rule-strong);
+  background: transparent;
+}
+[data-theme='dark'] .playback-buttons .primary-play,
+[data-theme='dark'] .scene-empty button {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: #111111;
+}
+[data-theme='dark'] .playback-buttons .primary-play:hover,
+[data-theme='dark'] .scene-empty button:hover {
+  border-color: #6ff2bc;
+  background: #6ff2bc;
+  color: #111111;
+}
+
+/* Difficulty ramp, lifted so every step clears the black sheet. */
+[data-theme='dark'] [data-difficulty='Easy'] {
+  --diff: oklch(0.86 0.06 250);
+}
+[data-theme='dark'] [data-difficulty='Normal'] {
+  --diff: oklch(0.8 0.09 252);
+}
+[data-theme='dark'] [data-difficulty='Hard'] {
+  --diff: oklch(0.74 0.12 256);
+}
+[data-theme='dark'] [data-difficulty='Expert'] {
+  --diff: oklch(0.68 0.15 262);
+}
+[data-theme='dark'] [data-difficulty='ExpertPlus'] {
+  --diff: oklch(0.64 0.17 268);
+}
+/* Selected chips match the reference's "Announcing" pill: mint rule, mint wash, mint text. */
+[data-theme='dark'] .difficulty-buttons button[aria-pressed='true'],
+[data-theme='dark'] .brain-controls [aria-pressed='true'] {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 12%, transparent);
+  color: var(--mint);
+}
+[data-theme='dark'] .live-tag {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 10%, transparent);
+  color: var(--mint);
+}
+[data-theme='dark'] .brain-connection-summary .edge-in {
+  color: oklch(0.75 0.14 305);
+}
+[data-theme='dark'] .brain-connection-summary .edge-out {
+  color: oklch(0.8 0.13 70);
+}
+[data-theme='dark'] .status-popover {
+  border-color: var(--rule);
+  background: var(--paper);
+  box-shadow: none;
+}
+[data-theme='dark'] .song-card.is-loaded {
+  box-shadow: inset 2px 0 0 var(--mint);
+}
+
+/* Mono figures drop the Archivo/Martian width axis, which General Sans and Geist lack. */
+[data-theme='dark'] * {
+  font-variation-settings: normal;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
