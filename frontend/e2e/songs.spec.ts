@@ -9,6 +9,11 @@ const cover = Buffer.from(
 )
 
 test.beforeEach(async ({ page }) => {
+  // These specs exercise local chart previews. A running developer backend must not
+  // replace the three-note archive with the real BeatSaver map for the fixture key.
+  await page.route('**/api/community/**', (route) =>
+    route.fulfill({ status: 422, json: { detail: 'Fixture preview only' } }),
+  )
   await page.route('**/api/eye_lattice?*', (route) =>
     route.fulfill({ json: { left: [[0, 0]], right: [[0, 0]] } }),
   )
