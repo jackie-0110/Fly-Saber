@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { liveActivity, STALE_MS } from '../src/brain/live-activity.ts'
+import { liveActivity, STALE_MS } from '../src/features/brain/live-activity.ts'
 
 test('keeps the latest neuron and cell-type activity apart, each with its own step', () => {
   const neurons = Int8Array.of(-3, 0, 9)

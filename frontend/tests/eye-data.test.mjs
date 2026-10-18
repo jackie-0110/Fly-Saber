@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { decodeEyeImage, matchesLattice, mosaicGeometry, parseEyeLattice } from '../src/eyeview/eye-data.ts'
+import { decodeEyeImage, matchesLattice, mosaicGeometry, parseEyeLattice } from '../src/features/eye/eye-data.ts'
 
 function packet() {
   const buffer = new ArrayBuffer(17)

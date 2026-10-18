@@ -88,7 +88,7 @@ The front end already has the full map from REST and positions notes from the au
 - `reset(notes, speed_mps, start_sec, end_sec) -> (obs, state)`; `notes` from `fly_saber.maps.adapt.note_arrays`.
 - `step(state, action) -> (obs, state, reward, done, events)`.
 - `obs`: float32 `(2, n_eye)`, values 0 to 1. Channel 0 is luminance, for R1 to R6. Channel 1 is color (red notes high, blue low, background 0.5), for R7 and R8.
-- Eye for training and live play: `training.brain_policy.build(model_cfg, saber_cfg, eye_cfg, key)` makes the env see through the brain's own eye columns (angles from `brain.connectome.metadata.column_angles`, the same as `columns.json`), so `n_eye` is the 437 columns in `load_graph`'s column-table order and `obs` is exactly the brain's `eye` argument. `BrainPolicy` wraps `make_step` in the `Policy` interface of `training/bc.py`. Without a brain, `SaberEnv.create` falls back to a synthetic hex lattice (`fly_saber.eye.lattice`, left eye first).
+- Eye for training and live play: `training.brain_policy.build(model_cfg, saber_cfg, eye_cfg, key)` makes the env see through the brain's own eye columns (angles from `brain.connectome.metadata.column_angles`, the same as `columns.json`), so `n_eye` is the 437 columns in `load_graph`'s column-table order and `obs` is exactly the brain's `eye` argument. `BrainPolicy` wraps `make_step` in the `Policy` interface of `src/training/bc.py`. Without a brain, `SaberEnv.create` falls back to a synthetic hex lattice (`fly_saber.eye.lattice`, left eye first).
 - `action`: int32 `(n_sabers, 2)`, rows red then blue: `[cell, cut]`, cell 0 to 11 or 12 (idle), cut 0 up, 1 down, 2 left, 3 right, or 4 (no cut). That is a 13-way position head and a 5-way direction head per saber. `n_sabers` is 1 when `saber.yaml` sets `two_sabers: false`.
 - `fly_saber.experts.saber_expert(env, state)` returns the perfect action, for behavior cloning.
 - Eye controls (spec 7.1) live in `state.eye` (`fly_saber.eye.EyeControls`) and change between frames with no recompile: `fly_saber.env.set_eye_controls(state, blind_left=1.0)` returns the new state. Fields: `blind_left`, `blind_right` (0 to 1, contrast that eye loses), `blur_deg` (added to the acceptance FWHM), `facet_dropout` (0 to 1, fraction of columns, the same columns for a given `seed`), `noise` (luminance std, fresh each frame), `seed`. Lost columns read as background 0.5. Which eye a column belongs to comes from the brain's column `side` (`SaberEnv.left_eye`), not from the sign of its azimuth, because the eyes overlap past the midline.
@@ -178,13 +178,13 @@ keeps the last image; play/seek, brain changes and disconnect clear it and reset
 last accepted step. The expert sends no eye images.
 
 Frontend integration for Person A: `EyeMosaic` is exported from
-`frontend/src/eyeview/eye-mosaic.tsx`, with `side="left" | "right"`, optional
+`frontend/src/features/eye/eye-mosaic.tsx`, with `side="left" | "right"`, optional
 `blind={boolean}` and `slot={number}` (default 0). The blind flag labels the control
 state; live pixels always come from the processed server observation.
 
 ## 4. Subgraph files, `groups.json`, and interventions (Person 1)
 
-Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_subgraph/`. Neuron **index** (row number, 0 to N-1) is the id used everywhere: edges, groups, activity stream, interventions. Body ids are only for lookup.
+Built by `uv run python scripts/connectome/build_subgraph.py` into `data/processed/malecns_subgraph/`. Neuron **index** (row number, 0 to N-1) is the id used everywhere: edges, groups, activity stream, interventions. Body ids are only for lookup.
 
 **`neurons.parquet`**, one row per neuron, sorted by role then type then side:
 
@@ -204,13 +204,13 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 **`edges.parquet`**: `pre` (int32 index), `post` (int32 index), `weight` (int32 synapse count, at least 5), `sign` (int8, sign of `pre`). Sorted by `post` then `pre`.
 
-**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `eye_left`, `eye_right` (photoreceptors plus lamina), `octopamine`, `dopamine`, `serotonin` (modulatory-role neurons, what the mood sliders drive), `modulatory_<nt>` (every neuron with that transmitter, including a serotonergic DN), plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `brain/connectome/groups.py`.
+**`groups.json`**: `{"group_name": [index, ...]}`, sorted indices, empty groups omitted. Current groups: `photoreceptors`, `lamina`, `medulla`, `T4`, `T5`, `motion_detectors`, `LPLC2`, `LC4`, `looming_detectors` (LPLC2, LC4, LPLC1, LPLC4), `LC_all`, `lobula_plate_tangential`, `giant_fiber`, `DN_all`, `intermediates`, `eye_left`, `eye_right` (photoreceptors plus lamina), `octopamine`, `dopamine`, `serotonin` (modulatory-role neurons, what the mood sliders drive), `modulatory_<nt>` (every neuron with that transmitter, including a serotonergic DN), plus `_left` and `_right` versions of `photoreceptors`, `lamina`, `T4`, `T5`, `LPLC2`, `LC_all`. Groups and type lists live in `src/brain/connectome/groups.py`.
 
 **`meta.json`**: counts, sign totals, and the config used.
 
 ### Front end copies: `frontend/public/data/brain/`
 
-Committed to git so the front end needs no Python or data download. For the bundled trained model, regenerate with `uv run python scripts/export_web.py --bundle bundles/real_fast` and commit. This checks the manifest's content hashes and checkpoint subgraph metadata. For a newly built subgraph use `make subgraph export-web` (or pass `--subgraph-dir`). The browser loads `neurons.json` and `groups.json` under `/data/brain/`, then `edges.json` once connections are shown.
+Committed to git so the front end needs no Python or data download. For the bundled trained model, regenerate with `uv run python scripts/web/export_web.py --bundle bundles/real_fast` and commit. This checks the manifest's content hashes and checkpoint subgraph metadata. For a newly built subgraph use `make subgraph export-web` (or pass `--subgraph-dir`). The browser loads `neurons.json` and `groups.json` under `/data/brain/`, then `edges.json` once connections are shown.
 
 **`groups.json`**: identical to the one above.
 
@@ -256,14 +256,14 @@ The browser fetches `edges.json` after `neurons.json` and `groups.json`, and onl
 | `n_columns` | int | 437 (217 left, 220 right) |
 | `side` | string[] | `L` or `R` |
 | `hex1`, `hex2` | int[] | MaleCNS column coordinates (even numbers only: every 2nd column is kept) |
-| `azimuth_deg`, `elevation_deg` | float[] | viewing direction, `fly_saber/eye.py` convention: azimuth positive to the fly's right, elevation positive up |
+| `azimuth_deg`, `elevation_deg` | float[] | viewing direction, `src/fly_saber/eye.py` convention: azimuth positive to the fly's right, elevation positive up |
 | `luminance_input` | int[] | 0 a traced R1-R6 takes luminance, 1 the L1/L2 fallback does (index into `luminance_inputs`) |
 | `spacing_deg`, `kept_spacing_deg` | float | 5 between neighboring real columns (from `configs/eye.yaml`); 10 between kept columns |
 
 Angles: hex1 and hex2 are axial hex coordinates with axes 120 degrees apart. **+hex1 points up and forward, +hex2 up and backward**, the same in both eyes (fit to lamina soma positions, which map the eye directly). So forward = (sqrt(3)/2) * 5 * (hex1 - hex2) and up = 0.5 * 5 * (hex1 + hex2) degrees, then each eye is shifted so its most frontal column is 10 degrees past the midline (`binocular_overlap_deg`) and its vertical midpoint is the equator. Result: each eye spans about -129 to +10 degrees azimuth (mirrored for the right eye) and -80 to +80 degrees elevation. The optic chiasm flips front and back between lamina and medulla, but the hex coordinates name columns, and the connectome wiring already carries the flip, so **the renderer must not flip anything**. The absolute angles are an idealized lattice; the orientation is measured. Kept columns are 10 degrees apart, so the acceptance angle should be about 10 degrees, or the fly sees gaps.
 
 
-**Interventions** (`brain/model/interventions.py`): a `NamedTuple` pytree passed into every step, so the server can change it live without recompiling.
+**Interventions** (`src/brain/model/interventions.py`): a `NamedTuple` pytree passed into every step, so the server can change it live without recompiling.
 
 | Field | Shape | Meaning |
 |---|---|---|
@@ -294,9 +294,9 @@ Lesion wins over stimulation and mood for neurons in both. Any group in `groups.
 
 **How moods work:** a mood level drives its modulatory group like opto. Each neuron those modulatory neurons synapse onto has its output multiplied by exp(gain * change in their rate from rest), with `modulation_gain` per transmitter in `configs/model.yaml` (octopamine +1, dopamine +1, serotonin -1, an assumption) and capped at e. At level 0 the factor is exactly 1, so moods never need retraining. -1 silences the group (same as lesioning it). Targets are mostly central relay neurons, visual projection neurons (LC9, LC14), and DNs; in this data the modulatory neurons do not synapse directly onto T4/T5.
 
-**Effect on motor output before training** (`uv run python scripts/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
+**Effect on motor output before training** (`uv run python scripts/training/check_controls.py`, mean change in DN rates, looming stimulus): arousal +1 97%, reward drive +1 49%, noise 0.5 36%, stimulate looming detectors 22%, lesion central relay 19%, lesion octopamine 16%, lesion dopamine 10%, calm +-1 about 6%, lesion motion detectors 4%, lesion looming detectors 4%, lesion one eye under 1%. Vision moves DNs little until training strengthens it; rerun with a checkpoint (`check_controls.py checkpoints/.../bc_N.npz`) after training.
 
-### Brain modes (`scripts/export_brains.py`, `configs/brains.yaml`)
+### Brain modes (`scripts/web/export_brains.py`, `configs/brains.yaml`)
 
 Four brains the demo can switch between, all with the **same neurons** (one `neurons.json`), different wiring:
 
@@ -315,7 +315,7 @@ Run on HiPerGator (it needs the checkpoints and their subgraphs). It writes:
 
 ## 5. Brain step and checkpoints (Person 1)
 
-`brain/model/brain.py`, configured by `configs/model.yaml`:
+`src/brain/model/brain.py`, configured by `configs/model.yaml`:
 
 ```python
 graph, columns, n = load_graph(cfg)  # columns: eye column table, one row per column
@@ -340,16 +340,16 @@ One call is one 30 Hz game frame (4 Euler substeps of 8.3 ms). To vmap over envs
 **Readout and training (status).** The first HiPerGator BC run (lr 1e-3, raw DN readout) sat exactly at the no-vision base rate (loss 4.4, position accuracy 37%, hit rate 0) for 300 updates. Diagnosis:
 
 - Visual information does reach the DNs: a least-squares readout of the *untrained* brain's DN rates predicts the expert's next cell on held-out songs at 59% (base rate 27%; eye pixels 79%, projection neurons 68%). Gradient descent finds that readout very slowly because DN rates are highly correlated.
-- So `training/calibration.py` **fits the readout** before BC: it plays 64 synthetic songs with the expert, sets `dn_mean`/`dn_std` (fixed params, saved in checkpoints), and solves ridge regression per head plus a temperature. The step reads `clip((rate - dn_mean) / dn_std, +-5) / sqrt(D)`.
+- So `src/training/calibration.py` **fits the readout** before BC: it plays 64 synthetic songs with the expert, sets `dn_mean`/`dn_std` (fixed params, saved in checkpoints), and solves ridge regression per head plus a temperature. The step reads `clip((rate - dn_mean) / dn_std, +-5) / sqrt(D)`.
 - Episodes start from `rest_state` (brain settled on the gray background), not zeros; `BrainPolicy.rest` holds it. After loading a checkpoint, recompute it.
 - Result with no gradient training: greedy play hits **18% of notes on training songs and 16% on the held-out song**, versus 0% before.
 - The readout reads DN ripples of about 1e-5. With a fixed baseline, updating the brain's own parameters washed them out (brain lr 1e-5: loss 3.4 to 97, position accuracy 57% to 24% in ten updates).
 - **Live baseline** (`live_baseline: true`): every update, `BrainPolicy.prepare` sets `dn_mean` to the DN rates of the brain settled on the gray background under the *current* params (`rest_dn`, 45 frames, one env, with gradients). Drift in the brain's operating point now cancels in the readout. Interventions are not applied to the baseline, so lesions and moods still reach the actions. The readout fit uses the same baseline (centered ridge, intercept folded into the bias). Optimizers keep the stored `dn_mean`/`dn_std` fixed.
 - With it the brain trains without collapsing: brain lr 1e-5 kept position accuracy at 57% to 62% over 40 small local updates (1e-4 also stable, noisier loss). Defaults: `freeze_brain: false`, `brain_learning_rate: 1e-5`. Whether brain training beats readout-only fine-tuning (about 62% at the same point) needs a longer GPU run.
 
-**Training memory:** `remat: true` (default) wraps the step in `jax.checkpoint`, so backprop through a rollout stores each frame's inputs and recomputes the substeps. Measured for one BC update (64 envs, 10 s windows): 169 GB without it, 2.5 GB with it; memory grows linearly with envs times window length. Gradients are identical (tested). Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/bench_brain.py` to recheck.
+**Training memory:** `remat: true` (default) wraps the step in `jax.checkpoint`, so backprop through a rollout stores each frame's inputs and recomputes the substeps. Measured for one BC update (64 envs, 10 s windows): 169 GB without it, 2.5 GB with it; memory grows linearly with envs times window length. Gradients are identical (tested). Activation is `relu_sat` (relu that levels off at `rate_max` 10), so excitatory loops cannot run away when moods raise gains. Untrained the network is stable and responsive: about 97% of neurons tonically active, looming in the eye changes LPLC2 and LC4 by about 2%, and DNs by about 0.05% before training. Speed on a laptop CPU: 4 ms per frame at batch 1, about 1,800 frames/s at batch 64. Run `uv run python scripts/training/bench_brain.py` to recheck.
 
-**Checkpoints** (`training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
+**Checkpoints** (`src/training/checkpoints.py`): one `.npz` per checkpoint, at `checkpoints/{variant}/seed{seed}/{stage}_{step}.npz` (gitignored), for example `checkpoints/real/seed0/bc_2000.npz`.
 
 ```python
 from training.checkpoints import save_checkpoint, load_checkpoint, subgraph_fingerprint
@@ -374,7 +374,7 @@ params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expe
 
 ### Running the trained fly in the server (Person 2)
 
-Everything a live session needs, in order. The bundle is `bundles/<id>/` (demo fly: `bundles/real_fast/`, or a brain mode from `scripts/export_brains.py`).
+Everything a live session needs, in order. The bundle is `bundles/<id>/` (demo fly: `bundles/real_fast/`, or a brain mode from `scripts/web/export_brains.py`).
 
 ```python
 from brain.model.controls import from_controls, load_controls

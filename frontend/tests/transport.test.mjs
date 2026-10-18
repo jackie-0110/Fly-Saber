@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { AudioTransport } from '../src/game/transport.ts'
+import { AudioTransport } from '../src/features/session/transport.ts'
 
 globalThis.requestAnimationFrame = () => 1
 globalThis.cancelAnimationFrame = () => {}

@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from scripts.export_web import bundle_subgraph, export_web
+from scripts.web.export_web import bundle_subgraph, export_web
 
 BUNDLE = Path("bundles/real_fast")
 WEB = Path("frontend/public/data/brain")

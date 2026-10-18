@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { attachFlyMotionStream, cellCenter, CUT_VECTORS, FlyMotionController, STROKE_SECONDS } from '../src/game/fly-motion.ts'
+import { attachFlyMotionStream, cellCenter, CUT_VECTORS, FlyMotionController, STROKE_SECONDS } from '../src/features/game/fly-motion.ts'
 
 const frame = (step, sabers, slot = 0, t = step / 30) => ({ type: 'frame', slot, render_state: { step, t, sabers } })
 const hand = (color, cell, cut = null) => ({ color, cell, cut })
