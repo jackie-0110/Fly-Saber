@@ -25,8 +25,11 @@ train-bc:
 train-ppo:
 	uv run python -m training.ppo
 
+# Watch only what the server imports: a repo-wide watch also sees .claude/worktrees,
+# data/ and training output, and restarts (dropping live sessions) on every write there.
 serve:
-	uv run uvicorn server.app:serve --factory --reload --port 8000
+	uv run uvicorn server.app:serve --factory --port 8000 --reload \
+		--reload-dir server --reload-dir fly_saber --reload-dir configs --reload-include '*.yaml'
 
 frontend:
 	cd frontend && npm run dev
