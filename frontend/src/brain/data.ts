@@ -179,6 +179,53 @@ export function parseBrainEdges(raw: unknown, asset: BrainAsset): BrainEdges {
   return raw as unknown as BrainEdges
 }
 
+export interface ControlSection {
+  group: string
+  label: string
+  description: string
+  n_neurons: number
+}
+export interface MoodControl {
+  name: string
+  label: string
+  low_label: string
+  high_label: string
+  description: string
+  min: number
+  max: number
+}
+export interface Controls {
+  sections: ControlSection[]
+  moods: MoodControl[]
+}
+
+function isText(value: unknown, ...keys: string[]) {
+  return isRecord(value) && keys.every((key) => typeof value[key] === 'string')
+}
+
+/** The lesionable sections and moods the UI offers (docs/PROTOCOL.md section 4). */
+export function parseControls(raw: unknown): Controls {
+  if (
+    !isRecord(raw) ||
+    raw.schema_version !== 1 ||
+    !Array.isArray(raw.sections) ||
+    !raw.sections.every(
+      (s) => isText(s, 'group', 'label', 'description') && Number.isInteger(s.n_neurons),
+    ) ||
+    !Array.isArray(raw.moods) ||
+    !raw.moods.every(
+      (m) =>
+        isText(m, 'name', 'label', 'low_label', 'high_label', 'description') &&
+        Number.isFinite(m.min) &&
+        Number.isFinite(m.max) &&
+        m.min <= 0 &&
+        m.max >= 0,
+    )
+  )
+    throw new Error('Unsupported brain controls. Expected controls schema version 1.')
+  return { sections: raw.sections, moods: raw.moods } as Controls
+}
+
 async function fetchJson(file: string, signal: AbortSignal): Promise<unknown> {
   const response = await fetch(`${import.meta.env.BASE_URL}data/brain/${file}`, { signal })
   if (!response.ok) throw new Error(`Could not load ${file}.`)
@@ -251,4 +298,8 @@ export function filterNeuronIndices(data: BrainData, group: string, cellType: st
 
 export function cellTypeColor(type: number): string {
   return `hsl(${(type * 137.508 + 165) % 360}, 58%, 40%)`
+}
+
+export async function loadControls(signal: AbortSignal): Promise<Controls> {
+  return parseControls(await fetchJson('controls.json', signal))
 }

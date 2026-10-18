@@ -378,3 +378,18 @@ test('backend badge detects a disconnect and recovery without implying a live se
   await page.getByRole('tab', { name: 'Session', exact: true }).click()
   await expect(page.getByText('No live session', { exact: true })).toBeVisible()
 })
+
+test('brain controls toggle before a song and reset together', async ({ page }) => {
+  await page.goto('/')
+  const panel = page.getByRole('region', { name: 'Brain controls' })
+  const lesion = panel.getByRole('button', { name: 'Lesion looming detectors' })
+  const leftEye = panel.getByRole('button', { name: 'Blindfold left eye' })
+  await expect(panel.getByRole('slider', { name: /Arousal/ })).toBeEnabled()
+  await lesion.click()
+  await leftEye.click()
+  await expect(lesion).toHaveAttribute('aria-pressed', 'true')
+  await expect(leftEye).toHaveAttribute('aria-pressed', 'true')
+  await panel.getByRole('button', { name: 'Reset controls' }).click()
+  await expect(lesion).toHaveAttribute('aria-pressed', 'false')
+  await expect(leftEye).toHaveAttribute('aria-pressed', 'false')
+})
