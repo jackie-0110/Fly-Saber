@@ -7,13 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import jax
 import pytest
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
 from server.app import EXPERT, create_app
 from server.protocol import Brain, RenderState
-from server.saber_sim import expert_sims
+from server.saber_sim import MAX_NOTES, expert_sims
 from server.session import LiveBrain, Sim, StepOutput
 
 AUDIO_BYTES = b"OggS fixture"
@@ -271,3 +272,42 @@ def test_start_past_max_sessions_is_refused_until_one_leaves(tmp_path: Path) -> 
                 return
             time.sleep(0.05)
         pytest.fail("the seat was never freed")
+
+
+def write_map(tmp_path: Path, map_id: str, n_notes: int) -> None:
+    data = make_map(map_id)
+    note = data["notes"][0]
+    data["notes"] = [{**note, "id": i, "time_sec": 0.2 + 0.01 * i} for i in range(n_notes)]
+    (tmp_path / "normalized" / f"{map_id}.json").write_text(json.dumps(data))
+
+
+def test_no_map_size_compiles_after_startup(tmp_path: Path) -> None:
+    write_maps(tmp_path)
+    write_map(tmp_path, "big12_hard", 100)
+    app = create_app(tmp_path, [LiveBrain(EXPERT, expert_sims())])
+    compiles: list[str] = []
+
+    def on_event(event: str, duration_secs: float, **kwargs: str | int) -> None:
+        if event == "/jax/core/compile/backend_compile_duration":
+            compiles.append(event)
+
+    jax.monitoring.register_event_duration_secs_listener(on_event)
+    try:
+        with TestClient(app).websocket_connect("/ws/session") as ws:
+            assert start(ws, ["expert"], "big12_hard")["type"] == "ready"
+            ws.send_json({"type": "play", "song_t": 0.0})
+            while receive(ws)["type"] != "frame":
+                pass
+    finally:
+        jax.monitoring.unregister_event_duration_listener(on_event)
+    assert compiles == []
+
+
+def test_map_over_the_note_limit_gets_error_and_socket_stays_open(tmp_path: Path) -> None:
+    write_maps(tmp_path)
+    write_map(tmp_path, "huge1_hard", MAX_NOTES + 1)
+    with TestClient(create_app(tmp_path, [EXPERT_BRAIN])).websocket_connect("/ws/session") as ws:
+        refused = start(ws, ["expert"], "huge1_hard")
+        assert refused["type"] == "error"
+        assert str(MAX_NOTES) in refused["message"]
+        assert start(ws, ["expert"])["type"] == "ready"

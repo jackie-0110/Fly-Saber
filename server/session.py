@@ -182,9 +182,13 @@ class Session:
                 return
             await self.seats.acquire()
             self.seated = True
-        self.start = start
         factories = [self.brains[b].make_sim for b in start.brains]
-        self.slots = await self.on_worker(self.make_slots, factories, map_data, start.seed)
+        try:
+            self.slots = await self.on_worker(self.make_slots, factories, map_data, start.seed)
+        except ValueError as error:  # a map the sim cannot play, e.g. too many notes
+            await self.send(Error(message=str(error)))
+            return
+        self.start = start
         # Versus pairs brains on one subgraph, or a brain with the brainless expert.
         neural = max(factories, key=lambda f: f.n_neurons)
         await self.send(
