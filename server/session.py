@@ -16,6 +16,8 @@ from pydantic import ValidationError
 
 from server.catalog import Catalog
 from server.protocol import (
+    NEURON_ACTIVITY,
+    TYPE_ACTIVITY,
     Brain,
     ClientMessage,
     Clock,
@@ -33,6 +35,7 @@ from server.protocol import (
     SetInterventions,
     SlotInfo,
     Start,
+    binary_message,
     client_message_adapter,
 )
 
@@ -64,6 +67,11 @@ class Sim(Protocol):
 
     def set_interventions(self, controls: Mapping[str, Any], eye: Mapping[str, Any]) -> None: ...
 
+    def activity(self) -> tuple[bytes, bytes] | None:
+        """The last step's per-neuron and per-cell-type payloads (PROTOCOL.md section 6);
+        None for a player without a brain."""
+        ...
+
 
 class SimFactory(Protocol):
     """Makes one player's sims; n_neurons is 0 for players without a brain."""
@@ -85,6 +93,7 @@ class SlotRun:
     sim: Sim
     render_state: RenderState
     done: bool = False
+    neurons_sent_step: int | None = None
 
 
 class Session:
@@ -236,9 +245,9 @@ class Session:
             for message in await self.on_worker(self.advance, self.song_t()):
                 await self.send(message)
 
-    def advance(self, target: float) -> list[Message]:
+    def advance(self, target: float) -> list[Message | bytes]:
         """Step each slot up to song time `target`; returns the messages to send."""
-        messages: list[Message] = []
+        messages: list[Message | bytes] = []
         for slot, run in enumerate(self.slots):
             stepped = False
             # Nearest step, not floor: ticks land on step boundaries and jitter either way.
@@ -250,6 +259,7 @@ class Session:
                 ]
             if stepped:
                 messages.append(Frame(slot=slot, render_state=run.render_state))
+                messages += activity(slot, run)
                 if run.done:
                     messages.append(Ended(slot=slot, score=run.render_state.score))
         return messages
@@ -275,5 +285,24 @@ class Session:
     def now(self) -> float:
         return asyncio.get_running_loop().time()
 
-    async def send(self, message: Message) -> None:
-        await self.websocket.send_text(message.model_dump_json())
+    async def send(self, message: Message | bytes) -> None:
+        if isinstance(message, bytes):
+            await self.websocket.send_bytes(message)
+        else:
+            await self.websocket.send_text(message.model_dump_json())
+
+
+def activity(slot: int, run: SlotRun) -> list[bytes]:
+    """Binary activity for the slot's latest step: cell-type means with every frame (30 Hz),
+    every neuron at most every other step (15 Hz)."""
+    payloads = run.sim.activity()
+    if payloads is None:
+        return []
+    neurons, types = payloads
+    step = run.render_state.step
+    messages = [binary_message(TYPE_ACTIVITY, slot, step, types)]
+    last = run.neurons_sent_step
+    if last is None or not 0 < step - last < 2:  # a seek can move the step back
+        run.neurons_sent_step = step
+        messages.append(binary_message(NEURON_ACTIVITY, slot, step, neurons))
+    return messages

@@ -10,6 +10,14 @@ class Socket extends EventTarget {
   close() { this.readyState = 3; this.dispatchEvent(new Event('close')) }
   open() { this.readyState = 1; this.dispatchEvent(new Event('open')) }
   receive(data) { this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data) })) }
+  receiveActivity(kind, step, values) {
+    const data = new ArrayBuffer(8 + values.length)
+    const view = new DataView(data)
+    view.setUint8(0, kind)
+    view.setUint32(4, step, true)
+    new Int8Array(data, 8).set(values)
+    this.dispatchEvent(new MessageEvent('message', { data }))
+  }
 }
 const score = { score: 75, combo: 3, max_combo: 3, hits: 3, misses: 1, accuracy: 0.75 }
 const ready = { type: 'ready', map_id: 'abc12_hard', slots: [{ slot: 0, brain: 'expert' }] }
@@ -17,13 +25,15 @@ const frame = { type: 'frame', slot: 0, render_state: { t: 2, step: 60, score, s
 function setup() {
   const sockets = []
   const state = { ...emptySession }
+  const activity = []
   let time = 0, failures = 0
   const client = new SessionClient({
     url: () => 'ws://test/ws/session', getTime: () => time,
     onChange: (next) => Object.assign(state, next), onFailure: () => failures++,
+    onActivity: (frame) => activity.push([frame.kind, frame.step, [...frame.values]]),
     makeSocket: () => { const socket = new Socket(); sockets.push(socket); return socket },
   })
-  return { client, state, sockets, time: (t) => time = t, failures: () => failures }
+  return { client, state, sockets, activity, time: (t) => time = t, failures: () => failures }
 }
 
 test('start waits for ready, drives real motor frames, handles score/events and preserves pause state', async (t) => {
@@ -109,4 +119,26 @@ test('ignores other slots, malformed scores, duplicate frames and invalid events
   socket.receive(frame)
   socket.receive({ ...frame, render_state: { ...frame.render_state, score: { ...score, combo: 100 } } })
   assert.equal(s.state.score.combo, 3)
+})
+
+test('passes brain activity on while playing, in step order, and again after a seek', async (t) => {
+  const s = setup()
+  t.after(() => s.client.disconnect())
+  const pending = s.client.prepare('abc12_hard', 'real')
+  const socket = s.sockets[0]
+  socket.open()
+  socket.receive({ ...ready, slots: [{ slot: 0, brain: 'real' }], n_neurons: 3, cell_types: ['a', 'b'] })
+  await pending
+  socket.receiveActivity(2, 1, [1, 1])
+  assert.deepEqual(s.activity, [], 'not playing yet')
+  s.client.play()
+  socket.receiveActivity(1, 60, [-5, 0, 7])
+  socket.receiveActivity(2, 60, [1, -1])
+  socket.receiveActivity(2, 59, [9, 9])
+  socket.receiveActivity(2, 61, [9, 9, 9])
+  assert.deepEqual(s.activity, [[1, 60, [-5, 0, 7]], [2, 60, [1, -1]]], 'stale and malformed dropped')
+  s.time(0.1)
+  s.client.seek()
+  socket.receiveActivity(2, 3, [2, 2])
+  assert.deepEqual(s.activity.at(-1), [2, 3, [2, 2]])
 })

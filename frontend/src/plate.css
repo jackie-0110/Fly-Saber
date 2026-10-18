@@ -1310,6 +1310,81 @@
   font-size: var(--text-sm);
 }
 
+.brain-display-controls select {
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid var(--field-rule);
+  border-radius: 2px;
+  background: var(--field-2);
+  color: var(--field-ink);
+  font-size: var(--text-xs);
+}
+.brain-connection-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.brain-connection-summary .edge-in {
+  color: oklch(0.48 0.13 255);
+  font-weight: 600;
+}
+.brain-connection-summary .edge-out {
+  color: oklch(0.55 0.12 70);
+  font-weight: 600;
+}
+
+/* ---------- Live play: brain picker and server songs ---------- */
+
+.live-play {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1.5px solid var(--ink);
+}
+.brain-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+.brain-picker select {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: 500 var(--text-md) var(--font-sans);
+}
+.brain-picker select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.brain-description {
+  margin-top: -4px;
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.live-play .song-results {
+  margin-top: 0;
+}
+.server-song-copy {
+  padding: 10px 4px 6px;
+}
+.preview-only {
+  color: var(--signal-amber);
+}
+
 /* ---------- Song library ---------- */
 
 .songs-tab {
