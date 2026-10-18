@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { backendUrl } from '@/game/backend'
 
 type BackendState = 'checking' | 'connected' | 'disconnected'
@@ -59,15 +61,40 @@ export function BackendStatus() {
   }, [])
 
   return (
-    <Badge
-      variant="outline"
-      className="backend-status"
-      data-state={status}
-      role="status"
-      aria-live="polite"
-    >
-      <span className="status-dot" aria-hidden="true" />
-      {labels[status]}
-    </Badge>
+    <Popover>
+      <PopoverTrigger className="status-trigger" aria-label={`${labels[status]}: details`}>
+        <Badge
+          variant="outline"
+          className="backend-status"
+          data-state={status}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="status-dot" aria-hidden="true" />
+          {labels[status]}
+        </Badge>
+        <ChevronDown aria-hidden="true" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="status-popover">
+        <p className="status-popover-title">{details[status].title}</p>
+        <p>{details[status].body}</p>
+      </PopoverContent>
+    </Popover>
   )
+}
+
+// What each state means for the visitor, in place of scattered "not connected" notes.
+const details: Record<BackendState, { title: string; body: string }> = {
+  checking: {
+    title: 'Looking for the simulation server',
+    body: 'Songs, audio and the neuron view work meanwhile. The fly moves once the server answers.',
+  },
+  connected: {
+    title: 'Simulation server connected',
+    body: 'Choose a brain and a Live play song in the Songs tab, then press play: the brain drives the fly.',
+  },
+  disconnected: {
+    title: 'Simulation server unreachable',
+    body: 'Songs still play as previews and the neuron view works, but no brain drives the fly. This retries every few seconds.',
+  },
 }

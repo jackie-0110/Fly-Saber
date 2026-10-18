@@ -1,4 +1,32 @@
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
+import type { SaberAction } from '@/game/fly-motion'
 import { useSession } from '@/game/session'
+
+// Ghost hex lattice for the two compound eyes. Shape only: the live stream fills the
+// brain's 437 eye columns (docs/PROTOCOL.md, section 2).
+const OMMATIDIA = (() => {
+  const points: [number, number][] = []
+  const spacing = 4.2
+  const rowHeight = spacing * 0.866
+  for (const cx of [42, 118]) {
+    for (let row = -11; row <= 11; row++) {
+      const y = row * rowHeight
+      const offset = row % 2 ? spacing / 2 : 0
+      for (let col = -9; col <= 9; col++) {
+        const x = col * spacing + offset
+        if ((x / 30) ** 2 + (y / 37) ** 2 <= 1) points.push([cx + x, 45 + y])
+      }
+    }
+  }
+  return points
+})()
+
+// Cut directions as the protocol numbers them: 0 up, 1 down, 2 left, 3 right.
+const CUTS = [ArrowUp, ArrowDown, ArrowLeft, ArrowRight]
+const SABERS = [
+  { color: 0, name: 'Left', tone: 'magenta' },
+  { color: 1, name: 'Right', tone: 'green' },
+] as const
 
 export function SessionReadouts() {
   const score = useSession((s) => s.score)
@@ -9,6 +37,16 @@ export function SessionReadouts() {
     <section className="session-readouts" aria-label="Session readouts">
       <div className="readout-block">
         <h2>Visual input</h2>
+        <svg
+          className="eye-lattice"
+          viewBox="0 0 160 90"
+          preserveAspectRatio="xMinYMid meet"
+          aria-hidden="true"
+        >
+          {OMMATIDIA.map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" />
+          ))}
+        </svg>
         <p className="readout-status">
           <span className="status-dot" />
           Awaiting fly's-eye stream
@@ -16,23 +54,27 @@ export function SessionReadouts() {
       </div>
       <div className="readout-block">
         <h2>Motor output</h2>
-        <p className="readout-status">
-          <span className="status-dot" />
-          {sabers.length
-            ? sabers
-                .map(
-                  (s) =>
-                    `${s.color === 0 ? 'Left' : 'Right'}: ${s.cell === null ? 'idle' : `cell ${s.cell}`}`,
-                )
-                .join(' · ')
-            : status === 'ended'
-              ? 'Session complete'
-              : 'Awaiting simulation'}
-        </p>
+        {sabers.length ? (
+          <div className="motor-grid" aria-label="Saber targets">
+            {SABERS.map(({ color, name, tone }) => (
+              <SaberRow
+                key={color}
+                name={name}
+                tone={tone}
+                action={sabers.find((s) => s.color === color)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="readout-status">
+            <span className="status-dot" />
+            {status === 'ended' ? 'Session complete' : 'Awaiting simulation'}
+          </p>
+        )}
         <span className="readout-caption">
           {score
             ? `${score.hits} hits · ${score.misses} misses${lastEvent ? ` · ${lastEvent.kind.replace('_', ' ')} #${lastEvent.note_id}` : ''}`
-            : 'Saber actions will appear here.'}
+            : 'Saber targets and cuts appear here during live play.'}
         </span>
       </div>
       <div className="readout-block">
@@ -53,5 +95,38 @@ export function SessionReadouts() {
         </div>
       </div>
     </section>
+  )
+}
+
+/** One saber's target on the 4 × 3 note grid (cell = layer * 4 + lane) and its cut. */
+function SaberRow({
+  name,
+  tone,
+  action,
+}: {
+  name: string
+  tone: 'magenta' | 'green'
+  action: SaberAction | undefined
+}) {
+  const cell = action?.cell ?? null
+  const Cut = action?.cut === null || action?.cut === undefined ? null : CUTS[action.cut]
+  return (
+    <div className={`motor-row ${tone}`}>
+      <span className="motor-name">{name}</span>
+      <span
+        className="cell-grid"
+        role="img"
+        aria-label={`${name} saber: ${cell === null ? 'idle' : `cell ${cell}`}`}
+      >
+        {[2, 1, 0].flatMap((layer) =>
+          [0, 1, 2, 3].map((lane) => (
+            <i key={`${layer}-${lane}`} data-active={cell === layer * 4 + lane} />
+          )),
+        )}
+      </span>
+      <span className="motor-cut" aria-hidden="true">
+        {Cut ? <Cut /> : '·'}
+      </span>
+    </div>
   )
 }
