@@ -4,12 +4,24 @@ import { loadControls } from '@/features/brain/data'
 import type { Controls } from '@/features/brain/data'
 import { isUntouched, noControls } from '@/features/session/interventions'
 import type { BrainControls } from '@/features/session/interventions'
-import { liveSession } from '@/features/session/store'
+import { useSession } from '@/features/session/session'
+import { liveSession, transport, usePlayer } from '@/features/session/store'
 
 // Control groups and moods named in controls.json.
 export const LOOMING = 'looming_detectors'
 export const AROUSAL = 'arousal'
 export const GIANT_FIBER = 'giant_fiber'
+
+const COMPARE_KEY = 'fly-saber-compare'
+function readCompare() {
+  try {
+    return localStorage.getItem(COMPARE_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+const initialCompare = readCompare()
+liveSession.setBaseline(initialCompare)
 
 /** Brain-control state for the player, shared by the eyes, the Brain stage, the panel and Session. */
 export const useBrainControls = create<{
@@ -18,10 +30,27 @@ export const useBrainControls = create<{
   /** Whether the full controls panel is open over the inspector. */
   panelOpen: boolean
   setPanelOpen: (open: boolean) => void
+  /** Whether an untouched twin plays beside the fly, so the controls' effect has a baseline. */
+  compare: boolean
+  setCompare: (on: boolean) => void
 }>((set, get) => ({
   controls: noControls,
   panelOpen: false,
   setPanelOpen: (panelOpen) => set({ panelOpen }),
+  compare: initialCompare,
+  setCompare: (compare) => {
+    set({ compare })
+    try {
+      localStorage.setItem(COMPARE_KEY, compare ? 'on' : 'off')
+    } catch {
+      // Blocked storage: the choice lasts until reload.
+    }
+    // Mid-song, restart the session from here so both flies start level at this point.
+    const playing = useSession.getState().status === 'playing'
+    if (playing) transport.pause()
+    liveSession.setBaseline(compare)
+    if (playing) void usePlayer.getState().play()
+  },
   change: (next) => {
     const controls = { ...get().controls, ...next }
     set({ controls })

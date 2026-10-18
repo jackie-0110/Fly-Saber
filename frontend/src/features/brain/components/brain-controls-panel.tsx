@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { FloatingWindow } from '@/components/floating-window'
 import type { Frame } from '@/components/floating-window'
 import { RangeControl } from '@/components/range-control'
+import { BaselineCompare } from '@/features/session/components/baseline-compare'
 import type { ControlSection, Controls, MoodPreset } from '@/features/brain/data'
 import {
   describeControls,
@@ -192,6 +193,7 @@ export function BrainControlsPanel() {
 
       {config && (
         <div className="controls-sheet-body">
+          <BaselineCompare />
           <TriggerEscape config={config} disabled={disabled} onSet={setStimulation} />
 
           <section className="controls-group" aria-labelledby="moods-heading">

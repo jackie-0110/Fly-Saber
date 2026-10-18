@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { emptySession, SessionClient } from '../src/features/session/session-client.ts'
 import { flyMotion } from '../src/features/game/fly-motion.ts'
 import { interventionsMessage, isUntouched, noControls } from '../src/features/session/interventions.ts'
+import { compareScores } from '../src/features/session/comparison.ts'
 
 class Socket extends EventTarget {
   readyState = 0
@@ -328,4 +329,60 @@ test('eye stream drops stale and other-slot images, preserves pause, and resets 
   assert.equal(s.eyes.at(-1)[0], 3)
   socket.receiveActivity(1, 3, [1, 2, 3])
   assert.equal(s.activity.length, 1, 'eye packets never consume activity sequence numbers')
+})
+
+test('the untouched twin plays slot 1 with no controls, and only its score reaches the page', async (t) => {
+  const s = setup()
+  t.after(() => s.client.disconnect())
+  const lesioned = { ...noControls, lesion: ['motion_detectors'] }
+  s.client.setInterventions(lesioned)
+  s.client.setBaseline(true)
+  const pending = s.client.prepare('abc12_hard', 'real')
+  const socket = s.sockets[0]
+  socket.open()
+  assert.deepEqual(socket.sent[0].brains, ['real', 'real'], 'the same brain twice')
+  socket.receive({
+    ...brainReady,
+    slots: [
+      { slot: 0, brain: 'real' },
+      { slot: 1, brain: 'real' },
+    ],
+  })
+  await pending
+  const controls = socket.sent.filter((m) => m.type === 'set_interventions')
+  assert.deepEqual(controls, [interventionsMessage(lesioned)], 'controls go to slot 0 only')
+
+  s.client.play()
+  const twinScore = { ...score, hits: 9, misses: 1, accuracy: 0.9 }
+  socket.receive({ ...frame, slot: 1, render_state: { ...frame.render_state, score: twinScore } })
+  socket.receive({ type: 'event', slot: 1, t: 2, kind: 'hit', note_id: 4 })
+  assert.deepEqual(s.state.baselineScore, twinScore)
+  assert.equal(s.state.score, null, "the twin's frames are not the fly's")
+  assert.equal(s.state.removed.has(4), false, "the twin's notes stay on the track")
+  socket.receive(frame)
+  assert.deepEqual(s.state.score, score)
+
+  socket.receive({ type: 'ended', slot: 0, score })
+  socket.receive({ type: 'ended', slot: 1, score: { ...twinScore, hits: 10, accuracy: 0.91 } })
+  assert.equal(s.state.baselineScore.hits, 10, "the twin's final score lands after the fly's")
+
+  s.client.setBaseline(false)
+  assert.equal(s.state.status, 'idle', 'turning the twin off closes the finished session')
+  const solo = s.client.prepare('abc12_hard', 'real')
+  s.sockets[1].open()
+  assert.deepEqual(s.sockets[1].sent[0].brains, ['real'])
+  s.sockets[1].receive(brainReady)
+  await solo
+  s.client.play()
+  s.sockets[1].receive({ ...frame, slot: 1 })
+  assert.equal(s.state.baselineScore, null)
+})
+
+test('the comparison is the hit-rate gap in points, once both have judged a note', () => {
+  const fly = { hits: 3, misses: 52, accuracy: 0.0545 }
+  const twin = { hits: 19, misses: 36, accuracy: 0.3455 }
+  assert.deepEqual(compareScores(fly, twin), { fly: 0.0545, twin: 0.3455, points: -29.1, judged: 55 })
+  assert.equal(compareScores(fly, null), null)
+  assert.equal(compareScores({ hits: 0, misses: 0, accuracy: 1 }, twin), null, 'nothing judged yet')
+  assert.equal(compareScores(twin, twin).points, 0)
 })

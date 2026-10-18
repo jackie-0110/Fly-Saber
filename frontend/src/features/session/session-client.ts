@@ -23,6 +23,12 @@ export interface SessionSnapshot {
   /** A rejected message once the session is ready; the session keeps running. */
   controlsError: string
   score: Score | null
+  /**
+   * The untouched twin's score: the same brain on the same song and seed in slot 1, with
+   * no controls, so the difference from `score` is what the controls did. Null when the
+   * comparison is off or the twin has judged nothing yet.
+   */
+  baselineScore: Score | null
   sabers: SaberAction[]
   removed: ReadonlySet<number>
   lastEvent: { kind: string; note_id: number } | null
@@ -32,6 +38,7 @@ export const emptySession: SessionSnapshot = {
   error: '',
   controlsError: '',
   score: null,
+  baselineScore: null,
   sabers: [],
   removed: new Set(),
   lastEvent: null,
@@ -77,6 +84,7 @@ export class SessionClient {
   private activitySteps = new Map<number, number>()
   private eyeStep = -1
   private controls = noControls
+  private baseline = false
   private readonly options: ClientOptions
 
   constructor(options: ClientOptions) {
@@ -100,6 +108,16 @@ export class SessionClient {
     this.update({ controlsError: '' })
     this.sendControls()
   }
+  /**
+   * Run an untouched twin beside the player from the next session on: slot 1 gets the same
+   * brain, song and seed and never gets controls. A change closes an idle session so the
+   * next play starts with or without the twin.
+   */
+  setBaseline(on: boolean) {
+    if (on === this.baseline) return
+    this.baseline = on
+    if (this.socket && this.status !== 'playing') this.disconnect()
+  }
   private stopClock() {
     clearInterval(this.clock)
     this.clock = undefined
@@ -109,7 +127,13 @@ export class SessionClient {
     this.activitySteps.clear()
     this.eyeStep = -1
     flyMotion.reset()
-    this.update({ score: null, sabers: [], removed: this.removed, lastEvent: null })
+    this.update({
+      score: null,
+      baselineScore: null,
+      sabers: [],
+      removed: this.removed,
+      lastEvent: null,
+    })
   }
   disconnect() {
     const socket = this.socket
@@ -133,10 +157,11 @@ export class SessionClient {
   }
 
   async prepare(mapId: string, brain: string) {
-    if (this.key === `${mapId}/${brain}` && ['ready', 'playing', 'paused'].includes(this.status))
-      return
+    const key = `${mapId}/${brain}/${this.baseline ? 'twin' : 'solo'}`
+    const brains = this.baseline ? [brain, brain] : [brain]
+    if (this.key === key && ['ready', 'playing', 'paused'].includes(this.status)) return
     this.disconnect()
-    this.key = `${mapId}/${brain}`
+    this.key = key
     this.clearRun()
     this.update({ status: 'connecting', error: '' })
     await new Promise<void>((resolve, reject) => {
@@ -155,7 +180,7 @@ export class SessionClient {
       }, 15000)
       socket.addEventListener('open', () => {
         if (this.socket === socket)
-          this.send({ type: 'start', game: 'saber', brains: [brain], map_id: mapId, seed: 0 })
+          this.send({ type: 'start', game: 'saber', brains, map_id: mapId, seed: 0 })
       })
       socket.addEventListener('message', (event) => {
         if (this.socket !== socket) return
@@ -175,9 +200,11 @@ export class SessionClient {
             if (
               message.map_id !== mapId ||
               !Array.isArray(message.slots) ||
-              message.slots.length !== 1 ||
-              message.slots[0].slot !== 0 ||
-              message.slots[0].brain !== brain
+              message.slots.length !== brains.length ||
+              message.slots.some(
+                (info: { slot?: unknown; brain?: unknown }, i: number) =>
+                  info?.slot !== i || info?.brain !== brain,
+              )
             ) {
               this.fail('The server prepared a different song or brain. Press play to retry.')
               return
@@ -191,6 +218,15 @@ export class SessionClient {
             this.update({ status: 'ready' })
             if (!isUntouched(this.controls)) this.sendControls()
             resolve()
+          } else if (
+            message.slot === 1 &&
+            this.baseline &&
+            ['playing', 'ended'].includes(this.status)
+          ) {
+            // Only the twin's score; its sabers, notes and activity stay off the page.
+            const score = message.type === 'frame' ? message.render_state?.score : message.score
+            if (['frame', 'ended'].includes(message.type) && validScore(score))
+              this.update({ baselineScore: score })
           } else if (message.slot === 0 && this.status === 'playing') {
             if (
               message.type === 'frame' &&

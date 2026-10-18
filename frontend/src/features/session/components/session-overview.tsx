@@ -5,6 +5,7 @@ import {
   useControlsConfigState,
 } from '@/features/session/controls-state'
 import { difficultyLabel } from '@/features/songs/chart'
+import { BaselineCompare } from '@/features/session/components/baseline-compare'
 import { liveMapId, usePlayer } from '@/features/session/store'
 import { useSession } from '@/features/session/session'
 
@@ -67,6 +68,8 @@ export function SessionOverview() {
           </div>
         </dl>
       )}
+
+      <BaselineCompare />
 
       <section className="session-overview" aria-labelledby="overview-heading">
         <div className="inspector-section-heading">

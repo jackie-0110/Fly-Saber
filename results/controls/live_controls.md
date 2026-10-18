@@ -49,3 +49,16 @@ is in `src/brain/model/brain.py`: noise is added to every neuron each substep, a
 (`readout_norm`) divides descending-neuron rates by their resting spread (`dn_std`), which
 is tiny, so the noise is amplified with the signal. Worth a look by the model owner if
 noise should behave like a dial.
+
+## Against an untouched twin (live, two slots)
+
+The page runs an untouched twin of the fly in slot 1 (same brain, song and seed, no
+controls) so every control has a baseline. Same map and window as above, both slots at
+29.9 frames per second:
+
+| Slot 0 | Slot 0 hit rate | Untouched twin |
+|---|---|---|
+| Untouched | 34.5% (19 of 55) | 34.5% (19 of 55) |
+| Lesion motion detectors | 5.6% (3 of 53) | 34.5% (19 of 55) |
+
+With nothing changed the twin matches note for note, so any gap is the controls.
