@@ -1,6 +1,6 @@
 """FastAPI app, REST endpoints and WS /ws/session (spec 13).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 """
 
 import asyncio
@@ -147,7 +147,7 @@ def serve() -> FastAPI:
     """The production app, for `uvicorn server.app:serve --factory`."""
     frontend = Path("frontend/dist")
     return create_app(
-        brains=serving_brains(brain_modes(), Path("bundles")),
+        brains=serving_brains(brain_modes(), Path("data/bundles")),
         frontend_dir=frontend if frontend.is_dir() else None,
         max_sessions=int(os.environ.get("MAX_SESSIONS", MAX_SESSIONS)),
     )

@@ -227,7 +227,7 @@ const isRange = (value: unknown): value is ControlRange =>
   Number.isFinite(value.max) &&
   (value.min as number) <= (value.max as number)
 
-/** The sections, moods, presets and ranges the UI offers (docs/PROTOCOL.md section 4). */
+/** The sections, moods, presets and ranges the UI offers (docs/reference/PROTOCOL.md section 4). */
 export function parseControls(raw: unknown): Controls {
   if (
     !isRecord(raw) ||

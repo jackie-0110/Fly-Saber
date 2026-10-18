@@ -6,8 +6,8 @@
 !src/**
 !configs/
 !configs/*.yaml
-!bundles/
-!bundles/**
+!data/bundles/
+!data/bundles/**
 !scripts/
 !scripts/data/
 !scripts/data/fetch_maps.py
@@ -30,4 +30,4 @@
 **/.env.*
 **/*.npz
 # Trained flies ship in the image (scripts/training/bundle_checkpoint.py, export_brains.py).
-!bundles/**/*.npz
+!data/bundles/**/*.npz

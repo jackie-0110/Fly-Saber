@@ -5,7 +5,7 @@ and the subgraphs they were trained on):
     uv run python scripts/web/export_brains.py
 
 Writes, per mode in configs/brains.yaml:
-  bundles/<id>/                         checkpoint + exact subgraph (view-only: subgraph only)
+  data/bundles/<id>/                         checkpoint + exact subgraph (view-only: subgraph only)
   frontend/public/data/brains/<id>.json  per-neuron signs, strongest connections per layer pair
   frontend/public/data/brains/index.json labels, descriptions, play results, wiring stats
 All modes share the real brain's neurons, so the front end keeps one neurons.json.
@@ -65,7 +65,7 @@ def main() -> None:
         playable = ckpt is not None and ckpt.exists()
         if mode.get("checkpoint") and not playable:
             print(f"  {mode['id']}: {ckpt} not found, exporting as view-only")
-        out = Path("bundles") / mode["id"]
+        out = Path("data/bundles") / mode["id"]
         if playable:
             bundle(ckpt, out)  # type: ignore[arg-type]
         else:

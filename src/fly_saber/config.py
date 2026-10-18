@@ -1,6 +1,6 @@
 """Load YAML configs into frozen dataclasses.
 
-Owner: All. See docs/ARCHITECTURE.md conventions.
+Owner: All. See docs/reference/ARCHITECTURE.md conventions.
 """
 
 from pathlib import Path

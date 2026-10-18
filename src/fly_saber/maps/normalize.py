@@ -1,6 +1,6 @@
-"""Normalize parsed maps to the shared schema (spec 8.2, docs/PROTOCOL.md section 1).
+"""Normalize parsed maps to the shared schema (spec 8.2, docs/reference/PROTOCOL.md section 1).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 """
 
 import json

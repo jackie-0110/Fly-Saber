@@ -97,7 +97,7 @@ test('rejects unsafe body IDs, nonfinite coordinates, and out-of-range group ind
 
 test('the complete trained-bundle topology matches the manifest and original neuron IDs', () => {
   const manifest = JSON.parse(
-    readFileSync(new URL('../../bundles/real_fast/MANIFEST.json', import.meta.url)),
+    readFileSync(new URL('../../data/bundles/real_fast/MANIFEST.json', import.meta.url)),
   )
   const data = parseBrainData(asset, groups, edges)
   assert.deepEqual(edges.body_id, asset.body_id)

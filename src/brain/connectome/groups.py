@@ -1,6 +1,6 @@
 """Named neuron groups for interventions and the UI (spec 5.4).
 
-Owner: Person 1. Output format is the groups.json contract in docs/PROTOCOL.md.
+Owner: Person 1. Output format is the groups.json contract in docs/reference/PROTOCOL.md.
 """
 
 import pandas as pd

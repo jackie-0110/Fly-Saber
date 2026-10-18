@@ -26,7 +26,7 @@ COPY --from=python-builder /app/.venv /app/.venv
 COPY src/ src/
 COPY configs/ configs/
 # Trained flies with the exact subgraphs they were trained on (never rebuilt here).
-COPY bundles/ bundles/
+COPY data/bundles/ data/bundles/
 # Songs: the allowlist is in the image; maps and audio are downloaded into a volume on
 # the host with scripts/data/fetch_maps.py (infra/deploy/deploy_vultr.sh), so data/maps is writable.
 COPY scripts/data/fetch_maps.py scripts/data/fetch_maps.py

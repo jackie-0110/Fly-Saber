@@ -8,7 +8,7 @@ import pytest
 
 from scripts.web.export_web import bundle_subgraph, export_web
 
-BUNDLE = Path("bundles/real_fast")
+BUNDLE = Path("data/bundles/real_fast")
 WEB = Path("frontend/public/data/brain")
 
 

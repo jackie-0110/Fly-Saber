@@ -1,6 +1,6 @@
 """Brain data for the front end, the fly eye, and the Brain Explorer (spec 5.5).
 
-Owner: Person 1. Format is documented in docs/PROTOCOL.md section 4.
+Owner: Person 1. Format is documented in docs/reference/PROTOCOL.md section 4.
 explorer.json (descriptions, top connections) builds on web_neurons later.
 """
 
@@ -88,7 +88,7 @@ def column_angles(
     Azimuth is positive to the fly's right, elevation positive up, both in degrees.
     hex1 and hex2 are axial hex coordinates with axes 120 degrees apart: +hex1
     points up and forward, +hex2 up and backward (fit to lamina soma positions,
-    see docs/DATA_NOTES.md). Each eye's most frontal column sits at
+    see docs/reference/DATA_NOTES.md). Each eye's most frontal column sits at
     `binocular_overlap_deg` past the midline, and its vertical midpoint is the
     equator. Absolute angles are an idealized lattice, not measured optics.
     """

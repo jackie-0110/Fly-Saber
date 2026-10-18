@@ -2,7 +2,7 @@
 
 Owner: Person 1. Usage (on HiPerGator, repo root):
     uv run python scripts/training/bundle_checkpoint.py \
-        checkpoints/real/fast/seed0/bc_950.npz bundles/real
+        checkpoints/real/fast/seed0/bc_950.npz data/bundles/real
 Then copy the folder off the cluster, for example:
     scp -r <gatorlink>@hpg.rc.ufl.edu:/blue/uf-sps/<gatorlink>/Fly-Saber/bundles/real .
 

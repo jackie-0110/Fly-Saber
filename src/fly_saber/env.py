@@ -1,6 +1,6 @@
 """Fly Saber env, pure-functional JAX (spec 7.2).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 
 Actions are (n_sabers, 2) ints: [cell, cut]. Cell is layer * 4 + lane (0 to 11)
 or IDLE_CELL; cut is a sim direction 0 to 3 or NO_CUT. Saber 0 is red, 1 blue.
@@ -321,7 +321,7 @@ class SaberEnv:
         return apply_eye_controls(image, state.eye, self.left_eye, state.step, background)
 
     def render_state(self, state: SaberState) -> dict[str, Any]:
-        """The `render_state` contract (docs/PROTOCOL.md section 2) for one unbatched state."""
+        """The `render_state` contract (docs/reference/PROTOCOL.md section 2), unbatched."""
         judged = int(state.hits + state.misses + state.bad_cuts)
         accuracy = int(state.hits) / judged if judged else 1.0
         t = float(self.time(state))

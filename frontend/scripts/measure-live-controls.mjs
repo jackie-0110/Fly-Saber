@@ -1,4 +1,4 @@
-// Live effect of each brain and eye control on a served brain (results/controls/live_controls.md).
+// Live effect of each brain and eye control on a served brain (docs/results/controls/live_controls.md).
 // One condition per session, the same song window each time, counted from `event` messages.
 //
 //   node --experimental-strip-types scripts/measure-live-controls.mjs [map] [start_s] [seconds] [first-words]

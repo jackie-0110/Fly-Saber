@@ -1,4 +1,4 @@
-/** Visual motor adapter for docs/PROTOCOL.md §2. No map lookahead or scoring. */
+/** Visual motor adapter for docs/reference/PROTOCOL.md §2. No map lookahead or scoring. */
 export type SaberColor = 0 | 1
 export type CutDirection = 0 | 1 | 2 | 3
 export type Point3 = [number, number, number]

@@ -1,4 +1,4 @@
-/** Processed luminance, docs/PROTOCOL.md section 3. Values are unsigned, unlike activity. */
+/** Processed luminance, docs/reference/PROTOCOL.md section 3. Values are unsigned, unlike activity. */
 export interface EyeFrame {
   slot: number
   step: number
