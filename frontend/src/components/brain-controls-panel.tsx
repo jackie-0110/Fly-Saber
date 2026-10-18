@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { RotateCcw, X, Zap } from 'lucide-react'
+import { RotateCcw, SlidersHorizontal, X, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RangeControl } from '@/components/range-control'
 import type { ControlSection, Controls, MoodPreset } from '@/brain/data'
@@ -303,6 +303,51 @@ export function BrainControlsPanel() {
         </div>
       )}
     </section>
+  )
+}
+
+/** Count of separate changes from the untouched brain, for the header button's badge. */
+function changeCount(controls: BrainControls) {
+  const nonZero = (values: Record<string, number>) => Object.values(values).filter(Boolean).length
+  return (
+    controls.lesion.length +
+    nonZero(controls.stimulate) +
+    nonZero(controls.mood) +
+    [
+      controls.noise,
+      controls.blindLeft,
+      controls.blindRight,
+      controls.blurDeg,
+      controls.facetDropout,
+      controls.eyeNoise,
+    ].filter(Boolean).length
+  )
+}
+
+/**
+ * Opens the full panel from the header, where it is always in reach. The badge counts the
+ * changes in force, so a modified brain is never mistaken for the untouched one.
+ */
+export function BrainControlsButton() {
+  const open = useBrainControls((s) => s.panelOpen)
+  const setOpen = useBrainControls((s) => s.setPanelOpen)
+  const count = useBrainControls((s) => changeCount(s.controls))
+  return (
+    <button
+      type="button"
+      className="brain-controls-button"
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      onClick={() => setOpen(!open)}
+    >
+      <SlidersHorizontal aria-hidden="true" />
+      Brain controls
+      {count > 0 && (
+        <span className="brain-controls-count" aria-label={`${count} active`}>
+          {count}
+        </span>
+      )}
+    </button>
   )
 }
 

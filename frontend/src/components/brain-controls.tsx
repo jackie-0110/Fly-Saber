@@ -1,4 +1,4 @@
-import { RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { AROUSAL, LOOMING, useBrainControls, useControlsConfigState } from '@/game/controls-state'
 import { Button } from '@/components/ui/button'
 import { RangeControl } from '@/components/range-control'
@@ -9,7 +9,8 @@ import { usePlayer } from '@/game/store'
 /*
  * Brain controls sit in the signal path where they act: the blindfolds on the two eyes in
  * Visual input, the lesion and mood in the Brain stage between input and motor output.
- * The Brain stage keeps the two demo favourites; "All controls" opens the full panel.
+ * The Brain stage keeps the two demo favourites; the header's Brain controls button opens
+ * the full panel.
  */
 
 // Every mood range in controls.json is a multiple of this, so the slider can land on 0.
@@ -79,8 +80,6 @@ export function BrainStage() {
   const controlsError = useSession((s) => s.controlsError)
   const looming = config?.sections.find((s) => s.group === LOOMING)
   const arousal = config?.moods.find((m) => m.name === AROUSAL)
-  const panelOpen = useBrainControls((s) => s.panelOpen)
-  const setPanelOpen = useBrainControls((s) => s.setPanelOpen)
   const lesioned = controls.lesion.includes(LOOMING)
 
   const message = failed
@@ -105,16 +104,6 @@ export function BrainStage() {
           onClick={() => change(noControls)}
         >
           <RotateCcw aria-hidden="true" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="xs"
-          className="brain-more"
-          aria-expanded={panelOpen}
-          onClick={() => setPanelOpen(!panelOpen)}
-        >
-          <SlidersHorizontal aria-hidden="true" />
-          All controls
         </Button>
       </div>
       <button

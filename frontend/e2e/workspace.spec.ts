@@ -399,7 +399,7 @@ test('the full controls panel sets moods, lesions, stimulation, jitter and eyes,
   page,
 }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'All controls' }).click()
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
   const sheet = page.getByRole('dialog', { name: 'Brain controls panel' })
   const summary = sheet.locator('.controls-sheet-header p')
   await expect(summary).toHaveText(/untouched brain/)
@@ -444,4 +444,18 @@ test('the full controls panel sets moods, lesions, stimulation, jitter and eyes,
   await expect(anxious).toHaveAttribute('aria-pressed', 'false')
   await page.keyboard.press('Escape')
   await expect(sheet).toHaveCount(0)
+})
+
+test('the header button opens the controls and counts the changes in force', async ({ page }) => {
+  await page.goto('/')
+  const button = page.getByRole('button', { name: /^Brain controls/ })
+  await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await page.getByRole('button', { name: 'Lesion looming detectors' }).click()
+  await page.getByRole('button', { name: 'Blindfold left eye' }).click()
+  await expect(button).toHaveAccessibleName('Brain controls 2 active')
+  await button.click()
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toBeVisible()
+  await button.click()
+  await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toHaveCount(0)
 })

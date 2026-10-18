@@ -1,5 +1,5 @@
 import { BackendStatus } from '@/components/backend-status'
-import { BrainControlsPanel } from '@/components/brain-controls-panel'
+import { BrainControlsButton, BrainControlsPanel } from '@/components/brain-controls-panel'
 import { BrainPreview } from '@/components/brain-preview'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
@@ -21,6 +21,7 @@ export default function App() {
         </a>
         <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
+          <BrainControlsButton />
           <BackendStatus />
           <ThemeToggle />
         </div>

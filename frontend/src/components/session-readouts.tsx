@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 import type { SaberAction } from '@/game/fly-motion'
 import { BrainStage, EyeToggles } from '@/components/brain-controls'
+import { useBrainControls } from '@/game/controls-state'
 import { useSession } from '@/game/session'
 
 // Cut directions as the protocol numbers them: 0 up, 1 down, 2 left, 3 right.
@@ -22,10 +23,7 @@ export function SessionReadouts() {
       <div className="readout-block">
         <h2>Visual input</h2>
         <EyeToggles />
-        <p className="readout-status">
-          <span className="status-dot" />
-          Awaiting fly's-eye stream
-        </p>
+        <EyeStatus />
       </div>
       <BrainStage />
       <div className="readout-block">
@@ -104,5 +102,38 @@ function SaberRow({
         {Cut ? <Cut /> : '·'}
       </span>
     </div>
+  )
+}
+
+/*
+ * What the eyes are doing now. The server renders the fly's view from the notes every
+ * frame of live play; the picture itself is not streamed to the page yet, so this says
+ * whether the fly is seeing rather than promising an image.
+ */
+function EyeStatus() {
+  const status = useSession((s) => s.status)
+  const left = useBrainControls((s) => s.controls.blindLeft)
+  const right = useBrainControls((s) => s.controls.blindRight)
+  let tone = ''
+  let text =
+    status === 'ready' || status === 'paused'
+      ? 'Sees the track once the song plays'
+      : 'Sees the track during live play'
+  if (left && right) {
+    tone = 'red'
+    text = 'Both eyes blindfolded: the fly sees nothing'
+  } else if (status === 'playing') {
+    tone = 'green'
+    text = left
+      ? 'Seeing the track, left eye blindfolded'
+      : right
+        ? 'Seeing the track, right eye blindfolded'
+        : 'Seeing the track live'
+  }
+  return (
+    <p className="readout-status">
+      <span className={`status-dot ${tone}`} />
+      {text}
+    </p>
   )
 }
