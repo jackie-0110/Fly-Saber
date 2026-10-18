@@ -14,6 +14,7 @@ export interface SongResult {
   mapper: string
   bpm: number
   duration: number
+  upvotes: number
   coverUrl: string
   downloadUrl: string
   difficulties: { name: string; characteristic: string; notes: number; nps: number }[]
@@ -52,10 +53,39 @@ export function parseSongResult(value: unknown): SongResult {
     mapper: string(metadata.levelAuthorName, 'Unknown mapper'),
     bpm: numeric(metadata.bpm),
     duration: numeric(metadata.duration),
+    upvotes: upvotes(data.stats),
     coverUrl: cdnUrl(version.coverURL, '.jpg'),
     downloadUrl: cdnUrl(version.downloadURL, '.zip'),
     difficulties,
   }
+}
+
+function upvotes(stats: unknown): number {
+  const value = stats && typeof stats === 'object' && 'upvotes' in stats ? stats.upvotes : 0
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function words(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+}
+
+/**
+ * Orders search results by how many of the query's words appear in the title or artist,
+ * then by title matches, then by upvotes. BeatSaver's own relevance ranks loose matches
+ * first: for "just dance lady gaga" it lists Applause and Born This Way above Just Dance.
+ */
+export function rankByMatch(query: string, songs: SongResult[]): SongResult[] {
+  const wanted = words(query)
+  const score = (song: SongResult) => {
+    const title = new Set(words(song.title))
+    const artist = new Set(words(song.artist))
+    const inTitle = wanted.filter((w) => title.has(w)).length
+    const anywhere = wanted.filter((w) => title.has(w) || artist.has(w)).length
+    return [anywhere, inTitle, song.upvotes]
+  }
+  const scored = songs.map((song) => ({ song, key: score(song) }))
+  scored.sort((a, b) => b.key[0] - a.key[0] || b.key[1] - a.key[1] || b.key[2] - a.key[2])
+  return scored.map(({ song }) => song)
 }
 
 export function mapKey(query: string): string | null {
@@ -108,7 +138,8 @@ export async function searchSongs(query: string, page: number, sort: string, sig
       /* One removed or malformed map cannot hide the rest. */
     }
   }
-  return { songs, more: response.docs.length >= 20 }
+  const ranked = sort === 'Relevance' && query.trim() ? rankByMatch(query, songs) : songs
+  return { songs: ranked, more: response.docs.length >= 20 }
 }
 
 export async function downloadSong(result: SongResult, signal: AbortSignal): Promise<Song> {
