@@ -9,15 +9,16 @@ import type { BrainData, BrainEdges } from './data'
 import { liveActivity } from './live-activity'
 import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
 
-// Brightness of a neuron at rest while a brain plays, so active neurons stand out.
-const REST_BRIGHTNESS = 0.15
-// |change from rest| (of 127) that draws at full brightness. The median active neuron moves
-// about 3, so a linear scale would leave nearly every active neuron as dark as one at rest.
-const FULL_BRIGHTNESS_AT = 32
+// Opacity of a neuron at rest while a brain plays, so active neurons stand out. Rest fades
+// toward the background, not toward black: on the light plate black dots would stand out most.
+const REST_OPACITY = 0.15
+// |change from rest| (of 127) that draws fully opaque. The median active neuron moves about
+// 3, so a linear scale would leave nearly every active neuron as faint as one at rest.
+const FULL_OPACITY_AT = 32
 
-function brightness(change: number) {
-  const level = Math.min(1, Math.sqrt(Math.abs(change) / FULL_BRIGHTNESS_AT))
-  return REST_BRIGHTNESS + (1 - REST_BRIGHTNESS) * level
+function activityOpacity(change: number) {
+  const level = Math.min(1, Math.sqrt(Math.abs(change) / FULL_OPACITY_AT))
+  return REST_OPACITY + (1 - REST_OPACITY) * level
 }
 
 export type CameraAction =
@@ -239,13 +240,13 @@ function NeuronCloud({
 }: Pick<SceneProps, 'data' | 'indices' | 'selected' | 'onSelect' | 'pointSize' | 'opacity'>) {
   const buffers = useMemo(() => {
     const positions = new Float32Array(indices.length * 3)
-    const colors = new Float32Array(indices.length * 3)
+    const colors = new Float32Array(indices.length * 4).fill(1)
     const palette = data.asset.cell_types.map((_, type) => new Color(cellTypeColor(type)))
     indices.forEach((index, offset) => {
       positions.set(data.positions.subarray(index * 3, index * 3 + 3), offset * 3)
-      palette[data.asset.type[index]].toArray(colors, offset * 3)
+      palette[data.asset.type[index]].toArray(colors, offset * 4)
     })
-    return { positions, colors, base: colors.slice() }
+    return { positions, colors }
   }, [data, indices])
   const colorAttribute = useRef<BufferAttribute>(null)
   const drawn = useRef({ buffers, step: -1, live: false })
@@ -261,13 +262,10 @@ function NeuronCloud({
       (!live || last.step === liveActivity.neuronStep)
     )
       return
-    const { colors, base } = buffers
-    if (live && neurons) {
-      indices.forEach((index, offset) => {
-        const level = brightness(neurons[index])
-        for (let i = offset * 3; i < offset * 3 + 3; i++) colors[i] = base[i] * level
-      })
-    } else colors.set(base)
+    const { colors } = buffers
+    indices.forEach((index, offset) => {
+      colors[offset * 4 + 3] = live && neurons ? activityOpacity(neurons[index]) : 1
+    })
     if (colorAttribute.current) colorAttribute.current.needsUpdate = true
     drawn.current = { buffers, step: liveActivity.neuronStep, live }
   })
@@ -287,7 +285,7 @@ function NeuronCloud({
           <bufferAttribute
             ref={colorAttribute}
             attach="attributes-color"
-            args={[buffers.colors, 3]}
+            args={[buffers.colors, 4]}
           />
         </bufferGeometry>
         <pointsMaterial
