@@ -324,9 +324,10 @@ class SaberEnv:
         """The `render_state` contract (docs/PROTOCOL.md section 2) for one unbatched state."""
         judged = int(state.hits + state.misses + state.bad_cuts)
         accuracy = int(state.hits) / judged if judged else 1.0
+        t = float(self.time(state))
         return {
-            "t": round(float(self.time(state)), 4),
-            "step": int(state.step),
+            "t": round(t, 4),
+            "step": round(t * self.cfg.step_hz),
             "sabers": [
                 {
                     "color": color,

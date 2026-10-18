@@ -1,0 +1,103 @@
+{
+ "schema_version": 1,
+ "modes": [
+  {
+   "id": "real",
+   "label": "Real fly brain",
+   "description": "The fly's own wiring from the MaleCNS connectome.",
+   "playable": true,
+   "bundle": "bundles/real",
+   "play": {
+    "heldout": 0.3268,
+    "train": 0.2908
+   },
+   "wiring": {
+    "direct_eye_to_motor_connections": 1,
+    "eye_to_motor_synapses_median": 4.0,
+    "eye_to_motor_synapses_histogram": {
+     "1": 1,
+     "2": 6,
+     "3": 291,
+     "4": 821,
+     "5": 167,
+     "6": 2
+    },
+    "motor_neurons_unreachable_from_eye": 22,
+    "connections_shared_with_real": 1.0,
+    "excitatory_neuron_fraction": 0.7938
+   }
+  },
+  {
+   "id": "shuffled_layers",
+   "label": "Shuffled within layers",
+   "description": "Same layers and connection counts as the real brain (eye, lamina, medulla, detectors, central brain, motor), but who connects to whom inside each layer pair is random.",
+   "playable": true,
+   "bundle": "bundles/shuffled_layers",
+   "play": {
+    "heldout": 0.5181,
+    "train": 0.4622
+   },
+   "wiring": {
+    "direct_eye_to_motor_connections": 1,
+    "eye_to_motor_synapses_median": 4.0,
+    "eye_to_motor_synapses_histogram": {
+     "1": 1,
+     "2": 5,
+     "3": 504,
+     "4": 769,
+     "5": 18
+    },
+    "motor_neurons_unreachable_from_eye": 13,
+    "connections_shared_with_real": 0.037,
+    "excitatory_neuron_fraction": 0.7938
+   }
+  },
+  {
+   "id": "shuffled_signs",
+   "label": "Excitation and inhibition shuffled",
+   "description": "The real wiring, but which neurons excite and which inhibit is scrambled.",
+   "playable": true,
+   "bundle": "bundles/shuffled_signs",
+   "play": {
+    "heldout": 0.1998,
+    "train": 0.1787
+   },
+   "wiring": {
+    "direct_eye_to_motor_connections": 1,
+    "eye_to_motor_synapses_median": 4.0,
+    "eye_to_motor_synapses_histogram": {
+     "1": 1,
+     "2": 6,
+     "3": 291,
+     "4": 821,
+     "5": 167,
+     "6": 2
+    },
+    "motor_neurons_unreachable_from_eye": 22,
+    "connections_shared_with_real": 1.0,
+    "excitatory_neuron_fraction": 0.7938
+   }
+  },
+  {
+   "id": "shuffled_free",
+   "label": "Shuffled freely",
+   "description": "Every neuron keeps its number of connections, but partners are drawn from anywhere, so the eyes wire straight into the motor neurons.",
+   "playable": false,
+   "bundle": "bundles/shuffled_free",
+   "play": null,
+   "wiring": {
+    "direct_eye_to_motor_connections": 1054,
+    "eye_to_motor_synapses_median": 2.0,
+    "eye_to_motor_synapses_histogram": {
+     "1": 520,
+     "2": 733,
+     "3": 42,
+     "4": 2
+    },
+    "motor_neurons_unreachable_from_eye": 13,
+    "connections_shared_with_real": 0.0151,
+    "excitatory_neuron_fraction": 0.7938
+   }
+  }
+ ]
+}

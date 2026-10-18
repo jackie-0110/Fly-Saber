@@ -31,7 +31,13 @@ COPY fly_saber/ fly_saber/
 COPY training/ training/
 COPY server/ server/
 COPY configs/ configs/
+# Trained flies with the exact subgraphs they were trained on (never rebuilt here).
+COPY bundles/ bundles/
+# Songs: the allowlist is in the image; maps and audio are downloaded into a volume on
+# the host with scripts/fetch_maps.py (scripts/deploy_vultr.sh), so data/maps is writable.
+COPY scripts/fetch_maps.py scripts/fetch_maps.py
 COPY data/maps/demo_allowlist.json data/maps/demo_allowlist.json
+RUN chown -R fly_saber:fly_saber data
 COPY --from=frontend /frontend/dist frontend/dist/
 USER fly_saber
 EXPOSE 8000

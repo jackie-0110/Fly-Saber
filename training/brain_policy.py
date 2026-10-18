@@ -3,10 +3,8 @@
 Owner: Person 2. See docs/PROTOCOL.md sections 2 and 5.
 """
 
-import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 
 import jax
 import numpy as np
@@ -28,7 +26,6 @@ from brain.model.interventions import Interventions, no_interventions
 from fly_saber.env import IDLE_CELL, NO_CUT, SaberConfig, SaberEnv
 from fly_saber.eye import EyeConfig
 from training.calibration import fit_readout
-from training.checkpoints import load_checkpoint, read_meta, subgraph_fingerprint
 
 
 @dataclass(frozen=True)
@@ -42,12 +39,14 @@ class BrainPolicy:
     n_neurons: int
     interventions: Interventions
     rest: jax.Array | None = None
-    baseline: Callable[[Params], Params] | None = None
+    baseline: Callable[[Params, Interventions | None], Params] | None = None
     """Sets the live readout baseline from the current params (with_live_baseline)."""
 
-    def prepare(self, params: Params) -> Params:
+    def prepare(self, params: Params, iv: Interventions | None = None) -> Params:
         """Params to run with: call once per update on the trained params (training/bc.py)."""
-        return params if self.baseline is None else self.baseline(params)
+        # Server: call again with the live interventions whenever the UI changes them, so
+        # the readout re-centers on the modified brain's rest (see brain.model.brain.rest_dn).
+        return params if self.baseline is None else self.baseline(params, iv)
 
     """Episode start state (brain.model.brain.rest_state); None starts from all zeros.
     After loading a checkpoint, replace it: dataclasses.replace(policy, rest=rest_state(...))."""
@@ -93,8 +92,8 @@ def build(
     baseline = None
     if model_cfg.readout_norm and model_cfg.live_baseline:
 
-        def baseline(p: Params) -> Params:
-            return with_live_baseline(p, graph, model_cfg, n_neurons, rest)
+        def baseline(p: Params, iv: Interventions | None = None) -> Params:
+            return with_live_baseline(p, graph, model_cfg, n_neurons, rest, iv)
 
         params = baseline(params)
     policy = BrainPolicy(
@@ -105,34 +104,3 @@ def build(
         baseline,
     )
     return env, policy, params
-
-
-def load(
-    path: Path, saber_cfg: SaberConfig, eye_cfg: EyeConfig
-) -> tuple[SaberEnv, BrainPolicy, Params, ModelConfig]:
-    """A checkpointed brain ready to play: env, policy resting under the trained params, params.
-
-    Uses the checkpoint's model config, so its subgraph_dir must hold the subgraph it was
-    trained on (load_checkpoint raises otherwise).
-    """
-    saved = ModelConfig(**read_meta(path)["configs"]["model"])
-    model_cfg = dataclasses.replace(saved, remat=False)
-    graph, columns, n_neurons = load_graph(model_cfg)
-    env = column_env(saber_cfg, eye_cfg, columns)
-    # Shapes only: readout_norm would calibrate a readout the checkpoint overwrites.
-    template = init_params(
-        jax.random.PRNGKey(0),
-        graph,
-        dataclasses.replace(model_cfg, readout_norm=False),
-        n_neurons,
-    )
-    params, _ = load_checkpoint(
-        path, template, expect_subgraph=subgraph_fingerprint(model_cfg.subgraph_dir)
-    )
-    rest = rest_state(params, graph, model_cfg, n_neurons)
-    if model_cfg.readout_norm and model_cfg.live_baseline:
-        params = with_live_baseline(params, graph, model_cfg, n_neurons, rest)
-    policy = BrainPolicy(
-        make_step(graph, model_cfg, n_neurons), n_neurons, no_interventions(n_neurons), rest
-    )
-    return env, policy, params, model_cfg

@@ -141,7 +141,9 @@ test('edge filtering requires both endpoints and selection respects edge directi
 
 test('rejects mismatched neuron order and malformed or incomplete edge exports', () => {
   const parse = (changed) => parseBrainData(asset, groups, changed)
-  assert.throws(() => parse(undefined), /schema/)
+  // Neurons render before edges.json arrives; an absent table is not an error.
+  assert.equal(parseBrainData(asset, groups).edges, null)
+  assert.throws(() => parse(null), /schema/)
   assert.throws(() => parse({ ...edges, schema_version: 2 }), /schema/)
   assert.throws(() => parse({ ...edges, body_id: [...edges.body_id].reverse() }), /ordering/)
   assert.throws(() => parse({ ...edges, n_neurons: asset.n_neurons - 1 }), /ordering/)

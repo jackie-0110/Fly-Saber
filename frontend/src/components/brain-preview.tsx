@@ -18,11 +18,13 @@ import {
   filterEdgeIndices,
   filterNeuronIndices,
   loadBrainData,
+  loadBrainEdges,
   neuronConnectionStats,
 } from '@/brain/data'
-import type { BrainData } from '@/brain/data'
+import type { BrainData, BrainEdges } from '@/brain/data'
 import type { CameraAction } from '@/brain/brain-scene'
-import { MOVING_EDGE_LIMIT } from '@/brain/rendering'
+import { MOVING_EDGE_LIMIT, SAMPLE_EDGE_LIMIT, sampleEdges } from '@/brain/rendering'
+import type { ConnectionDetail } from '@/brain/rendering'
 import { SongLibrary } from '@/components/song-library'
 import { usePlayer } from '@/game/store'
 
@@ -76,7 +78,11 @@ export function BrainPreview() {
   const [cameraReady, setCameraReady] = useState(false)
   const [pointSize, setPointSize] = useState(1.5)
   const [opacity, setOpacity] = useState(0.65)
-  const [showConnections, setShowConnections] = useState(true)
+  const [detail, setDetail] = useState<ConnectionDetail>('sample')
+  const [edges, setEdges] = useState<BrainEdges | null>(null)
+  const [edgesError, setEdgesError] = useState('')
+  const [edgesAttempt, setEdgesAttempt] = useState(0)
+  const showConnections = detail !== 'off'
   const [cameraMoving, setCameraMoving] = useState(false)
   const stageRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -122,17 +128,44 @@ export function BrainPreview() {
     return () => controller.abort()
   }, [attempt])
 
+  // Fetch the connection table only once connections are shown, after the neurons render.
+  const asset = data?.asset
+  const wantEdges = !!asset && showConnections && !edges
+  useEffect(() => {
+    if (!wantEdges || !asset) return
+    const controller = new AbortController()
+    loadBrainEdges(asset, controller.signal)
+      .then((loaded) => {
+        if (!controller.signal.aborted) setEdges(loaded)
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setEdgesError(cause instanceof Error ? cause.message : 'Could not load connections.')
+      })
+    return () => controller.abort()
+  }, [asset, wantEdges, edgesAttempt])
+
+  // `data` keeps its identity when edges arrive, so the camera is fitted only once.
+  const graph = useMemo(() => (data && edges ? { ...data, edges } : null), [data, edges])
   const indices = useMemo(
     () => (data ? filterNeuronIndices(data, group, cellType) : []),
     [data, group, cellType],
   )
+  const filteredEdges = useMemo(
+    () => (graph && showConnections ? filterEdgeIndices(graph, indices, selected) : []),
+    [graph, indices, selected, showConnections],
+  )
+  // A selected neuron always shows every visible connection; sampling is for the overview.
   const edgeIndices = useMemo(
-    () => (data && showConnections ? filterEdgeIndices(data, indices, selected) : []),
-    [data, indices, selected, showConnections],
+    () =>
+      detail === 'sample' && selected === null
+        ? sampleEdges(filteredEdges, SAMPLE_EDGE_LIMIT)
+        : filteredEdges,
+    [detail, filteredEdges, selected],
   )
   const connections = useMemo(
-    () => (data && selected !== null ? neuronConnectionStats(data, selected) : null),
-    [data, selected],
+    () => (graph && selected !== null ? neuronConnectionStats(graph, selected) : null),
+    [graph, selected],
   )
   const availableCellTypes = useMemo(() => {
     if (!data) return []
@@ -181,7 +214,6 @@ export function BrainPreview() {
       navigate.current?.(action[event.key])
     }
   }
-  const asset = data?.asset
   const fallback = (
     <SceneFallback
       message="The 3D view is unavailable. Your browser needs WebGL 2. You can still explore neuron metadata below."
@@ -291,6 +323,7 @@ export function BrainPreview() {
               <Suspense fallback={<SceneFallback message="Preparing the 3D view…" />}>
                 <BrainScene
                   data={data}
+                  edges={edges}
                   indices={indices}
                   edgeIndices={edgeIndices}
                   showConnections={showConnections}
@@ -329,13 +362,17 @@ export function BrainPreview() {
           </div>
           <div className="brain-display-controls">
             <label>
-              <input
-                type="checkbox"
-                checked={showConnections}
-                disabled={!data}
-                onChange={(event) => setShowConnections(event.target.checked)}
-              />
               Connections
+              <select
+                aria-label="Connection detail"
+                value={detail}
+                disabled={!data}
+                onChange={(event) => setDetail(event.target.value as ConnectionDetail)}
+              >
+                <option value="off">Off</option>
+                <option value="sample">Sample</option>
+                <option value="all">All</option>
+              </select>
             </label>
             <label>
               Point size
@@ -423,22 +460,42 @@ export function BrainPreview() {
         </div>
         <div className="brain-connection-summary" role="status">
           <span>
-            {data
-              ? `${number.format(cameraMoving && selected === null ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT) : edgeIndices.length)} of ${number.format(data.edges.n_edges)} connections shown`
-              : 'Loading connections…'}
+            {!data || !showConnections
+              ? showConnections
+                ? 'Loading connections…'
+                : 'Connections hidden'
+              : edgesError
+                ? edgesError
+                : !edges
+                  ? 'Loading connections…'
+                  : `${number.format(cameraMoving && detail === 'all' && selected === null ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT) : edgeIndices.length)} of ${number.format(edges.n_edges)} connections shown`}
           </span>
-          {showConnections && selected !== null && (
+          {edgesError && showConnections && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                setEdgesError('')
+                setEdgesAttempt((value) => value + 1)
+              }}
+            >
+              Retry connections
+            </Button>
+          )}
+          {edges && showConnections && selected !== null && (
             <span>
               <span style={{ color: '#8ec5ff' }}>Blue: incoming</span>
               {' · '}
               <span style={{ color: '#f0c987' }}>Gold: outgoing</span>
             </span>
           )}
-          {showConnections && selected === null && (
+          {edges && showConnections && selected === null && (
             <span>
-              {cameraMoving && edgeIndices.length > MOVING_EDGE_LIMIT
+              {cameraMoving && detail === 'all' && edgeIndices.length > MOVING_EDGE_LIMIT
                 ? 'Movement preview; full detail returns when still.'
-                : 'Select a neuron to trace its connections.'}
+                : detail === 'sample' && filteredEdges.length > SAMPLE_EDGE_LIMIT
+                  ? 'Evenly spaced sample; choose All to draw every connection.'
+                  : 'Select a neuron to trace its connections.'}
             </span>
           )}
         </div>
@@ -551,13 +608,13 @@ export function BrainPreview() {
         <p>
           Connections come from the exact graph bundled with the trained real fly model (bc_950,
           training update 950). Lines join presynaptic to postsynaptic neuron locations; they do not
-          trace axon paths. All connections are included at rest. During camera movement, dense
-          views use an evenly distributed sample of real connections and a lower pixel resolution;
-          full detail returns when the camera settles. Selected-neuron connections stay complete.
-          Filters keep connections only when both neurons are visible; selecting a neuron shows its
-          visible incoming (blue) and outgoing (gold) connections. Inspector totals include all its
-          connections, including those hidden by filters. Overlapping positions can hide individual
-          lines.
+          trace axon paths. By default the overview draws an evenly spaced sample of 20,000 real
+          connections; choose All to draw every connection. With All, camera movement draws the
+          sample at a lower pixel resolution and full detail returns when the camera settles.
+          Selected-neuron connections are always complete. Filters keep connections only when both
+          neurons are visible; selecting a neuron shows its visible incoming (blue) and outgoing
+          (gold) connections. Inspector totals include all its connections, including those hidden
+          by filters. Overlapping positions can hide individual lines.
         </p>
         <p>
           Synapse counts describe anatomical connections, not learned weights or firing activity.
@@ -580,11 +637,11 @@ export function BrainPreview() {
           </div>
           <div>
             <dt>Directed connections</dt>
-            <dd>{data ? number.format(data.edges.n_edges) : 'Not loaded'}</dd>
+            <dd>{edges ? number.format(edges.n_edges) : 'Not loaded'}</dd>
           </div>
           <div>
             <dt>Synapses</dt>
-            <dd>{data ? number.format(data.edges.n_synapses) : 'Not loaded'}</dd>
+            <dd>{edges ? number.format(edges.n_synapses) : 'Not loaded'}</dd>
           </div>
           <div>
             <dt>Cell types</dt>

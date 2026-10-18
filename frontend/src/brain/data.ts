@@ -22,7 +22,8 @@ export interface BrainAsset {
 
 export interface BrainData {
   asset: BrainAsset
-  edges: BrainEdges
+  // Null until edges.json loads: the 5.75 MB connection table loads after the neurons.
+  edges: BrainEdges | null
   groups: Record<string, number[]>
   positions: Float32Array
   radius: number
@@ -52,7 +53,7 @@ function isFiniteArray(value: unknown, length: number): value is number[] {
 }
 
 // Keep array index i unchanged: the backend activity stream and groups use that index.
-export function parseBrainData(raw: unknown, rawGroups: unknown, rawEdges: unknown): BrainData {
+export function parseBrainData(raw: unknown, rawGroups: unknown, rawEdges?: unknown): BrainData {
   if (!isRecord(raw) || raw.schema_version !== 1 || typeof raw.source !== 'string') {
     throw new Error('Unsupported brain export. Expected neuron schema version 1.')
   }
@@ -108,7 +109,7 @@ export function parseBrainData(raw: unknown, rawGroups: unknown, rawEdges: unkno
     }
   }
   const asset = raw as unknown as BrainAsset
-  const edges = parseBrainEdges(rawEdges, asset)
+  const edges = rawEdges === undefined ? null : parseBrainEdges(rawEdges, asset)
   const center = min.map((v, axis) => (v + max[axis]) / 2)
   const scale = 2 / extent
   const positions = new Float32Array(count * 3)
@@ -133,7 +134,7 @@ export function parseBrainData(raw: unknown, rawGroups: unknown, rawEdges: unkno
   }
 }
 
-function parseBrainEdges(raw: unknown, asset: BrainAsset): BrainEdges {
+export function parseBrainEdges(raw: unknown, asset: BrainAsset): BrainEdges {
   if (!isRecord(raw) || raw.schema_version !== 1 || typeof raw.source !== 'string')
     throw new Error('Unsupported brain connections export. Expected edge schema version 1.')
   const count = raw.n_edges
@@ -178,17 +179,25 @@ function parseBrainEdges(raw: unknown, asset: BrainAsset): BrainEdges {
   return raw as unknown as BrainEdges
 }
 
+async function fetchJson(file: string, signal: AbortSignal): Promise<unknown> {
+  const response = await fetch(`${import.meta.env.BASE_URL}data/brain/${file}`, { signal })
+  if (!response.ok) throw new Error(`Could not load ${file}.`)
+  return response.json()
+}
+
+// Neurons and groups only, so the 3D view appears before the connection table loads.
 export async function loadBrainData(signal: AbortSignal): Promise<BrainData> {
-  const base = `${import.meta.env.BASE_URL}data/brain/`
-  const responses = await Promise.all(
-    ['neurons.json', 'groups.json', 'edges.json'].map((file) =>
-      fetch(`${base}${file}`, { signal }),
-    ),
-  )
-  if (responses.some((response) => !response.ok))
+  const [asset, groups] = await Promise.all(
+    ['neurons.json', 'groups.json'].map((file) => fetchJson(file, signal)),
+  ).catch((cause: unknown) => {
+    if (signal.aborted) throw cause
     throw new Error('Could not load the brain data files.')
-  const [asset, groups, edges] = await Promise.all(responses.map((response) => response.json()))
-  return parseBrainData(asset, groups, edges)
+  })
+  return parseBrainData(asset, groups)
+}
+
+export async function loadBrainEdges(asset: BrainAsset, signal: AbortSignal): Promise<BrainEdges> {
+  return parseBrainEdges(await fetchJson('edges.json', signal), asset)
 }
 
 // Both endpoints must survive the filters. Selection reveals only incident edges.
@@ -197,6 +206,7 @@ export function filterEdgeIndices(
   indices: number[],
   selected: number | null = null,
 ): number[] {
+  if (!data.edges) return []
   const visible = new Uint8Array(data.asset.n_neurons)
   for (const index of indices) visible[index] = 1
   const result: number[] = []
@@ -213,6 +223,7 @@ export function filterEdgeIndices(
 }
 
 export function neuronConnectionStats(data: BrainData, index: number) {
+  if (!data.edges) return null
   let incoming = 0,
     outgoing = 0,
     incomingSynapses = 0,

@@ -9,7 +9,7 @@ Fill these in during the hour 0 contracts session (30 minutes, all three). Every
 | WebSocket protocol (both directions) | Person 2 | 3 | Draft |
 | `groups.json` and interventions schema | Person 1 | 2, 3 | groups done, interventions TODO |
 | Brain step function signature and checkpoint format | Person 1 | 2, 3 | Done |
-| Activity stream format (quantized rates, cell-type means) | Person 1 | 3 | TODO |
+| Activity stream format (change from rest, per neuron and per cell type) | Person 2 | 1, 3 | Done |
 
 ## 1. Normalized map schema (Person 2)
 
@@ -19,7 +19,7 @@ One JSON file per playable (song, difficulty): `data/maps/normalized/{map_id}.js
 {
   "schema_version": 1,
   "map_id": "3a2b1_hard",
-  "split": "train",                  // "train" | "heldout"; heldout gets the "unseen map" badge
+  "split": "train",                  // "train" | "heldout" | "community" (fetched on demand); heldout gets the "unseen map" badge
   "song": {
     "title": "Example Song",
     "artist": "Example Artist",
@@ -63,7 +63,7 @@ The front end already has the full map from REST and positions notes from the au
 ```jsonc
 {
   "t": 12.533,                       // sim song time in seconds, same clock as note time_sec
-  "step": 376,                       // sim step index, 30 Hz
+  "step": 376,                       // round(t * 30): counts from song time 0, so it keeps rising across play, seek and reset
   "sabers": [
     { "color": 0, "cell": 5, "cut": null },   // cell 0-11 or null (idle, saber lowered)
     { "color": 1, "cell": 6, "cut": 3 }       // cut 0 up, 1 down, 2 left, 3 right, or null
@@ -100,10 +100,11 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | Endpoint | Returns |
 |---|---|
 | `GET /api/games` | `[{ "id": "saber", "label": "Fly Saber" }]` |
-| `GET /api/brains` | `[{ "id": "real", "label": "Real wiring", "description": "..." }]`: always `expert` (the scripted player), then each brain in `configs/server.yaml` (`real`, `rewired`) whose checkpoint file exists at startup |
+| `GET /api/brains` | `[{ "id": "real", "label": "Real fly brain", "description": "..." }]`: always `expert` (the scripted player), then each brain mode in `configs/brains.yaml` (section 4, Brain modes) whose `bundles/<id>/` holds a trained checkpoint at startup. View-only modes are not listed: they have nothing to play |
 | `GET /api/maps` | `[{ map_id, split, song: {title, artist, mapper, license}, difficulty: {name}, note_count }]`; only maps with allowlisted audio |
 | `GET /api/maps/{map_id}` | the full normalized map (section 1) |
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
+| `POST /api/community/{key}` | fetch BeatSaver map `key`'s charts (no audio) and normalize its Standard difficulties with `split: "community"`; returns their map ids, playable by `start` but not listed by `GET /api/maps`. 400 bad key, 404 unknown map, 422 a format the normalizer does not support, 502 BeatSaver unreachable |
 | `GET /api/explorer/{brain}` | `explorer.json` (Person 1) |
 | `GET /api/eye_lattice` | `{ "left": [[azimuth_deg, elevation_deg], ...], "right": [...] }`, the order used by eye images |
 
@@ -120,7 +121,7 @@ Text messages are JSON objects with a `type` field. Binary messages carry activi
 | `clock` | `song_t: float` | Sent about once a second from `AudioContext.currentTime`. Server resyncs the sim to it (spec 14). |
 | `pause` | `paused: bool` | Client pauses audio at the same time. |
 | `reset` | | Back to `ready` state, same map and brains. |
-| `set_interventions` | `slot`, `interventions` | `interventions` schema is section 4. Applies immediately, no retraining. |
+| `set_interventions` | `slot`, `interventions`, `eye` | Both optional. `interventions` is the brain payload of section 4 (lesion, stimulate, mood, noise). `eye` is `{blind_left, blind_right, blur_deg, facet_dropout, noise, seed}`, all optional, default 0 (sees normally): `blind_*` and `facet_dropout` 0 to 1, `blur_deg` and `noise` at least 0, `seed` a uint32 (section 2, eye controls). Applies from the next frame, no retraining or recompiling. |
 | `human_action` | `color`, `cell`, `cut` | You vs. the Fly (stretch). Same encoding as a saber in `render_state`. |
 | `narrate` | `slot` | Ask for an explanation of the last miss (Person 3). |
 
@@ -128,9 +129,11 @@ Server behaviour:
 
 - Each tick, the server steps every slot until its sim time reaches the client's song time (the `play` or latest `clock` value plus wall time elapsed since), then sends one `frame` per slot that stepped. A `clock` ahead of the sim makes it catch up at once; a `clock` behind it holds the sim until the audio catches up.
 - `start` with an unknown game, brain or map, `play` or `reset` before `start`, and malformed messages get an `error`; the socket stays open.
-- `set_interventions`, `human_action` and `narrate` answer `error` until they are implemented.
+- The server runs at most `MAX_SESSIONS` sessions at once (environment variable, default 2). A session takes a seat at its first successful `start` and holds it until the socket closes. A `start` while every seat is taken gets `error` ("the server is full"); the client can retry. A `start` on a socket that already has a seat always succeeds.
+- `set_interventions` replaces that slot's brain and eye controls (it does not add to the previous message). They last through `play` and `reset`; a new `start` clears them. It answers `error` (and changes nothing) for a slot the session does not have, a slot playing `expert` (no brain or eyes to change), unknown groups or moods, and out-of-range eye values. Send it before or after `play`. There is no reply on success.
+- `human_action` and `narrate` answer `error` until they are implemented.
 - Brains play greedily from their checkpoint, with each slot's membrane potentials carried frame to frame and reset to the rest state on `play` and `reset`. Brain noise is seeded by `start.seed`, so a replay of the same session is identical.
-- A served checkpoint loads with its own model config, so that config's `subgraph_dir` must hold the subgraph it was trained on; startup fails if the subgraph fingerprint differs.
+- Each served brain loads from its bundle (`training.play_eval.load_trained` with the bundle's `subgraph/`), never from a local subgraph build. A bundle that fails to load (missing file, fingerprint mismatch) is logged and left out of `/api/brains`; the server still starts.
 - The audio key for `/api/maps/{map_id}/audio` and the allowlist is `map_id` up to its last `_`, so all difficulties of a song share one file.
 
 #### Server to client
@@ -158,7 +161,7 @@ Every binary message starts with a 4-byte header:
 
 Then a little-endian `uint32` sim `step`, then the payload.
 
-- Kinds 1 and 2: payload layout is section 6 (Person 1).
+- Kinds 1 and 2: brain activity, payload layout in section 6. Only slots with a brain send them, right after that slot's `frame` for the same `step`.
 - Kind 3, eye image, 15 Hz: `uint16` ommatidia count for the left eye, `uint16` for the right, then one `uint8` luminance per ommatidium, left eye first, in the lattice order from `GET /api/eye_lattice` (served once with each ommatidium's azimuth and elevation in degrees, so the front end can draw the hex mosaic).
 
 ## 4. Subgraph files, `groups.json`, and interventions (Person 1)
@@ -189,7 +192,7 @@ Built by `uv run python scripts/build_subgraph.py` into `data/processed/malecns_
 
 ### Front end copies: `frontend/public/data/brain/`
 
-Committed to git so the front end needs no Python or data download. For the bundled trained model, regenerate with `uv run python scripts/export_web.py --bundle bundles/real_fast` and commit. This checks the manifest's content hashes and checkpoint subgraph metadata. For a newly built subgraph use `make subgraph export-web` (or pass `--subgraph-dir`). The browser loads `neurons.json`, `groups.json`, and `edges.json` under `/data/brain/`.
+Committed to git so the front end needs no Python or data download. For the bundled trained model, regenerate with `uv run python scripts/export_web.py --bundle bundles/real_fast` and commit. This checks the manifest's content hashes and checkpoint subgraph metadata. For a newly built subgraph use `make subgraph export-web` (or pass `--subgraph-dir`). The browser loads `neurons.json` and `groups.json` under `/data/brain/`, then `edges.json` once connections are shown.
 
 **`groups.json`**: identical to the one above.
 
@@ -224,7 +227,7 @@ Coordinates are MaleCNS space: the whole CNS including the ventral nerve cord, a
 
 This includes the entire bundled anatomy, including connections omitted from the model's fast-synapse graph. Training keeps topology fixed and learns per-neuron and cell-type-pair parameters. The browser draws straight segments between displayed neuron positions, preserving all indices and coordinates. Filters require both endpoints to be visible; selection restricts lines to incident connections, colored blue for incoming and gold for outgoing. Inspector totals include edges outside the active filters. No firing activity is inferred from connectivity. The separate per-mode files under Brain modes below contain only strongest-edge samples and are not used for this complete view.
 
-Rendering reuses neuron positions through a 16-bit index buffer (32-bit for more than 65,536 neurons). All filtered edges stay resident on the GPU. During camera motion, unselected views draw at most 20,000 evenly distributed actual edges using a prefix of that same index buffer; the displayed connection count reflects this preview. The complete draw range and original pixel resolution return once motion and damping settle. Selected-neuron connections are never sampled. The exported anatomy, filters, and inspector totals remain complete.
+The browser fetches `edges.json` after `neurons.json` and `groups.json`, and only while connections are shown. By default the overview draws an evenly spaced sample of 20,000 filtered edges; choosing All draws every one. Rendering reuses neuron positions through a 16-bit index buffer (32-bit for more than 65,536 neurons). With All, every filtered edge stays resident on the GPU, and during camera motion unselected views draw at most 20,000 evenly distributed actual edges using a prefix of that same index buffer; the displayed connection count reflects this preview. The complete draw range and original pixel resolution return once motion and damping settle. Selected-neuron connections are never sampled. The exported anatomy, filters, and inspector totals remain complete.
 
 **Eye input:** the brain takes `eye` as `(2, n_columns)`, one value per kept eye column (437) in the order of `columns.json` below. Row 0 is luminance and drives R1 to R6; in columns with no traced R1 to R6 (most of them, see DATA_NOTES) it drives that column's L1 and L2 with inverted sign instead. Row 1 is color (red notes high, blue low, background 0.5) and drives R7 and R8. The env should render the eye at the column directions in `columns.json`, so its `obs` is exactly this array.
 
@@ -351,6 +354,46 @@ params, meta = load_checkpoint(path, init_params(key, graph, model_cfg, n), expe
 - Loading takes a template pytree (any policy: brain `Params`, MLP, stub) and raises if keys or shapes differ, or if the checkpoint was trained on a different subgraph. Writes are atomic, so the server never reads a half-written file.
 - About 0.7 MB for the brain.
 
-## 6. Activity stream (Person 1)
+### Running the trained fly in the server (Person 2)
 
-Spec 13: uint8-quantized rates for all subgraph neurons at 15 Hz, per-cell-type means at 30 Hz. Pin the binary layout here.
+Everything a live session needs, in order. The bundle is `bundles/<id>/` (demo fly: `bundles/real_fast/`, or a brain mode from `scripts/export_brains.py`).
+
+```python
+from brain.model.controls import from_controls, load_controls
+from training.play_eval import load_trained
+
+fly = load_trained("bundles/real_fast/bc_950.npz", subgraph_dir="bundles/real_fast/subgraph")
+# fly.env (SaberEnv seeing through the brain's eye columns), fly.policy (BrainPolicy),
+# fly.params (trained, baseline applied), fly.groups, fly.n_neurons
+step = jax.jit(fly.policy.step)          # one 30 Hz frame; warm up once at startup (~11 s compile)
+v = fly.policy.init_carry()              # start of every song: the brain at rest, not zeros
+params = fly.params
+
+# On every set_interventions message:
+iv = from_controls(msg.interventions, fly.groups, load_controls(), fly.n_neurons)  # ValueError -> error
+params = fly.policy.prepare(fly.params, iv)   # re-center the readout on the modified brain
+policy_iv = iv
+
+# Every frame:
+v, out = step(params, v, obs, policy_iv, key)   # obs = env observation, (2, 437)
+action = greedy over split_heads(out.logits, [13, 5, 13, 5]) -> env.step
+# out.rates (N,) feeds the activity stream (section 6), neuron i = neurons.json index i
+```
+
+- **Always call `prepare(params, iv)` when interventions change.** Without it the readout keeps the untouched brain's baseline, and every control (even lesioning the 2 giant fibers) collapses play to 0 to 4% hits. With it, a lesion changes how vision drives the motor neurons. Cost: about 45 brain frames, once per change.
+- **Use the bundle's `subgraph/`, never a local rebuild.** HiPerGator's subgraph has 19,463 neurons; a local build had 19,462. `load_trained` refuses a mismatched subgraph.
+- Front-end data that matches: `frontend/public/data/brain/` (re-exported from HiPerGator in #30).
+- Versus: load two bundles (two `load_trained` calls), same `env`, same episode seed.
+
+## 6. Activity stream
+
+Every slot with a brain streams its activity while playing, after the 4-byte header and `uint32` step of section 3:
+
+| Kind | Rate | Payload |
+|---|---|---|
+| 1, neurons | 15 Hz (at most every other step) | `ready.n_neurons` x `int8`, one per neuron in subgraph order (`neurons.json`, array index i is neuron i) |
+| 2, cell types | 30 Hz (every frame) | `len(ready.cell_types)` x `int8`, the mean over that type's neurons, in `ready.cell_types` order |
+
+Each value is the neuron's firing-rate change from the untouched brain at rest on the gray background, scaled so that +-127 is +-0.25 rate units and clipped there: `value = clip(round((rate - rest) / 0.25 * 127), -127, 127)`. Positive is firing above rest; a lesioned neuron reads below zero for as long as the lesion lasts. Rates during play sit near 0.7 and move by hundredths, which is why the stream carries the change from rest and not the absolute rate.
+
+A client drops a message whose length does not match its kind, and one whose `step` is not after the last step of that kind (reset when it sends `play`).

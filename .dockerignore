@@ -12,6 +12,10 @@
 !server/**
 !configs/
 !configs/*.yaml
+!bundles/
+!bundles/**
+!scripts/
+!scripts/fetch_maps.py
 !data/
 !data/maps/
 !data/maps/demo_allowlist.json
@@ -30,3 +34,5 @@
 **/.env
 **/.env.*
 **/*.npz
+# Trained flies ship in the image (scripts/bundle_checkpoint.py, export_brains.py).
+!bundles/**/*.npz

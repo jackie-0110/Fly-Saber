@@ -1,8 +1,9 @@
-"""WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2 and 3 (spec 13).
+"""WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2, 3 and 6 (spec 13).
 
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
+import struct
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -11,6 +12,7 @@ Cell = Annotated[int, Field(ge=0, le=11)]
 Cut = Annotated[int, Field(ge=0, le=3)]
 Color = Annotated[int, Field(ge=0, le=1)]
 Slot = Annotated[int, Field(ge=0, le=1)]
+Fraction = Annotated[float, Field(ge=0.0, le=1.0)]
 
 
 class Message(BaseModel):
@@ -105,11 +107,23 @@ class Reset(Message):
     type: Literal["reset"] = "reset"
 
 
+class EyeSettings(Message):
+    """Live eye controls (fly_saber.eye.EyeControls); the defaults see normally."""
+
+    blind_left: Fraction = 0.0
+    blind_right: Fraction = 0.0
+    blur_deg: Annotated[float, Field(ge=0.0)] = 0.0
+    facet_dropout: Fraction = 0.0
+    noise: Annotated[float, Field(ge=0.0)] = 0.0
+    seed: Annotated[int, Field(ge=0, lt=2**32)] = 0
+
+
 class SetInterventions(Message):
     type: Literal["set_interventions"] = "set_interventions"
     slot: Slot
-    # Schema is PROTOCOL.md section 4 (Person 1), not pinned yet.
-    interventions: dict[str, Any]
+    interventions: dict[str, Any] = {}
+    """Brain controls, PROTOCOL.md section 4; validated by brain.model.controls.from_controls."""
+    eye: EyeSettings = EyeSettings()
 
 
 class HumanAction(Message):
@@ -179,3 +193,13 @@ class Narration(Message):
 class Error(Message):
     type: Literal["error"] = "error"
     message: str
+
+
+# Binary messages: kinds 1 and 2 carry int8 activity (section 6).
+
+NEURON_ACTIVITY, TYPE_ACTIVITY = 1, 2
+
+
+def binary_message(kind: int, slot: int, step: int, payload: bytes) -> bytes:
+    """Header (kind, slot, 2 reserved zero bytes, little-endian uint32 sim step), then payload."""
+    return struct.pack("<BBHI", kind, slot, 0, step) + payload

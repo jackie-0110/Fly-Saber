@@ -1,3 +1,5 @@
+import { decodeActivity } from './activity.ts'
+import type { ActivityFrame } from './activity.ts'
 import { flyMotion } from './fly-motion.ts'
 import type { SaberAction } from './fly-motion.ts'
 
@@ -33,6 +35,8 @@ interface ClientOptions {
   getTime: () => number
   onChange: (state: Partial<SessionSnapshot>) => void
   onFailure: () => void
+  /** Brain activity while playing, in step order; never called for a brain-less player. */
+  onActivity?: (frame: ActivityFrame) => void
   makeSocket?: (url: string) => WebSocket
 }
 
@@ -61,6 +65,8 @@ export class SessionClient {
   private rejectReady: ((error: Error) => void) | undefined
   private removed = new Set<number>()
   private started = false
+  private activitySizes = { neurons: 0, types: 0 }
+  private activitySteps = new Map<number, number>()
   private readonly options: ClientOptions
 
   constructor(options: ClientOptions) {
@@ -80,6 +86,7 @@ export class SessionClient {
   }
   private clearRun() {
     this.removed = new Set()
+    this.activitySteps.clear()
     flyMotion.reset()
     this.update({ score: null, sabers: [], removed: this.removed, lastEvent: null })
   }
@@ -121,6 +128,7 @@ export class SessionClient {
         return
       }
       this.socket = socket
+      socket.binaryType = 'arraybuffer'
       this.deadline = setTimeout(() => {
         if (this.socket === socket) this.fail('The live session timed out. Press play to retry.')
       }, 15000)
@@ -129,7 +137,12 @@ export class SessionClient {
           this.send({ type: 'start', game: 'saber', brains: [brain], map_id: mapId, seed: 0 })
       })
       socket.addEventListener('message', (event) => {
-        if (this.socket !== socket || typeof event.data !== 'string') return
+        if (this.socket !== socket) return
+        if (event.data instanceof ArrayBuffer) {
+          this.receiveActivity(event.data)
+          return
+        }
+        if (typeof event.data !== 'string') return
         try {
           const message = JSON.parse(event.data)
           if (!message || typeof message !== 'object') return
@@ -148,6 +161,10 @@ export class SessionClient {
             }
             clearTimeout(this.deadline)
             this.rejectReady = undefined
+            this.activitySizes = {
+              neurons: Number.isInteger(message.n_neurons) ? message.n_neurons : 0,
+              types: Array.isArray(message.cell_types) ? message.cell_types.length : 0,
+            }
             this.update({ status: 'ready' })
             resolve()
           } else if (message.slot === 0 && this.status === 'playing') {
@@ -178,7 +195,7 @@ export class SessionClient {
             }
           }
         } catch {
-          /* Ignore unrelated or malformed messages; binary activity has a separate contract. */
+          /* Ignore unrelated or malformed messages. */
         }
       })
       socket.addEventListener('close', () => {
@@ -195,6 +212,15 @@ export class SessionClient {
           this.fail('Could not reach the live session. Check the backend and press play to retry.')
       })
     })
+  }
+
+  private receiveActivity(data: ArrayBuffer) {
+    if (this.status !== 'playing' || !this.options.onActivity) return
+    const frame = decodeActivity(data, this.activitySizes)
+    if (!frame || frame.slot !== 0) return
+    if (frame.step <= (this.activitySteps.get(frame.kind) ?? -1)) return
+    this.activitySteps.set(frame.kind, frame.step)
+    this.options.onActivity(frame)
   }
 
   play() {

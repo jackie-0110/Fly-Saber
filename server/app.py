@@ -3,7 +3,10 @@
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
-from dataclasses import dataclass
+import asyncio
+import json
+import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -14,10 +17,15 @@ from fastapi.staticfiles import StaticFiles
 
 from fly_saber.config import CONFIG_DIR
 from server.catalog import Catalog
+from server.community import CommunityMaps, MapImportError
 from server.protocol import Brain, Game, MapSummary
 from server.saber_sim import brain_sims, expert_sims
 from server.session import GAMES, LiveBrain, Session
 
+log = logging.getLogger(__name__)
+# Two Versus sessions are four brain slots, about what a laptop CPU steps in real time.
+# Size it to the host with the MAX_SESSIONS environment variable.
+MAX_SESSIONS = 2
 EXPERT = Brain(
     id="expert",
     label="Scripted expert",
@@ -25,26 +33,30 @@ EXPERT = Brain(
 )
 
 
-@dataclass(frozen=True)
-class BrainSpec:
-    id: str
-    label: str
-    description: str
-    checkpoint: str
+def brain_modes() -> list[Brain]:
+    """The demo's brain modes (Person 1, configs/brains.yaml), playable or not."""
+    raw = yaml.safe_load((CONFIG_DIR / "brains.yaml").read_text())
+    return [Brain(id=m["id"], label=m["label"], description=m["description"]) for m in raw["modes"]]
 
 
-def brain_specs() -> list[BrainSpec]:
-    raw = yaml.safe_load((CONFIG_DIR / "server.yaml").read_text())
-    return [BrainSpec(**b) for b in raw["brains"]]
-
-
-def serving_brains(specs: list[BrainSpec]) -> list[LiveBrain]:
-    """The expert, plus every brain whose checkpoint exists."""
+def serving_brains(modes: list[Brain], bundles_dir: Path) -> list[LiveBrain]:
+    """The expert, plus every mode with a trained bundle at bundles_dir/<id>/
+    (training/bundle.py). A bundle that fails to load is logged and left out."""
     brains = [LiveBrain(EXPERT, expert_sims())]
-    for spec in specs:
-        if Path(spec.checkpoint).is_file():
-            info = Brain(id=spec.id, label=spec.label, description=spec.description)
-            brains.append(LiveBrain(info, brain_sims(Path(spec.checkpoint))))
+    for mode in modes:
+        bundle = bundles_dir / mode.id
+        manifest = bundle / "MANIFEST.json"
+        if not manifest.is_file():
+            continue
+        checkpoint = json.loads(manifest.read_text())["checkpoint"]
+        if checkpoint is None:  # view-only mode: wiring to show, nothing to play
+            continue
+        try:
+            sims = brain_sims(bundle / checkpoint, bundle / "subgraph")
+        except (OSError, ValueError, KeyError) as error:
+            log.warning("not serving brain %s: %s", mode.id, error)
+            continue
+        brains.append(LiveBrain(mode, sims))
     return brains
 
 
@@ -65,12 +77,16 @@ def create_app(
     maps_dir: Path = Path("data/maps"),
     brains: list[LiveBrain] | None = None,
     frontend_dir: Path | None = None,
+    max_sessions: int = MAX_SESSIONS,
+    community: CommunityMaps | None = None,
 ) -> FastAPI:
-    """`brains` defaults to the expert alone."""
+    """`brains` defaults to the expert alone. Past `max_sessions` running at once, `start`
+    answers an error until one disconnects."""
     app = FastAPI(title="Fly Saber")
+    seats = asyncio.Semaphore(max_sessions)
     brains = brains or [LiveBrain(EXPERT, expert_sims())]
     by_id = {b.info.id: b for b in brains}
-    catalog = Catalog(maps_dir)
+    catalog = Catalog(maps_dir, community)
     warm_up(catalog, brains)
 
     @app.get("/api/games")
@@ -92,6 +108,15 @@ def create_app(
             raise HTTPException(404, f"unknown map {map_id}")
         return map_data
 
+    @app.post("/api/community/{key}")
+    def import_community(key: str) -> list[str]:
+        """Fetch a BeatSaver map's charts so brains can play it; returns its map ids.
+        The browser keeps the audio it downloaded; none is served for these maps."""
+        try:
+            return catalog.community.fetch(key)
+        except MapImportError as error:
+            raise HTTPException(error.status, str(error)) from error
+
     @app.get("/api/maps/{map_id}/audio")
     def map_audio(map_id: str) -> FileResponse:
         path = catalog.audio_path(map_id)
@@ -102,7 +127,7 @@ def create_app(
     @app.websocket("/ws/session")
     async def session(websocket: WebSocket) -> None:
         await websocket.accept()
-        await Session(websocket, catalog, by_id).run()
+        await Session(websocket, catalog, by_id, seats).run()
 
     if frontend_dir is not None:
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
@@ -114,6 +139,7 @@ def serve() -> FastAPI:
     """The production app, for `uvicorn server.app:serve --factory`."""
     frontend = Path("frontend/dist")
     return create_app(
-        brains=serving_brains(brain_specs()),
+        brains=serving_brains(brain_modes(), Path("bundles")),
         frontend_dir=frontend if frontend.is_dir() else None,
+        max_sessions=int(os.environ.get("MAX_SESSIONS", MAX_SESSIONS)),
     )

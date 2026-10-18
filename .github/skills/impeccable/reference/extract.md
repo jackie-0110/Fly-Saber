@@ -1,3 +1,5 @@
+<!-- Vendored from Impeccable; whitespace normalized for this repository. -->
+
 # Extract Flow
 
 Identify reusable patterns, components, and design tokens, then extract and consolidate them into the design system for systematic reuse.
@@ -66,4 +68,3 @@ Update design system documentation:
 - Skip proper TypeScript types or prop documentation
 - Create tokens for every single value (tokens should have semantic meaning)
 - Extract things that differ in intent (two buttons that look similar but serve different purposes should stay separate)
-

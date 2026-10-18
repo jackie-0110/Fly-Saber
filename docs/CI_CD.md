@@ -11,10 +11,8 @@
   an image tagged with the full commit SHA. Publishing is disabled for other branches.
 - Weekly: Dependabot opens dependency update PRs.
 
-The delivery boundary is a tested image in GHCR. No production host is configured
-in this repository yet. Deployment to Vultr requires provisioning that host and
-connecting its credentials or a deployment agent; this workflow does not restart
-an external server.
+The delivery boundary is a tested image in GHCR. CI does not restart an external
+server; the Vultr host is deployed by hand with `scripts/deploy_vultr.sh` (below).
 
 ## Build and run locally
 
@@ -45,6 +43,33 @@ That maps directory should contain `demo_allowlist.json`, `normalized/`, and
 `audio/` as described in [PROTOCOL.md](PROTOCOL.md). Without downloaded maps the
 UI and API still start, and the map list is empty. Backend sessions use the live Fly Saber environment played by the scripted expert.
 Container delivery preserves that simulation behavior.
+
+## Deploy on Vultr
+
+The backend (FastAPI and the trained brains in `bundles/`) runs on a Vultr Cloud
+Compute instance; the Cloudflare Worker serves the front end and proxies `/api/*` and
+`/ws/*` to it (`frontend/README.md`). A CPU instance is enough: one brain takes about
+6 ms per 30 Hz frame, two (Versus) about 8 ms. Suggested: 2 to 4 vCPU, 8 GB RAM,
+Ubuntu, a US East region.
+
+On the new server, once:
+
+```bash
+curl -fsSL https://get.docker.com | sh            # Docker
+git clone https://github.com/jackie-0110/Fly-Saber.git && cd Fly-Saber   # or SSH with a deploy key
+bash scripts/deploy_vultr.sh
+```
+
+The script builds the image (trained brains included), downloads the allowlisted demo
+songs into the Docker volume `fly-saber-maps` on first run, starts the container with
+`--restart unless-stopped` on port 8000, and waits until `/api/games` answers. Then:
+
+1. Open TCP 8000 in the Vultr firewall group (or `ufw allow 8000`).
+2. In Cloudflare, set the `flysaber` Worker secret `BACKEND_URL=http://<server ip>:8000`.
+
+To update: `git pull && bash scripts/deploy_vultr.sh` (songs are kept). Logs:
+`docker logs -f fly-saber`. Never rebuild the brain subgraph on the server; the
+bundles carry the exact files the checkpoints were trained on.
 
 ## Publish a release
 

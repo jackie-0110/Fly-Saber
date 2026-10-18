@@ -36,6 +36,28 @@ the interactive runner. HTML/JUnit reports, screenshots, and failure traces appe
 in `playwright-report/` and `test-results/`. See [CONTRIBUTING.md](../CONTRIBUTING.md)
 for the full CI checks.
 
+## Deploy (Cloudflare Workers)
+
+`wrangler.jsonc` deploys the `flysaber` Worker: the Vite build is served as static
+assets with SPA fallback, and `/api/*` and `/ws/*` (including the session WebSocket)
+are proxied by `worker/index.ts` to the FastAPI server, so the browser stays on one
+origin and the backend needs no CORS.
+
+Workers Builds settings (Settings → Build): root directory `frontend`, build command
+empty (wrangler runs `npm run build` itself), deploy command `npx wrangler deploy`,
+non-production branch deploy command `npx wrangler versions upload`.
+
+Point the Worker at the backend once; deploys keep it:
+
+```bash
+npx wrangler secret put BACKEND_URL   # e.g. https://flysaber-api.example.com
+```
+
+Until it is set, `/api/*` returns 503 and the header shows "Backend disconnected".
+Test the Worker locally against a running server with
+`npm run cf:dev -- --var BACKEND_URL:http://localhost:8000`, or deploy manually with
+`npm run deploy`.
+
 ## Current behavior
 
 - Desktop windows use a viewport-height workspace with a brain sidebar around 30% of the width and a compact timeline. The brain fills the sidebar width, neuron metadata forms a compact grid below it, and session information has its own tab. Narrow screens stack the panels vertically.
@@ -47,7 +69,7 @@ for the full CI checks.
 - Drag to orbit, right-drag to pan, and scroll to zoom. Touch supports orbit, pinch zoom, and two-finger pan. Camera buttons offer reset, display-axis views, and zoom. Focus the view to rotate with arrow keys, zoom with +/−, and reset with Home.
 - Filter by authentic group and cell type. Click a point or use previous/next buttons to inspect its body ID, backend index, type, side, role, transmitter, original coordinates, and position provenance.
 - Expand the neuron view to fullscreen and adjust point size/opacity to inspect dense regions. All neurons render because the view preserves original indices and positions, including shared partner/estimated positions. Transparent points do not hide deeper neurons with depth writes; coincident points still overlap without invented offsets.
-- Connections are on by default; the Connections checkbox hides them. At rest, all edges render using indexed line segments that reuse the neuron positions. During orbit, pan, zoom, or camera-button movement, dense views draw an evenly distributed preview of at most 20,000 actual edges at a pixel ratio capped at 1. The full graph and original pixel ratio return after camera motion and damping settle. The connection count reports the preview while active. Only the draw range changes during movement; geometry is not rebuilt or uploaded each frame. Selected-neuron connections remain complete and use separate incoming/outgoing material groups. Group/type filters keep only edges with both endpoints visible. Selecting a neuron traces its visible incoming (blue) and outgoing (gold) connections. Inspector counts include all its incoming/outgoing connections and anatomical synapses, including connections hidden by filters. Lines connect neuron locations; they are not axon reconstructions, and synapse counts are not learned efficacies or live activity.
+- The Connections control has Off, Sample (default) and All. `edges.json` loads after the neurons, only while connections are shown, so the 3D view never waits on it. Sample draws an evenly spaced 20,000 of the filtered edges; software WebGL (CI, weak laptops) stalls on the full 340k. With All, every filtered edge renders at rest using indexed line segments that reuse the neuron positions. During orbit, pan, zoom, or camera-button movement, dense views draw an evenly distributed preview of at most 20,000 actual edges at a pixel ratio capped at 1. The full graph and original pixel ratio return after camera motion and damping settle. The connection count reports the preview while active. Only the draw range changes during movement; geometry is not rebuilt or uploaded each frame. Selected-neuron connections remain complete and use separate incoming/outgoing material groups. Group/type filters keep only edges with both endpoints visible. Selecting a neuron traces its visible incoming (blue) and outgoing (gold) connections. Inspector counts include all its incoming/outgoing connections and anatomical synapses, including connections hidden by filters. Lines connect neuron locations; they are not axon reconstructions, and synapse counts are not learned efficacies or live activity.
 - Colors identify cell types. **Neuron firing data must still be received from the backend.** No activity is simulated. See [BACKEND_ACTIVITY.md](./BACKEND_ACTIVITY.md).
 - The live session forwards real motor frames to the fly animation adapter and shows server accuracy, combo, score, hits and misses. Note events remove judged notes. Pause/resume preserves score; seek/restart resets simulation state at the selected audio timestamp. Live playback stays at 1× because the protocol has no rate negotiation.
 - The fly animation adapter accepts the existing backend motor frame protocol. Open `/?flyMotion=preview` for isolated sample movements; see [FLY_ANIMATIONS.md](./FLY_ANIMATIONS.md) for connection and lifecycle instructions. Fly vision and firing activity still await their backend streams. The frontend does not fabricate policy actions or judge hits.
@@ -63,7 +85,7 @@ Live sessions wait up to 15 seconds for readiness before starting audio. Server 
 
 ## Brain assets and coordinates
 
-The browser loads `public/data/brain/neurons.json`, `groups.json`, and `edges.json`, documented in [docs/PROTOCOL.md](../docs/PROTOCOL.md). Array index i remains the backend neuron index even after filtering. `edges.json` includes every `pre`, `post`, `weight` (synapse count), and `sign` from the bundle's `subgraph/edges.parquet`; matching ordered body IDs protect against connecting the wrong neurons. IDs must be safe integers in the current schema; future larger IDs need a string export.
+The browser loads `public/data/brain/neurons.json` and `groups.json`, then `edges.json` once connections are shown, documented in [docs/PROTOCOL.md](../docs/PROTOCOL.md). Array index i remains the backend neuron index even after filtering. `edges.json` includes every `pre`, `post`, `weight` (synapse count), and `sign` from the bundle's `subgraph/edges.parquet`; matching ordered body IDs protect against connecting the wrong neurons. IDs must be safe integers in the current schema; future larger IDs need a string export.
 
 Regenerate the committed assets from the trained bundle at the repository root:
 

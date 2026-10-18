@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from fly_saber.maps.allowlist import load_allowlist
+from server.community import CommunityMaps
 from server.protocol import MapSummary
 
 # Also keeps request paths from escaping the maps directory.
@@ -20,10 +21,12 @@ def audio_key(map_id: str) -> str:
 
 
 class Catalog:
-    """Read-only view of `{maps_dir}/normalized`, `{maps_dir}/audio` and the demo allowlist."""
+    """Read-only view of `{maps_dir}/normalized`, `{maps_dir}/audio` and the demo allowlist,
+    plus community maps fetched on demand into `{maps_dir}/community` (charts only)."""
 
-    def __init__(self, maps_dir: Path) -> None:
+    def __init__(self, maps_dir: Path, community: CommunityMaps | None = None) -> None:
         self.maps_dir = maps_dir
+        self.community = community or CommunityMaps(maps_dir / "community")
 
     def allowlist(self) -> set[str]:
         return set(load_allowlist(self.maps_dir / "demo_allowlist.json"))
@@ -32,6 +35,8 @@ class Catalog:
         if not MAP_ID_PATTERN.fullmatch(map_id):
             return None
         path = self.maps_dir / "normalized" / f"{map_id}.json"
+        if not path.exists():
+            path = self.community.map_path(map_id)
         if not path.exists():
             return None
         data: dict[str, Any] = json.loads(path.read_text())

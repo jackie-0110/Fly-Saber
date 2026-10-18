@@ -1,12 +1,13 @@
 import { ArrowUpRight, Music2 } from 'lucide-react'
 import { difficultyLabel, formatTime } from '@/game/chart'
-import { usePlayer } from '@/game/store'
+import { liveMapId, usePlayer } from '@/game/store'
 
 export function SongHeader() {
   const song = usePlayer((s) => s.song)
   const chart = usePlayer((s) => s.chart)
   const coverUrl = usePlayer((s) => s.coverUrl)
   const duration = usePlayer((s) => s.duration)
+  const live = usePlayer((s) => !!liveMapId(s))
   return (
     <section className="song-header" aria-label="Selected song information">
       {song && (
@@ -34,8 +35,15 @@ export function SongHeader() {
             <span>{formatTime(duration)}</span>
             <span>{chart.notes.filter((n) => !n.is_bomb).length.toLocaleString()} notes</span>
             <span>Mapped by {song.mapper}</span>
-            {song.serverMapId && (
-              <span>{song.split === 'heldout' ? 'Unseen map' : 'Training map'} · Live play</span>
+            {live && (
+              <span>
+                {song.split === 'community'
+                  ? 'Community map'
+                  : song.split === 'heldout'
+                    ? 'Unseen map'
+                    : 'Training map'}{' '}
+                · Live play
+              </span>
             )}
             {song.sourceUrl && (
               <a href={song.sourceUrl} target="_blank" rel="noreferrer">
