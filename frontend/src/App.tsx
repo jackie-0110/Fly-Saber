@@ -1,4 +1,5 @@
 import { BackendStatus } from '@/components/backend-status'
+import { BrainControlsPanel } from '@/components/brain-controls-panel'
 import { BrainPreview } from '@/components/brain-preview'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
@@ -35,6 +36,7 @@ export default function App() {
         </section>
         <aside className="inspector" aria-label="Brain and session inspector">
           <BrainPreview />
+          <BrainControlsPanel />
         </aside>
       </main>
     </div>

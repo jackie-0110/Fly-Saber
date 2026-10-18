@@ -15,8 +15,13 @@ export const GIANT_FIBER = 'giant_fiber'
 export const useBrainControls = create<{
   controls: BrainControls
   change: (next: Partial<BrainControls>) => void
+  /** Whether the full controls panel is open over the inspector. */
+  panelOpen: boolean
+  setPanelOpen: (open: boolean) => void
 }>((set, get) => ({
   controls: noControls,
+  panelOpen: false,
+  setPanelOpen: (panelOpen) => set({ panelOpen }),
   change: (next) => {
     const controls = { ...get().controls, ...next }
     set({ controls })
@@ -70,13 +75,13 @@ export function describeControls(controls: BrainControls, config?: Controls | nu
     if (current) parts.push(`${section(group)} stimulated at ${current.toFixed(1)}`)
   for (const [name, level] of Object.entries(controls.mood))
     if (level) parts.push(`${mood(name)} ${signed(level)}`)
-  if (controls.noise) parts.push(`jitter ${controls.noise.toFixed(2)}`)
+  if (controls.noise) parts.push('neural noise on')
   if (controls.blindLeft && controls.blindRight) parts.push('both eyes blindfolded')
   else if (controls.blindLeft) parts.push('left eye blindfolded')
   else if (controls.blindRight) parts.push('right eye blindfolded')
-  if (controls.blurDeg) parts.push(`vision blurred ${controls.blurDeg.toFixed(0)}°`)
+  if (controls.blurDeg) parts.push(`vision blurred ${controls.blurDeg.toFixed(1)}°`)
   if (controls.facetDropout)
     parts.push(`${Math.round(controls.facetDropout * 100)}% of facets dropped`)
-  if (controls.eyeNoise) parts.push(`visual noise ${controls.eyeNoise.toFixed(2)}`)
+  if (controls.eyeNoise) parts.push(`visual noise ${controls.eyeNoise.toFixed(3)}`)
   return sentence(parts)
 }

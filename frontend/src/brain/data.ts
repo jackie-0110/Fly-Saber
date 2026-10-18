@@ -188,6 +188,8 @@ export interface ControlSection {
 export interface MoodControl {
   name: string
   label: string
+  /** The modulatory group the mood drives; lesioning it silences the mood. */
+  group?: string
   low_label: string
   high_label: string
   description: string

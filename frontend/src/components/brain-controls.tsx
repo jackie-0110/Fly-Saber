@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { AROUSAL, LOOMING, useBrainControls, useControlsConfigState } from '@/game/controls-state'
 import { Button } from '@/components/ui/button'
-import type { Controls } from '@/brain/data'
+import { RangeControl } from '@/components/range-control'
 import { isUntouched, noControls } from '@/game/interventions'
 import { useSession } from '@/game/session'
 import { usePlayer } from '@/game/store'
@@ -10,11 +9,9 @@ import { usePlayer } from '@/game/store'
 /*
  * Brain controls sit in the signal path where they act: the blindfolds on the two eyes in
  * Visual input, the lesion and mood in the Brain stage between input and motor output.
+ * The Brain stage keeps the two demo favourites; "All controls" opens the full panel.
  */
 
-// Each change re-centres the brain's readout on the server, a few frames' work, so a
-// dragged slider sends once it settles instead of on every step.
-const SLIDER_SETTLE_MS = 250
 // Every mood range in controls.json is a multiple of this, so the slider can land on 0.
 const MOOD_STEP = 0.05
 
@@ -82,6 +79,8 @@ export function BrainStage() {
   const controlsError = useSession((s) => s.controlsError)
   const looming = config?.sections.find((s) => s.group === LOOMING)
   const arousal = config?.moods.find((m) => m.name === AROUSAL)
+  const panelOpen = useBrainControls((s) => s.panelOpen)
+  const setPanelOpen = useBrainControls((s) => s.setPanelOpen)
   const lesioned = controls.lesion.includes(LOOMING)
 
   const message = failed
@@ -98,14 +97,24 @@ export function BrainStage() {
         <h2>Brain</h2>
         <Button
           variant="ghost"
-          size="xs"
+          size="icon-xs"
           className="brain-reset"
-          title="Controls carry over to the next song until reset."
+          aria-label="Reset controls"
+          title="Reset every brain and eye control. They carry over to the next song until reset."
           disabled={disabled || isUntouched(controls)}
           onClick={() => change(noControls)}
         >
           <RotateCcw aria-hidden="true" />
-          Reset controls
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="brain-more"
+          aria-expanded={panelOpen}
+          onClick={() => setPanelOpen(!panelOpen)}
+        >
+          <SlidersHorizontal aria-hidden="true" />
+          All controls
         </Button>
       </div>
       <button
@@ -127,10 +136,18 @@ export function BrainStage() {
         Lesion looming detectors
       </button>
       {arousal && (
-        <MoodSlider
-          mood={arousal}
-          level={controls.mood[AROUSAL] ?? 0}
+        <RangeControl
+          className="mood-slider"
+          label={arousal.label}
+          min={arousal.min}
+          max={arousal.max}
+          step={MOOD_STEP}
+          value={controls.mood[AROUSAL] ?? 0}
           disabled={disabled}
+          lowLabel={arousal.low_label}
+          highLabel={arousal.high_label}
+          format={(v) => (v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2))}
+          title={arousal.description}
           onCommit={(level) =>
             change({ mood: { ...useBrainControls.getState().controls.mood, [AROUSAL]: level } })
           }
@@ -140,49 +157,5 @@ export function BrainStage() {
         {message}
       </p>
     </section>
-  )
-}
-
-function MoodSlider({
-  mood,
-  level,
-  disabled,
-  onCommit,
-}: {
-  mood: Controls['moods'][number]
-  level: number
-  disabled: boolean
-  onCommit: (level: number) => void
-}) {
-  const [draft, setDraft] = useState<number | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => () => clearTimeout(timer.current), [])
-  return (
-    <label className="mood-slider" title={mood.description}>
-      <span className="mood-name">{mood.label}</span>
-      <input
-        type="range"
-        min={mood.min}
-        max={mood.max}
-        step={MOOD_STEP}
-        value={draft ?? level}
-        disabled={disabled}
-        onChange={(event) => {
-          const next = Number(
-            (Math.round(Number(event.target.value) / MOOD_STEP) * MOOD_STEP).toFixed(2),
-          )
-          setDraft(next)
-          clearTimeout(timer.current)
-          timer.current = setTimeout(() => {
-            onCommit(next)
-            setDraft(null)
-          }, SLIDER_SETTLE_MS)
-        }}
-      />
-      <span className="mood-ends">
-        <span>{mood.low_label}</span>
-        <span>{mood.high_label}</span>
-      </span>
-    </label>
   )
 }
