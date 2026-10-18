@@ -1,7 +1,10 @@
 """UI controls to interventions."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
+import yaml
 
 from brain.model.controls import ControlsConfig, Mood, Section, from_controls, load_controls
 
@@ -62,3 +65,33 @@ def test_shipped_controls_reference_real_groups() -> None:
     groups = json.loads(path.read_text())
     names = [s.group for s in cfg.sections] + [m.group for m in cfg.moods]
     assert [g for g in names if g not in groups] == []
+
+
+def test_shipped_presets_set_only_their_moods() -> None:
+    cfg = load_controls()
+    groups = {m.group: [i] for i, m in enumerate(cfg.moods)}
+    index = {m.name: i for i, m in enumerate(cfg.moods)}
+    assert {p.name for p in cfg.presets} == {"depressed", "anxious", "excited", "content"}
+    for preset in cfg.presets:
+        opto = np.asarray(from_controls({"mood": preset.mood}, groups, cfg, len(cfg.moods)).opto)
+        expected = np.zeros(len(cfg.moods))
+        for mood, level in preset.mood.items():
+            expected[index[mood]] = level
+        np.testing.assert_allclose(opto, expected, err_msg=preset.name)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "presets: [{name: p, label: P, description: '', mood: {nope: 0.3}}]",
+        "presets: [{name: p, label: P, description: '', mood: {arousal: 2}}]",
+        "moods: [{name: arousal, label: A, group: octopamine, current: 1.0, range: [0.1, 0.5],"
+        " low_label: l, high_label: h, description: ''}]",
+    ],
+)
+def test_load_rejects_presets_and_ranges_outside_the_moods(tmp_path: Path, bad: str) -> None:
+    raw = yaml.safe_load(Path("configs/controls.yaml").read_text())
+    raw.update(yaml.safe_load(bad))
+    (tmp_path / "controls.yaml").write_text(yaml.safe_dump(raw))
+    with pytest.raises(ValueError):
+        load_controls(tmp_path / "controls.yaml")
