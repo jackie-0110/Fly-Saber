@@ -1003,21 +1003,33 @@
   left: 24px;
 }
 
-/*
- * Neuron inspector: a one-line browser (prev/next and how to move the camera) until a
- * neuron is picked, then a card for it, closable with × or Esc.
- */
+/* Neuron inspector: the selected neuron's card, closable with × or Esc. */
 .neuron-inspector {
   width: min(320px, 100%);
+  max-height: 190px;
   padding: 4px 4px 6px 10px;
+  overflow: auto;
   border: 1px solid var(--field-rule);
   border-radius: 3px;
   background: var(--field-2);
   color: var(--field-ink);
 }
-.neuron-inspector[data-selected='true'] {
-  max-height: 190px;
-  overflow: auto;
+/* A first-visit tip: plain text on the field, gone after the first drag or pick. */
+.brain-hint {
+  padding: 5px 9px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--field-2) 82%, transparent);
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  pointer-events: none;
+  animation: brain-hint-in 0.4s ease-out 0.6s both;
+}
+@keyframes brain-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 .neuron-selection-heading,
 .neuron-selection-heading > div {
@@ -1093,10 +1105,6 @@
 }
 .brain-legend-row .brain-backend-note {
   padding: 6px 0;
-}
-.inset-dock .neuron-inspector:not([data-selected='true']) {
-  width: max-content;
-  max-width: 100%;
 }
 /* Display settings sit with the filters below the view, on paper. */
 .brain-display-controls {
@@ -2294,7 +2302,7 @@
     height: 460px;
     margin-top: 12px;
   }
-  .neuron-inspector[data-selected='true'] {
+  .neuron-inspector {
     max-height: 150px;
   }
   .inspector-tabs {

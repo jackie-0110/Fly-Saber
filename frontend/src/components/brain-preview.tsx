@@ -91,6 +91,8 @@ function ColorLegend({ swatch }: { swatch: string }) {
   )
 }
 const number = new Intl.NumberFormat('en-US')
+// The camera tip shows until the first drag, zoom or selection, then stays dismissed.
+const HINT_KEY = 'fly-saber-brain-hint'
 const provenance: Record<string, string> = {
   soma: 'Soma position',
   partner: 'Copied from strongest partner',
@@ -146,6 +148,28 @@ export function BrainPreview() {
   const [edgesAttempt, setEdgesAttempt] = useState(0)
   const showConnections = detail !== 'off'
   const [cameraMoving, setCameraMoving] = useState(false)
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return localStorage.getItem(HINT_KEY) !== 'seen'
+    } catch {
+      return true
+    }
+  })
+  const dismissHint = useCallback(() => {
+    setShowHint(false)
+    try {
+      localStorage.setItem(HINT_KEY, 'seen')
+    } catch {
+      // Storage can be blocked; the tip then returns on the next visit.
+    }
+  }, [])
+  const pickNeuron = useCallback(
+    (index: number | null) => {
+      setSelected(index)
+      if (index !== null) dismissHint()
+    },
+    [dismissHint],
+  )
   const stageRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenError, setFullscreenError] = useState('')
@@ -257,7 +281,7 @@ export function BrainPreview() {
   const stepSelection = (direction: number) => {
     if (!indices.length) return
     const current = selected === null ? (direction > 0 ? -1 : 0) : indices.indexOf(selected)
-    setSelected(indices[(current + direction + indices.length) % indices.length])
+    pickNeuron(indices[(current + direction + indices.length) % indices.length])
   }
   const onCameraKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) return
@@ -328,6 +352,10 @@ export function BrainPreview() {
           role="region"
           aria-label="Interactive 3D fly neuron view"
           onKeyDown={onCameraKey}
+          // The camera tip goes once the viewer drags, scrolls or clicks in the view; the
+          // fit-to-view on load moves the camera too, so camera motion alone can't count.
+          onPointerDown={showHint ? dismissHint : undefined}
+          onWheel={showHint ? dismissHint : undefined}
         >
           <div className="inset-label">
             <PanelLetter>b</PanelLetter>
@@ -358,7 +386,7 @@ export function BrainPreview() {
                   edgeIndices={edgeIndices}
                   showConnections={showConnections}
                   selected={selected}
-                  onSelect={setSelected}
+                  onSelect={pickNeuron}
                   onFocus={(index) => navigate.current?.({ focus: index })}
                   onNavigateReady={onNavigateReady}
                   onFailure={onContextLost}
@@ -371,6 +399,27 @@ export function BrainPreview() {
           )}
           {data && !indices.length && <p className="brain-empty">No neurons match both filters.</p>}
           <div className="brain-stage-toolbar" aria-label="Brain camera controls">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={!indices.length}
+              onClick={() => stepSelection(-1)}
+              aria-label="Select previous neuron"
+              title="Previous neuron"
+            >
+              <ChevronLeft aria-hidden="true" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={!indices.length}
+              onClick={() => stepSelection(1)}
+              aria-label="Select next neuron"
+              title="Next neuron"
+            >
+              <ChevronRight aria-hidden="true" />
+            </Button>
+            <span className="brain-tool-divider" />
             <Button
               variant="ghost"
               size="icon-xs"
@@ -427,75 +476,45 @@ export function BrainPreview() {
               {isFullscreen ? <Minimize aria-hidden="true" /> : <Expand aria-hidden="true" />}
             </Button>
           </div>
-          {/* Bottom-left: a one-line browser until a neuron is picked, then its card. */}
+          {/* Bottom-left: a first-visit tip, then only the selected neuron's card. */}
           <div className="inset-dock">
-            <div
-              className="neuron-inspector"
-              data-selected={selected !== null && !!asset}
-              aria-label="Neuron inspector"
-              role="group"
-            >
-              <div className="neuron-selection-heading">
-                <h3>
-                  {selected === null || !asset ? (
-                    'Neurons'
-                  ) : (
-                    <>
-                      <span
-                        className="type-swatch"
-                        style={{ background: cellTypeColor(asset.type[selected]) }}
-                      />
-                      {asset.cell_types[asset.type[selected]]}
-                    </>
-                  )}
-                </h3>
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    disabled={!indices.length}
-                    onClick={() => stepSelection(-1)}
-                    aria-label="Select previous neuron"
-                  >
-                    <ChevronLeft aria-hidden="true" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    disabled={!indices.length}
-                    onClick={() => stepSelection(1)}
-                    aria-label="Select next neuron"
-                  >
-                    <ChevronRight aria-hidden="true" />
-                  </Button>
-                  {selected !== null && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        disabled={!cameraReady}
-                        onClick={() => navigate.current?.({ focus: selected })}
-                        aria-label="Focus camera on this neuron"
-                        title="Focus camera on this neuron"
-                      >
-                        <Crosshair aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => setSelected(null)}
-                        aria-label="Clear selection"
-                        title="Clear selection (Esc)"
-                      >
-                        <X aria-hidden="true" />
-                      </Button>
-                    </>
-                  )}
+            {showHint && selected === null && (
+              <p className="brain-hint">
+                Drag to rotate · right-drag to pan · scroll to zoom · double-click a neuron to focus
+              </p>
+            )}
+            {selected !== null && asset && (
+              <div className="neuron-inspector" aria-label="Neuron inspector" role="group">
+                <div className="neuron-selection-heading">
+                  <h3>
+                    <span
+                      className="type-swatch"
+                      style={{ background: cellTypeColor(asset.type[selected]) }}
+                    />
+                    {asset.cell_types[asset.type[selected]]}
+                  </h3>
+                  <div>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={!cameraReady}
+                      onClick={() => navigate.current?.({ focus: selected })}
+                      aria-label="Focus camera on this neuron"
+                      title="Focus camera on this neuron"
+                    >
+                      <Crosshair aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => setSelected(null)}
+                      aria-label="Clear selection"
+                      title="Clear selection (Esc)"
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              {selected === null || !asset ? (
-                <p>Drag to rotate · right-drag pan · scroll zoom · double-click focus</p>
-              ) : (
                 <dl className="neuron-metadata" aria-live="polite">
                   <div>
                     <dt>Body ID / index</dt>
@@ -552,8 +571,8 @@ export function BrainPreview() {
                     </dd>
                   </div>
                 </dl>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
         {fullscreenError && (
