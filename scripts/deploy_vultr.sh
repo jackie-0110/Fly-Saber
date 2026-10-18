@@ -15,6 +15,9 @@ IMAGE=fly-saber
 CONTAINER=fly-saber
 SONGS=fly-saber-maps   # Docker volume for data/maps: normalized charts and licensed audio
 PORT=${PORT:-80}
+# Live sessions at once; past this, players see "the server is full". One brain costs
+# about 6 ms per 33 ms frame, so a 2 to 4 vCPU instance handles 6 comfortably.
+MAX_SESSIONS=${MAX_SESSIONS:-6}
 
 echo "== building image (a few minutes the first time)"
 docker build -f docker/Dockerfile -t "$IMAGE" .
@@ -29,9 +32,9 @@ else
     docker run --rm -v "$SONGS":/app/data/maps "$IMAGE" python scripts/fetch_maps.py
 fi
 
-echo "== starting server on port $PORT"
+echo "== starting server on port $PORT ($MAX_SESSIONS live sessions)"
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d --name "$CONTAINER" --restart unless-stopped \
+docker run -d --name "$CONTAINER" --restart unless-stopped -e MAX_SESSIONS="$MAX_SESSIONS" \
     -p "$PORT":8000 -v "$SONGS":/app/data/maps "$IMAGE" >/dev/null
 
 echo "== waiting for it to answer"

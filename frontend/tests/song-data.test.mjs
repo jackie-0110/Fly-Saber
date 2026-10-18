@@ -35,6 +35,19 @@ test('tempo clock handles exact boundaries, changes at zero, and out-of-order ev
   assert.equal(time(12), 7)
   assert.throws(() => beatClock(0), /BPM/)
   assert.throws(() => beatClock(120, [{ beat: 3, bpm: 0 }]), /BPM/)
+  assert.throws(() => beatClock(120, [{ beat: 3, bpm: Infinity }]), /BPM/)
+})
+
+test('extreme tempo events that snap the beat grid are accepted', () => {
+  // From BeatSaver map 55237: 100,000 BPM for 0.02 beats realigns the grid at beat 48.
+  const time = beatClock(300, [
+    { beat: 0, bpm: 300 },
+    { beat: 47.979939, bpm: 100000 },
+    { beat: 48, bpm: 300 },
+  ])
+  const snap = (0.020061 * 60) / 100000
+  assert.ok(Math.abs(time(48) - ((47.979939 * 60) / 300 + snap)) < 1e-9)
+  assert.ok(Math.abs(time(52) - time(48) - 0.8) < 1e-9)
 })
 
 test('v4 indexed metadata resolves notes and audio sample regions without using the initial BPM', () => {
