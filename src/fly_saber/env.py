@@ -321,7 +321,7 @@ class SaberEnv:
         return apply_eye_controls(image, state.eye, self.left_eye, state.step, background)
 
     def render_state(self, state: SaberState) -> dict[str, Any]:
-        """The `render_state` contract (docs/reference/PROTOCOL.md section 2) for one unbatched state."""
+        """The `render_state` contract (docs/reference/PROTOCOL.md section 2), unbatched."""
         judged = int(state.hits + state.misses + state.bad_cuts)
         accuracy = int(state.hits) / judged if judged else 1.0
         t = float(self.time(state))

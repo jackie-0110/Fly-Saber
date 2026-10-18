@@ -380,7 +380,7 @@ Everything a live session needs, in order. The bundle is `data/bundles/<id>/` (d
 from brain.model.controls import from_controls, load_controls
 from training.play_eval import load_trained
 
-fly = load_trained("bundles/real_fast/bc_950.npz", subgraph_dir="bundles/real_fast/subgraph")
+fly = load_trained("data/bundles/real_fast/bc_950.npz", subgraph_dir="data/bundles/real_fast/subgraph")
 # fly.env (SaberEnv seeing through the brain's eye columns), fly.policy (BrainPolicy),
 # fly.params (trained, baseline applied), fly.groups, fly.n_neurons
 step = jax.jit(fly.policy.step)          # one 30 Hz frame; warm up once at startup (~11 s compile)
