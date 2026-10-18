@@ -4,10 +4,8 @@ import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
 import { SessionReadouts } from '@/components/session-readouts'
-import { Separator } from '@/components/ui/separator'
 import { SongHeader } from '@/components/song-header'
-import './App.css'
-import './song-workspace.css'
+import './plate.css'
 
 export default function App() {
   return (
@@ -19,8 +17,7 @@ export default function App() {
           </span>
           Fly<span className="brand-word">Saber</span>
         </a>
-        <Separator orientation="vertical" className="header-divider" />
-        <span className="workspace-name">Neural simulation workspace</span>
+        <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
           <BackendStatus />
         </div>
@@ -29,8 +26,10 @@ export default function App() {
         <section className="observation-workspace" aria-label="Fly Saber observation workspace">
           <SongHeader />
           <GamePreview />
-          <SessionTimeline />
-          <SessionReadouts />
+          <div className="transport">
+            <SessionTimeline />
+            <SessionReadouts />
+          </div>
         </section>
         <aside className="inspector" aria-label="Brain and session inspector">
           <BrainPreview />

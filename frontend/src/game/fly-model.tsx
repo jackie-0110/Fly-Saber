@@ -5,7 +5,7 @@ import { Quaternion, Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
 import { FlyMotionController } from './fly-motion'
 
-const COLORS = ['#e6a08b', '#a4d9cf']
+const COLORS = ['#c64998', '#36a558']
 
 function Segment({
   from,
@@ -70,9 +70,9 @@ function StaticFlyBody({ wings }: { wings: RefObject<(Group | null)[]> }) {
             >
               <sphereGeometry args={[0.8, 16, 8]} />
               <meshStandardMaterial
-                color="#b8d5ce"
+                color="#748481"
                 transparent
-                opacity={0.28}
+                opacity={0.42}
                 roughness={0.25}
                 depthWrite={false}
               />

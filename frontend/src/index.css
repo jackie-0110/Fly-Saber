@@ -1,56 +1,86 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--foreground);
-  --color-muted: var(--surface-muted);
-  --color-muted-foreground: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--foreground);
-  --color-destructive: #dc8578;
-  --color-border: var(--line);
-  --color-input: var(--line);
-  --color-ring: var(--mint);
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 9px;
-  --radius-xl: 12px;
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--sheet);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--ink);
+  --color-popover-foreground: var(--paper);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--sheet);
+  --color-secondary: var(--wash);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--wash);
+  --color-muted-foreground: var(--ink-3);
+  --color-accent: var(--wash);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--signal-red);
+  --color-border: var(--rule);
+  --color-input: var(--rule-strong);
+  --color-ring: var(--focus);
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
 }
 
+/*
+ * The workspace is set as a live figure plate: a printed sheet (paper, ink, hairline
+ * rules) with the two WebGL views mounted as brightfield insets, a shade below the
+ * paper so they read as panels. Green and magenta follow the confocal convention and
+ * carry one meaning each everywhere: green is the right saber, magenta the left.
+ */
 :root {
-  font-family: 'DM Sans', sans-serif;
-  color: #e2e4e6;
-  background: #202124;
+  /* Sheet */
+  --paper: oklch(0.977 0.004 165);
+  --sheet: oklch(0.995 0.002 165);
+  --wash: oklch(0.955 0.006 165);
+  --rule: oklch(0.885 0.008 165);
+  --rule-strong: oklch(0.78 0.01 165);
+  --ink: oklch(0.235 0.014 200);
+  --ink-2: oklch(0.4 0.014 200);
+  --ink-3: oklch(0.5 0.012 200);
+
+  /* Brightfield insets (the game scene background matches --field) */
+  --field: oklch(0.945 0.006 165);
+  --field-2: oklch(0.995 0.002 165);
+  --field-rule: oklch(0.86 0.008 165);
+  --field-ink: oklch(0.235 0.014 200);
+  --field-ink-2: oklch(0.45 0.012 200);
+
+  /* Signals */
+  --signal-green: oklch(0.5 0.13 150);
+  --signal-magenta: oklch(0.52 0.19 345);
+  --signal-amber: oklch(0.54 0.12 70);
+  --signal-red: oklch(0.52 0.16 28);
+  --focus: oklch(0.5 0.13 150);
+
+  /* Type */
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', ui-serif, Georgia, serif;
+  --font-mono: 'Martian Mono', ui-monospace, 'SF Mono', monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 25px;
+
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-variation-settings: 'wdth' 100;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color-scheme: dark;
+  color-scheme: light;
   scrollbar-width: thin;
-  scrollbar-color: #566368 #202124;
-  --mint: #b6d5d0;
-  --muted: #a0a8af;
-  --line: #393f44;
-  --background: #202124;
-  --foreground: #e2e4e6;
-  --card: #25282b;
-  --popover: #33373b;
-  --primary: #b6d5d0;
-  --primary-foreground: #242b2d;
-  --secondary: #34373c;
-  --surface-muted: #2d3034;
-  --accent: #3b4248;
+  scrollbar-color: var(--rule-strong) transparent;
 }
 
 * {
@@ -59,6 +89,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--paper);
 }
 button,
 a,
@@ -74,8 +105,8 @@ button:disabled {
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 2px solid var(--mint);
-  outline-offset: 5px;
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 button,
 a {
@@ -92,8 +123,8 @@ button svg {
   height: 20px;
 }
 ::selection {
-  background: #b6d5d0;
-  color: #202124;
+  background: oklch(0.88 0.08 150);
+  color: var(--ink);
 }
 .sr-only {
   position: absolute;
@@ -109,7 +140,7 @@ button svg {
 
 input,
 textarea {
-  caret-color: var(--mint);
+  caret-color: var(--signal-green);
 }
 a {
   text-underline-offset: 3px;

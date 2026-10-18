@@ -32,7 +32,7 @@ interface SceneProps {
 
 const CAPACITY = 1024
 const WALL_CAPACITY = 128
-const COLORS = ['#e6a08b', '#a4d9cf']
+const COLORS = ['#c64998', '#36a558']
 
 function faceTexture(color: string, cut: number) {
   const canvas = document.createElement('canvas')
@@ -55,9 +55,9 @@ function faceTexture(color: string, cut: number) {
         (3 * Math.PI) / 4,
       ][cut],
     )
-    ctx.fillStyle = '#00000065'
+    ctx.fillStyle = '#00000026'
     ctx.fillRect(-190, -190, 380, 190)
-    ctx.fillStyle = '#172125'
+    ctx.fillStyle = '#f8fbf9'
     ctx.beginPath()
     ctx.moveTo(0, -72)
     ctx.lineTo(61, -13)
@@ -72,10 +72,10 @@ function faceTexture(color: string, cut: number) {
   } else {
     ctx.beginPath()
     ctx.arc(128, 128, 26, 0, Math.PI * 2)
-    ctx.fillStyle = '#172125'
+    ctx.fillStyle = '#f8fbf9'
     ctx.fill()
   }
-  ctx.strokeStyle = '#ffffff30'
+  ctx.strokeStyle = '#ffffff40'
   ctx.lineWidth = 8
   ctx.strokeRect(4, 4, 248, 248)
   const texture = new CanvasTexture(canvas)
@@ -159,33 +159,33 @@ function Track() {
     <group>
       <mesh position={[0, -0.31, -32]}>
         <boxGeometry args={[7, 0.22, 88]} />
-        <meshStandardMaterial color="#242c31" roughness={0.85} metalness={0.3} />
+        <meshStandardMaterial color="#f4f8f6" roughness={0.9} metalness={0} />
       </mesh>
       <lineSegments>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[lines, 3]} />
         </bufferGeometry>
-        <lineBasicMaterial color="#536367" transparent opacity={0.32} />
+        <lineBasicMaterial color="#6a7474" transparent opacity={0.28} />
       </lineSegments>
       {[-1, 1].map((side) => (
         <group key={side}>
           <mesh position={[side * 3.4, -0.12, -32]}>
             <boxGeometry args={[0.12, 0.18, 88]} />
-            <meshStandardMaterial color="#536463" metalness={0.5} roughness={0.5} />
+            <meshStandardMaterial color="#a5ada9" metalness={0.1} roughness={0.6} />
           </mesh>
           <mesh position={[side * 3.4, -0.015, -32]}>
             <boxGeometry args={[0.035, 0.015, 88]} />
-            <meshBasicMaterial color={side < 0 ? '#b2796b' : '#7aaba3'} />
+            <meshBasicMaterial color={side < 0 ? '#c64998' : '#36a558'} />
           </mesh>
           {[-12, -30, -48, -66].map((z) => (
             <group key={z} position={[side * 5.2, 0, z]}>
               <mesh position={[0, 3.2, 0]}>
                 <boxGeometry args={[0.35, 7, 0.35]} />
-                <meshStandardMaterial color="#283339" roughness={0.7} metalness={0.5} />
+                <meshStandardMaterial color="#d0d6d3" roughness={0.8} metalness={0} />
               </mesh>
               <mesh position={[side * -0.19, 3.2, 0.19]}>
                 <boxGeometry args={[0.04, 4.7, 0.015]} />
-                <meshBasicMaterial color={side < 0 ? '#785b54' : '#4c7470'} />
+                <meshBasicMaterial color={side < 0 ? '#d891b9' : '#87c293'} />
               </mesh>
             </group>
           ))}
@@ -193,11 +193,11 @@ function Track() {
       ))}
       <mesh position={[0, -0.16, 0]}>
         <boxGeometry args={[6.5, 0.03, 0.08]} />
-        <meshBasicMaterial color="#c3d7cf" />
+        <meshBasicMaterial color="#162021" />
       </mesh>
       <mesh position={[0, -0.42, -20]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#141a1e" roughness={1} />
+        <meshStandardMaterial color="#dfe4e2" roughness={1} />
       </mesh>
     </group>
   )
@@ -224,15 +224,15 @@ function Notes({ chart }: { chart: Chart | null }) {
       })
     })
     const bombMaterial = new MeshStandardMaterial({
-      color: '#776772',
+      color: '#3b2f35',
       metalness: 0.5,
       roughness: 0.5,
     })
     const wallMaterial = new MeshBasicMaterial({
-      color: '#a59a86',
+      color: '#5c6566',
       wireframe: true,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.3,
       depthWrite: false,
     })
     materials.push(bombMaterial, wallMaterial)
@@ -387,12 +387,12 @@ export default function GameScene(props: SceneProps) {
       }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <color attach="background" args={['#171d22']} />
-      <fog attach="fog" args={['#171d22', 25, 100]} />
-      <ambientLight intensity={0.9} />
-      <hemisphereLight args={['#c2d8d4', '#1b2429', 1.6]} />
-      <directionalLight position={[5, 12, 10]} intensity={2.3} color="#ffe7d5" />
-      <directionalLight position={[-8, 5, -10]} intensity={1.2} color="#9cc8cb" />
+      <color attach="background" args={['#e9eeec']} />
+      <fog attach="fog" args={['#e9eeec', 30, 110]} />
+      <ambientLight intensity={0.7} />
+      <hemisphereLight args={['#ffffff', '#bec6c2', 1.3]} />
+      <directionalLight position={[5, 12, 10]} intensity={1.8} color="#ffffff" />
+      <directionalLight position={[-8, 5, -10]} intensity={0.6} color="#e6eeeb" />
       <SceneLifecycle onFailure={props.onFailure} />
       <Navigation onNavigateReady={props.onNavigateReady} />
       <Track />

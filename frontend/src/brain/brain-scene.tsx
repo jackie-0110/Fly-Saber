@@ -61,9 +61,9 @@ function Connections({
       <primitive object={geometry} attach="geometry" />
       {selected === null ? (
         <lineBasicMaterial
-          color="#729baf"
+          color="#3f4a4b"
           transparent
-          opacity={0.025}
+          opacity={0.035}
           depthWrite={false}
           depthTest={false}
         />
@@ -71,7 +71,7 @@ function Connections({
         <>
           <lineBasicMaterial
             attach="material-0"
-            color="#f0c987"
+            color="#a86b00"
             transparent
             opacity={0.75}
             depthWrite={false}
@@ -79,7 +79,7 @@ function Connections({
           />
           <lineBasicMaterial
             attach="material-1"
-            color="#8ec5ff"
+            color="#2b63b0"
             transparent
             opacity={0.75}
             depthWrite={false}
@@ -262,8 +262,8 @@ function NeuronCloud({
       </points>
       {selectedPosition && (
         <mesh position={selectedPosition} raycast={() => {}}>
-          <sphereGeometry args={[0.022, 12, 8]} />
-          <meshBasicMaterial color="#ffffff" wireframe depthTest={false} />
+          <sphereGeometry args={[0.03, 12, 8]} />
+          <meshBasicMaterial color="#162021" wireframe depthTest={false} />
         </mesh>
       )}
     </>

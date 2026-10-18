@@ -21,6 +21,7 @@ import { openSongLibrary, usePlayer } from '@/game/store'
 import type { GameCameraAction } from '@/game/game-scene'
 import { FlyMotionPreview } from '@/game/fly-motion-preview'
 import { useSession } from '@/game/session'
+import { PanelLetter } from '@/components/figure'
 
 const GameScene = lazy(() => import('@/game/game-scene'))
 
@@ -169,6 +170,13 @@ export function GamePreview() {
             </Suspense>
           </GameBoundary>
         )}
+      </div>
+      <div className="inset-label">
+        <PanelLetter>a</PanelLetter>
+        <div>
+          <h2>Behaviour</h2>
+          <p>Fly Saber track · third-person camera</p>
+        </div>
       </div>
       {sessionStatus !== 'idle' && (
         <div className="scene-topline">
