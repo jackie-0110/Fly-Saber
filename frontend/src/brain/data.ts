@@ -336,6 +336,71 @@ export function neuronConnectionStats(data: BrainData, index: number) {
   return { incoming, outgoing, incomingSynapses, outgoingSynapses }
 }
 
+export interface PartnerType {
+  /** Cell-type index into `asset.cell_types`. */
+  type: number
+  synapses: number
+}
+
+/**
+ * A neuron's strongest partner cell types by synapse count, inputs and outputs, largest
+ * first (spec 5.5's "top inputs and outputs by type"). Null until edges load.
+ */
+export function topPartnerTypes(data: BrainData, index: number, limit = 3) {
+  if (!data.edges) return null
+  const inputs = new Map<number, number>()
+  const outputs = new Map<number, number>()
+  const { pre, post, weight, n_edges } = data.edges
+  const type = data.asset.type
+  for (let edge = 0; edge < n_edges; edge++) {
+    if (post[edge] === index) {
+      const t = type[pre[edge]]
+      inputs.set(t, (inputs.get(t) ?? 0) + weight[edge])
+    }
+    if (pre[edge] === index) {
+      const t = type[post[edge]]
+      outputs.set(t, (outputs.get(t) ?? 0) + weight[edge])
+    }
+  }
+  const top = (totals: Map<number, number>): PartnerType[] =>
+    [...totals]
+      .map(([t, synapses]) => ({ type: t, synapses }))
+      .sort((a, b) => b.synapses - a.synapses || a.type - b.type)
+      .slice(0, limit)
+  return { inputs: top(inputs), outputs: top(outputs) }
+}
+
+/** What a cell type is known to do, written by hand (configs/cell_types.yaml). */
+export interface CellTypeDescription {
+  name: string
+  types: string[]
+  description: string
+}
+
+/** explorer.json as a lookup from cell-type name to its description. */
+export function parseExplorer(raw: unknown): Map<string, CellTypeDescription> {
+  if (
+    !isRecord(raw) ||
+    raw.schema_version !== 1 ||
+    !Array.isArray(raw.descriptions) ||
+    !raw.descriptions.every(
+      (d) =>
+        isText(d, 'name', 'description') &&
+        Array.isArray(d.types) &&
+        d.types.every((t: unknown) => typeof t === 'string'),
+    )
+  )
+    throw new Error('Unsupported Brain Explorer data. Expected explorer schema version 1.')
+  const byType = new Map<string, CellTypeDescription>()
+  for (const entry of raw.descriptions as CellTypeDescription[])
+    for (const type of entry.types) byType.set(type, entry)
+  return byType
+}
+
+export async function loadExplorer(signal: AbortSignal) {
+  return parseExplorer(await fetchJson('explorer.json', signal))
+}
+
 export function filterNeuronIndices(data: BrainData, group: string, cellType: string): number[] {
   const indices = group
     ? (data.groups[group] ?? [])
