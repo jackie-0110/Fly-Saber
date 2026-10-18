@@ -80,3 +80,39 @@ def test_eye_image_layout_and_lattice_share_left_first_order(tmp_path: Path) -> 
     packet = binary_message(EYE_IMAGE, 1, 0x12345678, image)
     assert struct.unpack_from("<BBHIHH", packet) == (3, 1, 0, 0x12345678, 1, 2)
     assert packet[12:] == bytes([128, 0, 255])
+
+
+def test_streamed_eye_shows_looming_blur_dropout_and_noise() -> None:
+    base = expert_sims()
+    live = LiveSaber(
+        base.env,
+        lambda s, o, c, iv, k: (jnp.array([[12, 4], [12, 4]]), c, jnp.zeros(1)),
+        (),
+        n_neurons=1,
+    )
+    note = {
+        "time_sec": 1.0,
+        "lane": 1,
+        "layer": 1,
+        "color": 0,
+        "cut_direction": 0,
+        "is_bomb": False,
+    }
+    sim = live({"notes": [note]}, 0)
+
+    def pixels(time: float, **controls: float) -> np.ndarray:
+        sim.set_interventions({}, controls)
+        sim.reset(time)
+        packet = sim.eye_image()
+        assert packet is not None
+        return np.frombuffer(packet, np.uint8, offset=4)
+
+    def footprint(image: np.ndarray) -> int:
+        return int((np.abs(image.astype(float) - 127.5) > 3).sum())
+
+    far, near = pixels(0.1), pixels(0.9)
+    assert footprint(near) > footprint(far)
+    assert footprint(pixels(0.9, blur_deg=10.0)) > footprint(near)
+    assert (pixels(0.9, facet_dropout=1.0) == 128).all()
+    assert (pixels(0.9, blind_left=1.0, blind_right=1.0, noise=0.1) == 128).all()
+    assert not np.array_equal(pixels(0.9, noise=0.1), near)
