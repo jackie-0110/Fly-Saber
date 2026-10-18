@@ -12,7 +12,7 @@ export function SongLibrary() {
   const loaded = usePlayer((s) => s.song)
   const loading = usePlayer((s) => s.loading)
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState('Latest')
+  const [sort, setSort] = useState('Relevance')
   const [results, setResults] = useState<SongResult[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -127,8 +127,8 @@ export function SongLibrary() {
               value={sort}
               onChange={(event) => setSort(event.target.value)}
             >
+              <option value="Relevance">Best match</option>
               <option value="Latest">Latest</option>
-              <option value="Relevance">Relevance</option>
               <option value="Rating">Top rated</option>
             </select>
           </label>
