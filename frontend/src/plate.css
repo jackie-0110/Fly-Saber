@@ -1451,14 +1451,28 @@
   font-weight: 650;
 }
 
-/* ---------- Live play: brain picker and server songs ---------- */
+/* ---------- Songs: one brain setting, one list (ready-to-play pinned first) ---------- */
 
-.live-play {
+.brain-picker-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 18px;
-  border-bottom: 1.5px solid var(--ink);
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--wash);
+}
+.brain-picker-block .library-message {
+  padding: 0;
+}
+.live-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--ink-2);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .brain-picker {
   display: flex;
@@ -1481,17 +1495,10 @@
   outline-offset: 2px;
 }
 .brain-description {
-  margin-top: -4px;
   color: var(--ink-2);
   font-family: var(--font-serif);
   font-size: 13.5px;
   line-height: 1.5;
-}
-.live-play .song-results {
-  margin-top: 0;
-}
-.server-song-copy {
-  padding: 10px 4px 6px;
 }
 .preview-only {
   color: var(--signal-amber);

@@ -5,7 +5,7 @@ import { difficultyLabel, formatTime } from '@/game/chart'
 import { searchSongs } from '@/game/songs'
 import type { SongResult } from '@/game/songs'
 import { usePlayer } from '@/game/store'
-import { LivePlay } from '@/components/live-play'
+import { BrainPicker, ServerSongs } from '@/components/live-play'
 
 export function SongLibrary() {
   const active = usePlayer((s) => s.inspectorTab === 'songs')
@@ -89,13 +89,13 @@ export function SongLibrary() {
 
   return (
     <div className="song-library">
-      <LivePlay />
       <div className="library-heading">
-        <h2>Community maps</h2>
+        <h2>Songs</h2>
       </div>
+      <BrainPicker />
       <p className="library-intro">
-        Browse community maps. The server imports the chart when you load one so the fly can play
-        it; maps it cannot read play as previews, and the fly stays still.
+        Ready-to-play songs always go live. Community maps go live when the server can read them;
+        otherwise they play as a preview and the fly stays still.
       </p>
       <form
         className="song-search"
@@ -137,10 +137,11 @@ export function SongLibrary() {
           </Button>
         </div>
       </form>
+      <ServerSongs query={lastQuery.query} />
       <div className="library-section-label">
         <span>
           {lastQuery.query
-            ? 'Search results'
+            ? 'Community results'
             : lastQuery.sort === 'Rating'
               ? 'Top rated maps'
               : 'Latest community maps'}
