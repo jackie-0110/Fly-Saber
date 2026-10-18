@@ -108,7 +108,7 @@ A note leaves the scene when an `event` for its `id` arrives (hit, bad cut, bomb
 | `GET /api/maps/{map_id}/audio` | the audio file; 404 unless the map is in `demo_allowlist.json` |
 | `POST /api/community/{key}` | fetch BeatSaver map `key`'s charts (no audio) and normalize its Standard difficulties with `split: "community"`; returns their map ids, playable by `start` but not listed by `GET /api/maps`. 400 bad key, 404 unknown map, 422 a format the normalizer does not support, 502 BeatSaver unreachable |
 | `GET /api/explorer/{brain}` | `explorer.json` (Person 1) |
-| `GET /api/eye_lattice` | `{ "left": [[azimuth_deg, elevation_deg], ...], "right": [...] }`, the order used by eye images |
+| `GET /api/eye_lattice` | `{ "left": [[azimuth_deg, elevation_deg], ...], "right": [...] }`, the order used by eye images. Optional `?brain=<id>` selects that playable brain's exact lattice (404 for an unknown id). Default: `real`, then the first neural player, then the expert's synthetic lattice |
 
 ### WebSocket: `WS /ws/session`
 
@@ -165,6 +165,22 @@ Then a little-endian `uint32` sim `step`, then the payload.
 
 - Kinds 1 and 2: brain activity, payload layout in section 6. Only slots with a brain send them, right after that slot's `frame` for the same `step`.
 - Kind 3, eye image, 15 Hz: `uint16` ommatidia count for the left eye, `uint16` for the right, then one `uint8` luminance per ommatidium, left eye first, in the lattice order from `GET /api/eye_lattice` (served once with each ommatidium's azimuth and elevation in degrees, so the front end can draw the hex mosaic).
+
+Kind 3 is sent only for brain slots, after that slot's frame, at most every other sim
+step. Samples reuse the current environment observation after blur, visual noise,
+blindfolds and facet dropout, with `round(luminance * 255)` clipped to 0 to 255.
+Blindfolds and lost facets read as uniform background (128 for background 0.5), the
+same absence of contrast the brain receives. They do not read as black objects.
+Within each eye, samples retain column-table order; the stream groups left before
+right without changing brain input order. Fetch the lattice for the selected brain
+before drawing, and reject frames whose two counts differ from that lattice. Pause
+keeps the last image; play/seek, brain changes and disconnect clear it and reset the
+last accepted step. The expert sends no eye images.
+
+Frontend integration for Person A: `EyeMosaic` is exported from
+`frontend/src/eyeview/eye-mosaic.tsx`, with `side="left" | "right"`, optional
+`blind={boolean}` and `slot={number}` (default 0). The blind flag labels the control
+state; live pixels always come from the processed server observation.
 
 ## 4. Subgraph files, `groups.json`, and interventions (Person 1)
 
