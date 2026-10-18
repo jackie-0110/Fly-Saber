@@ -1,4 +1,4 @@
-/** Live brain and eye controls for one player (docs/PROTOCOL.md sections 3 and 4). */
+/** Live brain and eye controls for one player (docs/reference/PROTOCOL.md sections 3 and 4). */
 export interface BrainControls {
   /** Brain sections silenced, by group name from controls.json. */
   lesion: string[]

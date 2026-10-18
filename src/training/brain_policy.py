@@ -1,6 +1,6 @@
 """The connectome brain as a training policy, with the env's eye built from its columns.
 
-Owner: Person 2. See docs/PROTOCOL.md sections 2 and 5.
+Owner: Person 2. See docs/reference/PROTOCOL.md sections 2 and 5.
 """
 
 from collections.abc import Callable

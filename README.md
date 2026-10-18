@@ -34,7 +34,7 @@ Fly Saber runs the following pipeline, from raw connectome to a live browser ses
 6. **Serve** -- `src/server/` steps the trained brain at 30 Hz per session over a WebSocket and streams saber actions, judged notes and per-neuron activity. Lesions, blindfolds and moods apply mid-song without recompiling
 7. **Render** -- `frontend/` (React and three.js) plays the song, draws the game, and lights the neuron cloud
 
-The wire format is in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+The wire format is in [`docs/reference/PROTOCOL.md`](docs/reference/PROTOCOL.md).
 
 ### Four brains to choose from
 
@@ -47,9 +47,9 @@ The wire format is in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 
 ## Results
 
-Greedy play, no expert help. Hit rate is notes hit over notes judged, on songs held out from training. Full tables, learning curves and caveats are in [`results/README.md`](results/README.md).
+Greedy play, no expert help. Hit rate is notes hit over notes judged, on songs held out from training. Full tables, learning curves and caveats are in [`docs/results/README.md`](docs/results/README.md).
 
-**It plays from vision.** Live controls on the demo fly (`bundles/real`, 64 windows of 10 s):
+**It plays from vision.** Live controls on the demo fly (`data/bundles/real`, 64 windows of 10 s):
 
 | Change | Held-out hit rate |
 |---|---|
@@ -95,7 +95,7 @@ Try the live deployment at **[flysaber.jackie-courtney.com](https://flysaber.jac
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Docker (optional, for the container build)
 
-No API keys, GPU, or connectome download are needed to play: the trained brains ship in `bundles/`, each with the exact subgraph it was trained on.
+No API keys, GPU, or connectome download are needed to play: the trained brains ship in `data/bundles/`, each with the exact subgraph it was trained on.
 
 ### 1. Install and fetch songs
 
@@ -121,7 +121,7 @@ make docker-build
 docker run --rm -p 8000:8000 fly-saber:local
 ```
 
-Deploying to a server is covered in [`docs/CI_CD.md`](docs/CI_CD.md).
+Deploying to a server is covered in [`docs/development/CI_CD.md`](docs/development/CI_CD.md).
 
 ## Development
 
@@ -144,36 +144,34 @@ frontend/            React and three.js app (app, features, components, lib, tes
 scripts/             Maintenance commands grouped by data, connectome, training, web
 infra/               Docker build and smoke fixtures, deployment scripts, SLURM jobs
 configs/             YAML config for every component
-bundles/             Trained brains with their exact subgraphs
-data/                Raw downloads, processed data and song maps
-results/             Training runs and control evaluations
-docs/                Technical docs, project plans and frontend notes
+data/                Raw downloads, song maps and trained brain bundles (data/bundles/)
+docs/                Reference, development guides, results, figures and archived plans
 tests/               Python tests, one folder per package
 ```
 
-See the [Repository guide](docs/REPOSITORY.md) for module boundaries, commands and file placement.
+See the [Repository guide](docs/development/REPOSITORY.md) for module boundaries, commands and file placement.
 
 ## Team
 
 | Person | Focus | Owns |
 |---|---|---|
-| 1 | Brain and RL | `src/brain/`, training runs on HiPerGator, `results/`, hosting |
+| 1 | Brain and RL | `src/brain/`, training runs on HiPerGator, `docs/results/`, hosting |
 | 2 | Game, imitation, server | `src/fly_saber/`, `src/training/bc.py`, `src/server/` |
 | 3 | Experience | `frontend/`, the demo |
 
-Who builds what in detail: [`docs/project/FLY_SABER_TEAM_SPLIT.md`](docs/project/FLY_SABER_TEAM_SPLIT.md). Branches use the owner's prefix (`p1/`, `p2/`, `p3/`), and `main` always runs the demo.
+Who builds what in detail: [`docs/archive/project/FLY_SABER_TEAM_SPLIT.md`](docs/archive/project/FLY_SABER_TEAM_SPLIT.md). Branches use the owner's prefix (`p1/`, `p2/`, `p3/`), and `main` always runs the demo.
 
 ## Documentation
 
 | Doc | What |
 |---|---|
-| [`docs/project/FLY_SABER_HANDOFF.md`](docs/project/FLY_SABER_HANDOFF.md) | The full spec |
-| [`docs/project/MILESTONE.md`](docs/project/MILESTONE.md) | What stands between us and the MVP |
-| [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | Map schema, `render_state`, WebSocket messages, interventions, activity stream |
-| [`docs/DATA_NOTES.md`](docs/DATA_NOTES.md) | What the connectome files actually contain |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component boundaries and conventions |
-| [`docs/CI_CD.md`](docs/CI_CD.md) | CI, the container image and deployment |
-| [`results/README.md`](results/README.md) | Training runs, baselines and what each control does |
+| [`docs/archive/project/FLY_SABER_HANDOFF.md`](docs/archive/project/FLY_SABER_HANDOFF.md) | The full spec |
+| [`docs/archive/project/MILESTONE.md`](docs/archive/project/MILESTONE.md) | What stands between us and the MVP |
+| [`docs/reference/PROTOCOL.md`](docs/reference/PROTOCOL.md) | Map schema, `render_state`, WebSocket messages, interventions, activity stream |
+| [`docs/reference/DATA_NOTES.md`](docs/reference/DATA_NOTES.md) | What the connectome files actually contain |
+| [`docs/reference/ARCHITECTURE.md`](docs/reference/ARCHITECTURE.md) | Component boundaries and conventions |
+| [`docs/development/CI_CD.md`](docs/development/CI_CD.md) | CI, the container image and deployment |
+| [`docs/results/README.md`](docs/results/README.md) | Training runs, baselines and what each control does |
 
 ---
 

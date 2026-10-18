@@ -1,5 +1,5 @@
 # Brain modes for the demo (owner: Person 1). scripts/web/export_brains.py bundles each one
-# (bundles/<id>/) and writes frontend/public/data/brains/. A mode without a checkpoint is
+# (data/bundles/<id>/) and writes frontend/public/data/brains/. A mode without a checkpoint is
 # view-only: its wiring can be shown, but it cannot play.
 real_subgraph: data/processed/malecns_subgraph
 edges_per_block: 60      # strongest connections kept per layer-to-layer block, for drawing

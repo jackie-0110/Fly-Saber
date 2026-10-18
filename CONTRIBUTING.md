@@ -7,7 +7,7 @@ Bug and feature forms are available under GitHub Issues.
 Branch with your owner prefix (`p1/`, `p2/`, `p3/`); `main` always runs the demo.
 Don't use em dashes in user-facing text or docs.
 
-See the [repository guide](docs/REPOSITORY.md) for where code, commands, deployment files and documentation belong.
+See the [repository guide](docs/development/REPOSITORY.md) for where code, commands, deployment files and documentation belong.
 
 ## Setup and checks
 
@@ -59,11 +59,6 @@ Dependabot proposes weekly updates for Actions, npm, uv, and Docker dependencies
 Review and merge those updates through the same tests. Never commit `.env`, raw
 connectomes, checkpoints, replays, or unlicensed audio.
 
-## Agent tooling
-
-The installed Impeccable skills and editor hooks are documented in
-[Agent tooling](docs/AGENT_TOOLING.md), including engine setup and local cache handling.
-
 ## Container delivery
 
-See [docs/CI_CD.md](docs/CI_CD.md) for image builds, release publishing, and deployment.
+See [docs/development/CI_CD.md](docs/development/CI_CD.md) for image builds, release publishing, and deployment.

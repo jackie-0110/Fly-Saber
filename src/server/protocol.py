@@ -1,6 +1,6 @@
-"""WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2, 3 and 6 (spec 13).
+"""WebSocket and REST message types, mirrors docs/reference/PROTOCOL.md sections 2, 3 and 6 (spec 13).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 """
 
 import struct

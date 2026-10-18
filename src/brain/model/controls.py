@@ -1,7 +1,7 @@
 """Turn UI brain controls into an Interventions pytree.
 
 Owner: Person 1. The UI's choices arrive as the `interventions` object of the
-`set_interventions` WebSocket message (docs/PROTOCOL.md section 4); the server
+`set_interventions` WebSocket message (docs/reference/PROTOCOL.md section 4); the server
 calls `from_controls` and passes the result to every brain step.
 """
 

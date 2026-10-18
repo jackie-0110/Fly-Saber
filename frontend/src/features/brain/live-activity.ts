@@ -6,7 +6,7 @@ export const STALE_MS = 1000
 /**
  * The latest live brain activity, kept outside React: the session writes it, the neuron
  * cloud reads it each animation frame and redraws when a step changes. Values are change
- * from rest (docs/PROTOCOL.md section 6), indexed like `neurons.json` and `ready.cell_types`.
+ * from rest (docs/reference/PROTOCOL.md section 6), indexed like `neurons.json` and `ready.cell_types`.
  */
 export const liveActivity = {
   neurons: null as Int8Array | null,

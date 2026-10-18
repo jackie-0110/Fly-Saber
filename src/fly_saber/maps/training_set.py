@@ -1,6 +1,6 @@
 """Scrape a charts-only training set from BeatSaver (spec 8.1, 8.4).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 
 Training maps never keep audio: only the .dat files are extracted and every map
 is normalized without an allowlist entry, so its audio_url is null.

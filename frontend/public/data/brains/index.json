@@ -6,7 +6,7 @@
    "label": "Real fly brain",
    "description": "The fly's own wiring from the MaleCNS connectome.",
    "playable": true,
-   "bundle": "bundles/real",
+   "bundle": "data/bundles/real",
    "play": {
     "heldout": 0.3268,
     "train": 0.2908
@@ -32,7 +32,7 @@
    "label": "Shuffled within layers",
    "description": "Same layers and connection counts as the real brain (eye, lamina, medulla, detectors, central brain, motor), but who connects to whom inside each layer pair is random.",
    "playable": true,
-   "bundle": "bundles/shuffled_layers",
+   "bundle": "data/bundles/shuffled_layers",
    "play": {
     "heldout": 0.5181,
     "train": 0.4622
@@ -57,7 +57,7 @@
    "label": "Excitation and inhibition shuffled",
    "description": "The real wiring, but which neurons excite and which inhibit is scrambled.",
    "playable": true,
-   "bundle": "bundles/shuffled_signs",
+   "bundle": "data/bundles/shuffled_signs",
    "play": {
     "heldout": 0.1998,
     "train": 0.1787
@@ -83,7 +83,7 @@
    "label": "Shuffled freely",
    "description": "Every neuron keeps its number of connections, but partners are drawn from anywhere, so the eyes wire straight into the motor neurons.",
    "playable": false,
-   "bundle": "bundles/shuffled_free",
+   "bundle": "data/bundles/shuffled_free",
    "play": null,
    "wiring": {
     "direct_eye_to_motor_connections": 1054,

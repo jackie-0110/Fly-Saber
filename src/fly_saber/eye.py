@@ -1,6 +1,6 @@
 """Hexagonal ommatidia lattice and analytic rendering (spec 7.1).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 
 Coordinates: the eye is at the origin, x right, y up, z forward. Azimuth is
 positive to the right, elevation positive up.

@@ -1,7 +1,7 @@
 """Export neurons, wiring, groups, eye columns, UI controls and Explorer text for the browser.
 
 Owner: Person 1. Usage: uv run python scripts/web/export_web.py
-For the committed trained model: uv run python scripts/web/export_web.py --bundle bundles/real_fast
+For the committed trained model: uv run python scripts/web/export_web.py --bundle data/bundles/real_fast
 Rerun after scripts/connectome/build_subgraph.py whenever the subgraph changes, then commit.
 """
 

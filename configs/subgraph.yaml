@@ -1,4 +1,4 @@
-# Visual-to-motor subgraph extraction (owner: Person 1). See docs/DATA_NOTES.md.
+# Visual-to-motor subgraph extraction (owner: Person 1). See docs/reference/DATA_NOTES.md.
 dataset: malecns
 raw_dir: data/raw/malecns
 out_dir: data/processed/malecns_subgraph

@@ -1,6 +1,6 @@
 """Cached BeatSaver API client (spec 8.1). Never called at demo time.
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 """
 
 import hashlib

@@ -1,4 +1,4 @@
-/** Binary activity messages from a live session (docs/PROTOCOL.md sections 3 and 6). */
+/** Binary activity messages from a live session (docs/reference/PROTOCOL.md sections 3 and 6). */
 
 export const NEURON_ACTIVITY = 1
 export const TYPE_ACTIVITY = 2

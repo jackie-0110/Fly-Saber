@@ -1,4 +1,4 @@
-// Chart coordinates follow docs/PROTOCOL.md. Time is always seconds in the audio file.
+// Chart coordinates follow docs/reference/PROTOCOL.md. Time is always seconds in the audio file.
 export interface Note {
   id: number
   time_sec: number

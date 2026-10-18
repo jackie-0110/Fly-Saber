@@ -1,5 +1,5 @@
 # eye.yaml (owner: Person 2). Fly compound eye optics, spec 7.1. Angles in degrees.
-# Extents match the connectome eye columns (docs/DATA_NOTES.md); the synthetic lattice
+# Extents match the connectome eye columns (docs/reference/DATA_NOTES.md); the synthetic lattice
 # only stands in when no brain is loaded.
 ommatidium_spacing_deg: 5.0   # interommatidial angle
 # Gaussian acceptance, full width at half maximum. Matches the brain's column sampling:

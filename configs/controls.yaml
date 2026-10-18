@@ -70,7 +70,7 @@ moods:
     high_label: Calm
     description: Drives serotonin neurons. In this model serotonin turns gain down, a stand-in for quiescence.
 
-# Slider ranges (`range` above) keep the trained fly playable; measured in results/controls.
+# Slider ranges (`range` above) keep the trained fly playable; measured in docs/results/controls.
 # Presets set several moods at once and may go past the sliders.
 presets:
   - name: depressed

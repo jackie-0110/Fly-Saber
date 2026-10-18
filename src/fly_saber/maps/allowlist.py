@@ -1,6 +1,6 @@
 """Demo map allowlist: the only maps whose audio may ship (spec 8.4).
 
-Owner: Person 2. See docs/project/FLY_SABER_HANDOFF.md for the spec.
+Owner: Person 2. See docs/archive/project/FLY_SABER_HANDOFF.md for the spec.
 """
 
 import json

@@ -1,6 +1,6 @@
 """Checkpoint save and load with config hash (spec 12.4).
 
-Owner: Person 1. Format is documented in docs/PROTOCOL.md section 5.
+Owner: Person 1. Format is documented in docs/reference/PROTOCOL.md section 5.
 
 A checkpoint is one .npz file: one array per parameter leaf, keyed by its
 pytree path (for example ".log_tau"), plus a JSON "__meta__" entry. Loading

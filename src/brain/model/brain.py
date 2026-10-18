@@ -152,7 +152,7 @@ def _modulation_edges(
 
 
 def eye_inputs(neurons: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Map eye columns to input neurons (see docs/DATA_NOTES.md, deviation 6).
+    """Map eye columns to input neurons (see docs/reference/DATA_NOTES.md, deviation 6).
 
     Returns the column table and one row per input neuron: neuron index,
     column, channel (0 luminance, 1 color), and sign.
@@ -391,7 +391,7 @@ def make_step(graph: Graph, cfg: ModelConfig, n_neurons: int) -> StepFn:
 
     # Gradient checkpointing: backprop through a rollout keeps only each frame's inputs
     # and recomputes the substeps, instead of storing every edge value of every substep
-    # (169 GB for one default BC update; see docs/PROTOCOL.md section 5).
+    # (169 GB for one default BC update; see docs/reference/PROTOCOL.md section 5).
     return jax.checkpoint(step) if cfg.remat else step
 
 

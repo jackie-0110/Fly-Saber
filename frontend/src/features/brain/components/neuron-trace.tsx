@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { liveActivity } from '@/features/brain/live-activity'
 
-// Neuron activity arrives at 15 Hz (docs/PROTOCOL.md section 6), so 60 samples is 4 s.
+// Neuron activity arrives at 15 Hz (docs/reference/PROTOCOL.md section 6), so 60 samples is 4 s.
 const SAMPLES = 60
 const WIDTH = 240
 const HEIGHT = 36
