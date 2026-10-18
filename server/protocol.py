@@ -1,8 +1,9 @@
-"""WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2 and 3 (spec 13).
+"""WebSocket and REST message types, mirrors docs/PROTOCOL.md sections 2, 3 and 6 (spec 13).
 
 Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
+import struct
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -192,3 +193,13 @@ class Narration(Message):
 class Error(Message):
     type: Literal["error"] = "error"
     message: str
+
+
+# Binary messages: kinds 1 and 2 carry int8 activity (section 6).
+
+NEURON_ACTIVITY, TYPE_ACTIVITY = 1, 2
+
+
+def binary_message(kind: int, slot: int, step: int, payload: bytes) -> bytes:
+    """Header (kind, slot, 2 reserved zero bytes, little-endian uint32 sim step), then payload."""
+    return struct.pack("<BBHI", kind, slot, 0, step) + payload

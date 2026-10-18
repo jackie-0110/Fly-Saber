@@ -1,6 +1,8 @@
 """Trained brains in the live server: bundles listed and loaded, ready, and play."""
 
 import json
+import struct
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +16,7 @@ from fly_saber.env import IDLE_CELL, SaberConfig
 from fly_saber.eye import EyeConfig
 from server.app import create_app, serving_brains
 from server.protocol import Brain
-from tests.server.test_server import play_to_end, start, write_maps
+from tests.server.test_server import play_to_end, receive, start, write_maps
 from tests.training.test_brain_policy import model_config, write_subgraph
 from training.bc import BCConfig
 from training.brain_policy import build
@@ -93,7 +95,7 @@ def test_brain_plays_the_song_and_replays_identically(client: TestClient) -> Non
         start(ws, ["real"])
         first = play_to_end(ws, 1)
         ws.send_json({"type": "reset"})
-        ws.receive_json()
+        receive(ws)
         second = play_to_end(ws, 1)
     assert first[-1]["type"] == "ended"
     assert judged(first) == judged(second)
@@ -104,7 +106,7 @@ def sabers(ws: Any) -> dict[int, Any]:
     only its last step, so compare plays with `same_steps`."""
     ws.send_json({"type": "play", "song_t": 0.0})
     frames = {}
-    while (message := ws.receive_json())["type"] != "ended":
+    while (message := receive(ws))["type"] != "ended":
         if message["type"] == "frame":
             frames[message["render_state"]["step"]] = message["render_state"]["sabers"]
     return frames
@@ -129,7 +131,7 @@ def test_lesion_changes_play_and_lasts_through_reset(client: TestClient) -> None
         untouched = sabers(ws)
         lesioned = play_with(ws, {"lesion": ["DN_all"]}, {})
         ws.send_json({"type": "reset"})
-        ws.receive_json()
+        receive(ws)
         after_reset = sabers(ws)
     assert not same_steps(lesioned, untouched)
     assert same_steps(after_reset, lesioned)
@@ -171,6 +173,54 @@ def test_bad_interventions_get_error_and_socket_stays_open(
         ws.send_json({"type": "set_interventions", **message})
         assert ws.receive_json()["type"] == "error"
         assert start(ws, ["real"])["type"] == "ready"
+
+
+def activity(ws: Any) -> tuple[set[tuple[int, int]], list[tuple[int, int, int, bytes]]]:
+    """Play the song in real time; return the (slot, step) of every frame, and every binary
+    message as (kind, slot, step, payload)."""
+    ws.send_json({"type": "play", "song_t": 0.0})
+    frames, binary = set(), []
+    while True:
+        message = ws.receive()
+        if "bytes" in message:
+            kind, slot, reserved, step = struct.unpack_from("<BBHI", message["bytes"])
+            assert reserved == 0
+            binary.append((kind, slot, step, message["bytes"][8:]))
+            continue
+        decoded = json.loads(message["text"])
+        if decoded["type"] == "frame":
+            frames.add((decoded["slot"], decoded["render_state"]["step"]))
+        if decoded["type"] == "ended" and decoded["slot"] == 0:
+            return frames, binary
+
+
+def test_brain_streams_activity_with_its_frames(client: TestClient) -> None:
+    with client.websocket_connect("/ws/session") as ws:
+        ready = start(ws, ["real", "expert"])
+        frames, binary = activity(ws)
+    brain_frames = {step for slot, step in frames if slot == 0}
+    assert {slot for _, slot, _, _ in binary} == {0}, "the expert has no brain to stream"
+    types = [(step, payload) for kind, _, step, payload in binary if kind == 2]
+    neurons = [(step, payload) for kind, _, step, payload in binary if kind == 1]
+    assert [step for step, _ in types] == sorted(brain_frames)
+    assert all(len(payload) == len(ready["cell_types"]) for _, payload in types)
+    assert all(len(payload) == ready["n_neurons"] for _, payload in neurons)
+    neuron_steps = [step for step, _ in neurons]
+    assert set(neuron_steps) <= brain_frames
+    assert all(b - a >= 2 for a, b in pairwise(neuron_steps)), "at most 15 Hz"
+    assert len(neuron_steps) >= len(brain_frames) // 2 - 1
+
+
+def test_lesioned_neuron_reads_below_rest(client: TestClient) -> None:
+    with client.websocket_connect("/ws/session") as ws:
+        start(ws, ["real"])
+        ws.send_json(
+            {"type": "set_interventions", "slot": 0, "interventions": {"lesion": ["DN_all"]}}
+        )
+        _, binary = activity(ws)
+    dn = 3  # groups.json: DN_all is neuron 3
+    changes = [struct.unpack("4b", payload)[dn] for kind, _, _, payload in binary if kind == 1]
+    assert changes and all(change < 0 for change in changes)
 
 
 def test_interventions_recenter_the_readout(tmp_path: Path) -> None:

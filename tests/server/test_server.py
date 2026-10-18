@@ -136,13 +136,22 @@ def start(
     return ready
 
 
+def receive(ws: WebSocketTestSession) -> dict[str, Any]:
+    """The next JSON message, skipping binary activity."""
+    message = ws.receive()
+    while "bytes" in message:
+        message = ws.receive()
+    decoded: dict[str, Any] = json.loads(message["text"])
+    return decoded
+
+
 def play_to_end(ws: WebSocketTestSession, n_slots: int) -> list[dict[str, Any]]:
     """Play from 0, jump the clock past the song end, and collect messages until every slot ends."""
     ws.send_json({"type": "play", "song_t": 0.0})
     ws.send_json({"type": "clock", "song_t": 5.0})
     messages: list[dict[str, Any]] = []
     while sum(m["type"] == "ended" for m in messages) < n_slots:
-        messages.append(ws.receive_json())
+        messages.append(receive(ws))
     return messages
 
 
@@ -221,6 +230,9 @@ class SlowSim:
 
     def set_interventions(self, controls: Mapping[str, Any], eye: Mapping[str, Any]) -> None:
         self.sim.set_interventions(controls, eye)
+
+    def activity(self) -> tuple[bytes, bytes] | None:
+        return self.sim.activity()
 
 
 class SlowSims:
