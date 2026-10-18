@@ -82,6 +82,7 @@
 .backend-status .status-dot {
   background: var(--signal-amber);
 }
+.status-dot.green,
 .backend-status[data-state='connected'] .status-dot {
   background: var(--signal-green);
 }

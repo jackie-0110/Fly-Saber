@@ -6,7 +6,19 @@ import { BufferAttribute, BufferGeometry, Color, Spherical, Vector3 } from 'thre
 import type { MutableRefObject } from 'react'
 import { cellTypeColor } from './data'
 import type { BrainData, BrainEdges } from './data'
+import { liveActivity } from './live-activity'
 import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
+
+// Brightness of a neuron at rest while a brain plays, so active neurons stand out.
+const REST_BRIGHTNESS = 0.15
+// |change from rest| (of 127) that draws at full brightness. The median active neuron moves
+// about 3, so a linear scale would leave nearly every active neuron as dark as one at rest.
+const FULL_BRIGHTNESS_AT = 32
+
+function brightness(change: number) {
+  const level = Math.min(1, Math.sqrt(Math.abs(change) / FULL_BRIGHTNESS_AT))
+  return REST_BRIGHTNESS + (1 - REST_BRIGHTNESS) * level
+}
 
 export type CameraAction =
   'reset' | 'x' | 'y' | 'z' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
@@ -233,8 +245,32 @@ function NeuronCloud({
       positions.set(data.positions.subarray(index * 3, index * 3 + 3), offset * 3)
       palette[data.asset.type[index]].toArray(colors, offset * 3)
     })
-    return { positions, colors }
+    return { positions, colors, base: colors.slice() }
   }, [data, indices])
+  const colorAttribute = useRef<BufferAttribute>(null)
+  const drawn = useRef({ buffers, step: -1, live: false })
+  const invalidate = useThree((state) => state.invalidate)
+  useEffect(() => liveActivity.subscribe(invalidate), [invalidate])
+  useFrame(() => {
+    const neurons = liveActivity.neurons
+    const live = liveActivity.live() && neurons?.length === data.asset.n_neurons
+    const last = drawn.current
+    if (
+      last.buffers === buffers &&
+      last.live === live &&
+      (!live || last.step === liveActivity.neuronStep)
+    )
+      return
+    const { colors, base } = buffers
+    if (live && neurons) {
+      indices.forEach((index, offset) => {
+        const level = brightness(neurons[index])
+        for (let i = offset * 3; i < offset * 3 + 3; i++) colors[i] = base[i] * level
+      })
+    } else colors.set(base)
+    if (colorAttribute.current) colorAttribute.current.needsUpdate = true
+    drawn.current = { buffers, step: liveActivity.neuronStep, live }
+  })
   const selectedPosition =
     selected === null ? null : new Vector3().fromArray(data.positions, selected * 3)
   return (
@@ -248,7 +284,11 @@ function NeuronCloud({
       >
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[buffers.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[buffers.colors, 3]} />
+          <bufferAttribute
+            ref={colorAttribute}
+            attach="attributes-color"
+            args={[buffers.colors, 3]}
+          />
         </bufferGeometry>
         <pointsMaterial
           size={pointSize}

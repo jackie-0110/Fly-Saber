@@ -1,4 +1,14 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Component,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import {
   Brain,
@@ -28,8 +38,26 @@ import type { ConnectionDetail } from '@/brain/rendering'
 import { SongLibrary } from '@/components/song-library'
 import { PanelLetter } from '@/components/figure'
 import { usePlayer } from '@/game/store'
+import { liveActivity } from '@/brain/live-activity'
 
 const BrainScene = lazy(() => import('@/brain/brain-scene'))
+
+function ActivityNote() {
+  const live = useSyncExternalStore(
+    (notify) => liveActivity.subscribe(notify),
+    () => liveActivity.live(),
+  )
+  return (
+    <p className="brain-backend-note">
+      <span className={`status-dot ${live ? 'green' : 'amber'}`} />
+      <span>
+        {live
+          ? 'Live: brightness is each neuron’s firing change from rest.'
+          : 'Firing activity appears while a brain plays a song.'}
+      </span>
+    </p>
+  )
+}
 const number = new Intl.NumberFormat('en-US')
 const provenance: Record<string, string> = {
   soma: 'Soma position',
@@ -600,10 +628,7 @@ export function BrainPreview() {
               </span>
             )}
           </div>
-          <p className="brain-backend-note">
-            <span className="status-dot amber" />
-            <span>Firing activity is awaiting backend data.</span>
-          </p>
+          <ActivityNote />
         </div>
       </TabsContent>
       <TabsContent value="session" className="session-tab">
@@ -676,13 +701,6 @@ export function BrainPreview() {
       <TabsContent value="next" className="inspector-prose">
         <h2>Planned features</h2>
         <ul className="next-steps">
-          <li>
-            <strong>Receive neuron firing data</strong>
-            <p>
-              The backend needs to send per-neuron activity matching this asset’s neuron indices.
-              That data will drive brightness without moving the anatomy or camera.
-            </p>
-          </li>
           <li>
             <strong>Real-time Fly Saber</strong>
             <p>
