@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { strToU8, zipSync } from 'fflate'
 import { beatClock, formatTime, lowerBound, parseChart, sampleClock } from '../src/game/chart.ts'
-import { importSong, mapKey, parseSongResult } from '../src/game/songs.ts'
+import { importSong, mapKey, parseSongResult, searchSongs } from '../src/game/songs.ts'
 import { info, mapZip, result, v2, v3, wav } from './song-fixtures.ts'
 
 const options = { id: 'fixture_normal', name: 'Normal', characteristic: 'Standard', bpm: 120, speed: 10, jumpOffset: 0, offset: 0 }
@@ -153,4 +153,29 @@ test('seeking finds the same note window in either direction, including empty ch
   assert.equal(lowerBound([], 1), 0)
   assert.equal(formatTime(125.8), '02:05')
   assert.equal(formatTime(NaN), '00:00')
+})
+
+function hit(id, songName, songAuthorName, upvotes) {
+  return { ...result, id, metadata: { ...result.metadata, songName, songAuthorName }, stats: { upvotes } }
+}
+const gaga = [
+  hit('a1', 'Applause', '', 992),
+  hit('b2', 'Born This Way', 'Mapped by zack32h', 232),
+  hit('c3', 'Just Dance', "Lady Gaga ft. Colby O'Donis", 1439),
+  hit('d4', 'Bad Romance', 'Lady Gaga', 9),
+  hit('e5', 'Just Dance', 'Lady Gaga', 397),
+]
+
+test('best-match search puts the song whose title and artist match first, then the most upvoted', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ docs: gaga })))
+  const best = await searchSongs('Just Dance Lady Gaga', 0, 'Relevance', signal())
+  assert.deepEqual(best.songs.map((s) => s.id).slice(0, 3), ['c3', 'e5', 'd4'])
+  const latest = await searchSongs('Just Dance Lady Gaga', 0, 'Latest', signal())
+  assert.deepEqual(latest.songs.map((s) => s.id), ['a1', 'b2', 'c3', 'd4', 'e5'], 'an explicit sort keeps its order')
+})
+
+test('search results read upvotes and default to zero when BeatSaver omits them', () => {
+  assert.equal(parseSongResult(hit('f6', 'X', 'Y', 12)).upvotes, 12)
+  assert.equal(parseSongResult(result).upvotes, 0)
+  assert.equal(parseSongResult({ ...result, stats: { upvotes: 'many' } }).upvotes, 0)
 })
