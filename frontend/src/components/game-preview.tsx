@@ -22,6 +22,7 @@ import type { GameCameraAction } from '@/game/game-scene'
 import { FlyMotionPreview } from '@/game/fly-motion-preview'
 import { useSession } from '@/game/session'
 import { PanelLetter } from '@/components/figure'
+import { EyeInset } from '@/eyeview/eye-view'
 
 const GameScene = lazy(() => import('@/game/game-scene'))
 
@@ -189,6 +190,7 @@ export function GamePreview() {
         </div>
       )}
       {motionPreview && <FlyMotionPreview />}
+      <EyeInset />
       {!motionPreview && !chart && !loading && cameraReady && (
         <div className="scene-empty">
           <h2>Choose a song to begin</h2>

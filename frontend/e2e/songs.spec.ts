@@ -9,6 +9,9 @@ const cover = Buffer.from(
 )
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/eye_lattice?*', (route) =>
+    route.fulfill({ json: { left: [[0, 0]], right: [[0, 0]] } }),
+  )
   await page.route('**/api/maps', (route) => route.fulfill({ json: [] }))
   await page.route('**/api/brains', (route) =>
     route.fulfill({

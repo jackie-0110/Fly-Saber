@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 import type { SaberAction } from '@/game/fly-motion'
-import { BrainStage, EyeToggles } from '@/components/brain-controls'
+import { BrainStage } from '@/components/brain-controls'
 import { useSession } from '@/game/session'
+import { EyeReadout } from '@/eyeview/eye-view'
 
 // Cut directions as the protocol numbers them: 0 up, 1 down, 2 left, 3 right.
 const CUTS = [ArrowUp, ArrowDown, ArrowLeft, ArrowRight]
@@ -20,12 +21,7 @@ export function SessionReadouts() {
   return (
     <section className="session-readouts" aria-label="Session readouts">
       <div className="readout-block">
-        <h2>Visual input</h2>
-        <EyeToggles />
-        <p className="readout-status">
-          <span className="status-dot" />
-          Awaiting fly's-eye stream
-        </p>
+        <EyeReadout />
       </div>
       <BrainStage />
       <div className="readout-block">
