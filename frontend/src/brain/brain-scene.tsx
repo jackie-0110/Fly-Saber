@@ -2,27 +2,127 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { BufferAttribute, BufferGeometry, Color, Spherical, Vector3 } from 'three'
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  NormalBlending,
+  ShaderMaterial,
+  LineBasicMaterial,
+  Spherical,
+  Vector3,
+} from 'three'
 import type { MutableRefObject } from 'react'
 import { cellTypeColor } from './data'
 import type { BrainData, BrainEdges } from './data'
 import { liveActivity } from './live-activity'
 import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
+import { useScenePalette } from '@/lib/theme'
 
-// Opacity of a neuron at rest while a brain plays, so active neurons stand out. Rest fades
-// toward the background, not toward black: on the light plate black dots would stand out most.
-const REST_OPACITY = 0.15
-// |change from rest| (of 127) that draws fully opaque. The median active neuron moves about
-// 3, so a linear scale would leave nearly every active neuron as faint as one at rest.
-const FULL_OPACITY_AT = 32
+/*
+ * Live activity is drawn as ink on paper, the light-plate counterpart of a glow on black.
+ * Resting neurons are a faint pencil sketch of the anatomy. Active neurons are a second,
+ * larger layer drawn over it: change from rest is signed, so excitation is vermilion and
+ * inhibition blue (a diverging scale, as calcium imaging is printed). Normal blending keeps
+ * overlapping actives in their own color; multiplying them turned red over blue to black.
+ * Colors match --activity-* in index.css; selection uses amber and violet, never these.
+ * In the dark theme the same scale is drawn brighter on black (see useScenePalette).
+ */
+// |change from rest| (of 127) that draws at full strength. The median active neuron moves
+// about 3, so a linear scale would leave nearly every active neuron as faint as one at rest.
+const FULL_AT = 32
+// Seconds for displayed activity to close most of the gap to a new frame, so per-step
+// flicker reads as pulses that rise and fade.
+const EASE_SECONDS = 0.12
 
-function activityOpacity(change: number) {
-  const level = Math.min(1, Math.sqrt(Math.abs(change) / FULL_OPACITY_AT))
-  return REST_OPACITY + (1 - REST_OPACITY) * level
+/** Signed display level in [-1, 1] for a change from rest. */
+function activityLevel(change: number) {
+  return Math.sign(change) * Math.min(1, Math.sqrt(Math.abs(change) / FULL_AT))
+}
+
+const VERTEX = /* glsl */ `
+  attribute vec3 color;
+  attribute float activity;
+  uniform float uSize;
+  uniform float uPixelRatio;
+  uniform float uLive;
+  uniform float uInk;
+  uniform vec3 uRest;
+  uniform vec3 uExcite;
+  uniform vec3 uInhibit;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    float level = abs(activity);
+    if (uInk > 0.5) {
+      // Active neurons only, from about 2 of 127 change: smaller drifts stay in the sketch.
+      vColor = activity >= 0.0 ? uExcite : uInhibit;
+      vAlpha = mix(0.45, 1.0, level);
+      gl_PointSize = level < 0.25 ? 0.0 : uSize * uPixelRatio * mix(1.2, 2.6, level);
+    } else if (uLive > 0.5) {
+      vColor = uRest;
+      vAlpha = 0.28;
+      gl_PointSize = uSize * uPixelRatio * 0.8;
+    } else {
+      vColor = color;
+      vAlpha = 1.0;
+      gl_PointSize = uSize * uPixelRatio;
+    }
+  }
+`
+const FRAGMENT = /* glsl */ `
+  uniform float uOpacity;
+  uniform float uInk;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    float d = length(gl_PointCoord - 0.5);
+    if (d > 0.5) discard;
+    float alpha = vAlpha * uOpacity * smoothstep(0.5, 0.3, d);
+    gl_FragColor = vec4(vColor * alpha, alpha);
+  }
+`
+
+/** Props for one layer's <shaderMaterial>; uniforms are updated in place each frame. */
+function cloudMaterial(ink: boolean) {
+  return {
+    vertexShader: VERTEX,
+    fragmentShader: FRAGMENT,
+    uniforms: {
+      uSize: { value: 1.5 },
+      uPixelRatio: { value: 1 },
+      uOpacity: { value: 1 },
+      uLive: { value: 0 },
+      uInk: { value: ink ? 1 : 0 },
+      uRest: { value: new Color() },
+      uExcite: { value: new Color() },
+      uInhibit: { value: new Color() },
+    },
+    transparent: true,
+    premultipliedAlpha: true,
+    blending: NormalBlending,
+    depthWrite: false,
+    depthTest: false,
+  }
 }
 
 export type CameraAction =
-  'reset' | 'x' | 'y' | 'z' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
+  | 'reset'
+  | 'x'
+  | 'y'
+  | 'z'
+  | 'left'
+  | 'right'
+  | 'up'
+  | 'down'
+  | 'in'
+  | 'out'
+  // Fly the orbit centre to one neuron (by original index) and close in on it.
+  | { focus: number }
+
+// Seconds for a focus flight; long enough to follow, short enough not to wait on.
+const FLIGHT_SECONDS = 0.45
 
 interface SceneProps {
   data: BrainData
@@ -32,6 +132,7 @@ interface SceneProps {
   showConnections: boolean
   selected: number | null
   onSelect: (index: number | null) => void
+  onFocus: (index: number) => void
   onNavigateReady: (navigate: ((action: CameraAction) => void) | null) => void
   onFailure: () => void
   pointSize: number
@@ -49,6 +150,7 @@ function Connections({
   edges: BrainEdges
   moving: MutableRefObject<boolean>
 }) {
+  const palette = useScenePalette()
   const geometry = useMemo(() => {
     const { index, outgoing } = connectionIndex({ asset: data.asset, edges }, edgeIndices, selected)
     const result = new BufferGeometry()
@@ -62,7 +164,10 @@ function Connections({
     return result
   }, [data, edges, edgeIndices, selected])
   useEffect(() => () => geometry.dispose(), [geometry])
+  const quiet = useRef<LineBasicMaterial>(null)
   useFrame(() => {
+    // While activity plays, the full web would bury the active neurons under gray.
+    if (quiet.current) quiet.current.opacity = liveActivity.live() ? 0.01 : 0.022
     const count =
       moving.current && selected === null
         ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT)
@@ -74,9 +179,10 @@ function Connections({
       <primitive object={geometry} attach="geometry" />
       {selected === null ? (
         <lineBasicMaterial
-          color="#3f4a4b"
+          ref={quiet}
+          color={palette.quietEdge}
           transparent
-          opacity={0.035}
+          opacity={0.022}
           depthWrite={false}
           depthTest={false}
         />
@@ -92,7 +198,7 @@ function Connections({
           />
           <lineBasicMaterial
             attach="material-1"
-            color="#2b63b0"
+            color="#7847a6"
             transparent
             opacity={0.75}
             depthWrite={false}
@@ -163,19 +269,57 @@ function Navigation({
         Math.min(Math.atan(Math.tan((21 * Math.PI) / 180) * aspect), (21 * Math.PI) / 180),
       )) *
     1.12
+  // An in-progress focus flight: target and camera ease from their start to their end.
+  const flight = useRef<{
+    elapsed: number
+    fromTarget: Vector3
+    toTarget: Vector3
+    fromCamera: Vector3
+    toCamera: Vector3
+  } | null>(null)
+  useFrame((_, delta) => {
+    const trip = flight.current
+    const orbit = controls.current
+    if (!trip || !orbit) return
+    trip.elapsed = Math.min(FLIGHT_SECONDS, trip.elapsed + delta)
+    const t = trip.elapsed / FLIGHT_SECONDS
+    const ease = 1 - (1 - t) ** 3
+    orbit.target.lerpVectors(trip.fromTarget, trip.toTarget, ease)
+    camera.position.lerpVectors(trip.fromCamera, trip.toCamera, ease)
+    orbit.update()
+    beginMotion()
+    if (t >= 1) flight.current = null
+    invalidate()
+  })
   const navigate = useCallback(
     (action: CameraAction) => {
       const orbit = controls.current
       if (!orbit) return
       beginMotion()
+      flight.current = null
+      if (typeof action === 'object') {
+        const toTarget = new Vector3().fromArray(data.positions, action.focus * 3)
+        // Keep the viewing direction; close in to about a third of the fit unless already nearer.
+        const offset = camera.position.clone().sub(orbit.target)
+        offset.setLength(Math.min(offset.length(), Math.max(data.radius * 0.45, distance * 0.35)))
+        flight.current = {
+          elapsed: 0,
+          fromTarget: orbit.target.clone(),
+          toTarget,
+          fromCamera: camera.position.clone(),
+          toCamera: toTarget.clone().add(offset),
+        }
+        invalidate()
+        return
+      }
       if (['reset', 'x', 'y', 'z'].includes(action)) {
         orbit.target.set(0, 0, 0)
-        camera.up.set(0, 1, 0)
+        // Never change camera.up: OrbitControls fixes its orbit axis from `up` when it is
+        // created, so a top view that swapped `up` made the next drag swing the brain away.
+        // A hair of z keeps the top view off the pole, with -z (anterior) up on screen.
         if (action === 'x') camera.position.set(distance, 0, 0)
-        else if (action === 'y') {
-          camera.position.set(0, distance, 0)
-          camera.up.set(0, 0, -1)
-        } else camera.position.set(0, 0, distance)
+        else if (action === 'y') camera.position.set(0, distance, distance * 1e-3)
+        else camera.position.set(0, 0, distance)
       } else {
         const offset = camera.position.clone().sub(orbit.target)
         if (action === 'in' || action === 'out') {
@@ -194,7 +338,7 @@ function Navigation({
       orbit.update()
       invalidate()
     },
-    [camera, data.radius, distance, invalidate, beginMotion],
+    [camera, data.positions, data.radius, distance, invalidate, beginMotion],
   )
 
   useEffect(() => {
@@ -215,6 +359,8 @@ function Navigation({
       makeDefault
       enableDamping
       dampingFactor={0.18}
+      // Scroll zooms toward the pointer, so the part under the cursor is the part you reach.
+      zoomToCursor
       onChange={cameraChanged}
       onStart={() => {
         dragging.current = true
@@ -235,73 +381,115 @@ function NeuronCloud({
   indices,
   selected,
   onSelect,
+  onFocus,
   pointSize,
   opacity,
-}: Pick<SceneProps, 'data' | 'indices' | 'selected' | 'onSelect' | 'pointSize' | 'opacity'>) {
-  const buffers = useMemo(() => {
+}: Pick<
+  SceneProps,
+  'data' | 'indices' | 'selected' | 'onSelect' | 'onFocus' | 'pointSize' | 'opacity'
+>) {
+  const palette = useScenePalette()
+  const geometry = useMemo(() => {
     const positions = new Float32Array(indices.length * 3)
-    const colors = new Float32Array(indices.length * 4).fill(1)
+    const colors = new Float32Array(indices.length * 3)
     const palette = data.asset.cell_types.map((_, type) => new Color(cellTypeColor(type)))
     indices.forEach((index, offset) => {
       positions.set(data.positions.subarray(index * 3, index * 3 + 3), offset * 3)
-      palette[data.asset.type[index]].toArray(colors, offset * 4)
+      palette[data.asset.type[index]].toArray(colors, offset * 3)
     })
-    return { positions, colors }
+    const value = new BufferGeometry()
+    value.setAttribute('position', new BufferAttribute(positions, 3))
+    value.setAttribute('color', new BufferAttribute(colors, 3))
+    value.setAttribute('activity', new BufferAttribute(new Float32Array(indices.length), 1))
+    return value
   }, [data, indices])
-  const colorAttribute = useRef<BufferAttribute>(null)
-  const drawn = useRef({ buffers, step: -1, live: false })
+  useEffect(() => () => geometry.dispose(), [geometry])
+  const sketchProps = useMemo(() => cloudMaterial(false), [])
+  const inkProps = useMemo(() => cloudMaterial(true), [])
+  const sketchRef = useRef<ShaderMaterial>(null)
+  const inkRef = useRef<ShaderMaterial>(null)
+  // Target levels for the latest activity step; displayed levels ease toward them.
+  const target = useRef({ geometry, step: -1, values: new Float32Array(indices.length) })
+  const live = useRef(false)
   const invalidate = useThree((state) => state.invalidate)
+  const pixelRatio = useThree((state) => state.viewport.dpr)
   useEffect(() => liveActivity.subscribe(invalidate), [invalidate])
-  useFrame(() => {
+  useEffect(() => invalidate(), [palette, invalidate])
+  useFrame((_, delta) => {
+    const sketch = sketchRef.current
+    const ink = inkRef.current
+    if (!sketch || !ink) return
+    for (const material of [sketch, ink]) {
+      material.uniforms.uRest.value.set(palette.restInk)
+      material.uniforms.uExcite.value.set(palette.excite)
+      material.uniforms.uInhibit.value.set(palette.inhibit)
+      material.uniforms.uSize.value = pointSize
+      material.uniforms.uOpacity.value = opacity
+      material.uniforms.uPixelRatio.value = pixelRatio
+    }
     const neurons = liveActivity.neurons
-    const live = liveActivity.live() && neurons?.length === data.asset.n_neurons
-    const last = drawn.current
-    if (
-      last.buffers === buffers &&
-      last.live === live &&
-      (!live || last.step === liveActivity.neuronStep)
-    )
-      return
-    const { colors } = buffers
-    indices.forEach((index, offset) => {
-      colors[offset * 4 + 3] = live && neurons ? activityOpacity(neurons[index]) : 1
-    })
-    if (colorAttribute.current) colorAttribute.current.needsUpdate = true
-    drawn.current = { buffers, step: liveActivity.neuronStep, live }
+    const isLive = liveActivity.live() && neurons?.length === data.asset.n_neurons
+    const goal = target.current
+    if (goal.geometry !== geometry) {
+      target.current = { geometry, step: -1, values: new Float32Array(indices.length) }
+      return invalidate()
+    }
+    if (isLive && neurons && goal.step !== liveActivity.neuronStep) {
+      indices.forEach((index, offset) => (goal.values[offset] = activityLevel(neurons[index])))
+      goal.step = liveActivity.neuronStep
+    } else if (!isLive && goal.step !== -1) {
+      goal.values.fill(0)
+      goal.step = -1
+    }
+    if (live.current !== isLive) {
+      live.current = isLive
+      sketch.uniforms.uLive.value = isLive ? 1 : 0
+    }
+    // Ease displayed activity toward the target; stop redrawing once it has settled.
+    const attribute = geometry.getAttribute('activity') as BufferAttribute
+    const shown = attribute.array as Float32Array
+    const step = 1 - Math.exp(-Math.min(delta, 0.1) / EASE_SECONDS)
+    let moving = false
+    for (let i = 0; i < shown.length; i++) {
+      const gap = goal.values[i] - shown[i]
+      if (gap === 0) continue
+      if (Math.abs(gap) < 0.004) shown[i] = goal.values[i]
+      else {
+        shown[i] += gap * step
+        moving = true
+      }
+      attribute.needsUpdate = true
+    }
+    ink.visible = isLive || moving
+    if (moving) invalidate()
   })
   const selectedPosition =
     selected === null ? null : new Vector3().fromArray(data.positions, selected * 3)
   return (
     <>
       <points
+        geometry={geometry}
         onClick={(event) => {
           if (event.delta > 4 || event.index === undefined) return
           event.stopPropagation()
           onSelect(indices[event.index])
         }}
+        onDoubleClick={(event) => {
+          if (event.index === undefined) return
+          event.stopPropagation()
+          onSelect(indices[event.index])
+          onFocus(indices[event.index])
+        }}
       >
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[buffers.positions, 3]} />
-          <bufferAttribute
-            ref={colorAttribute}
-            attach="attributes-color"
-            args={[buffers.colors, 4]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={pointSize}
-          vertexColors
-          sizeAttenuation={false}
-          transparent
-          opacity={opacity}
-          depthWrite={false}
-          depthTest={false}
-        />
+        <shaderMaterial ref={sketchRef} {...sketchProps} />
+      </points>
+      <points geometry={geometry} raycast={() => {}} renderOrder={1}>
+        <shaderMaterial ref={inkRef} {...inkProps} />
       </points>
       {selectedPosition && (
         <mesh position={selectedPosition} raycast={() => {}}>
           <sphereGeometry args={[0.03, 12, 8]} />
-          <meshBasicMaterial color="#162021" wireframe depthTest={false} />
+          <meshBasicMaterial color={palette.selection} wireframe depthTest={false} />
         </mesh>
       )}
     </>
@@ -309,6 +497,7 @@ function NeuronCloud({
 }
 
 export default function BrainScene(props: SceneProps) {
+  const palette = useScenePalette()
   const moving = useRef(false)
   const [cameraMoving, setCameraMoving] = useState(false)
   const { onMotionChange } = props
@@ -343,6 +532,7 @@ export default function BrainScene(props: SceneProps) {
         if (event.type === 'click') props.onSelect(null)
       }}
     >
+      <color attach="background" args={[palette.field]} />
       <ContextMonitor onFailure={props.onFailure} />
       <Navigation
         data={props.data}

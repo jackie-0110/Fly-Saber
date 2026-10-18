@@ -175,7 +175,6 @@ export function GamePreview() {
         <PanelLetter>a</PanelLetter>
         <div>
           <h2>Behaviour</h2>
-          <p>Fly Saber track · third-person camera</p>
         </div>
       </div>
       {sessionStatus !== 'idle' && (
@@ -193,7 +192,6 @@ export function GamePreview() {
       {!motionPreview && !chart && !loading && cameraReady && (
         <div className="scene-empty">
           <h2>Choose a song to begin</h2>
-          <p>Explore a community chart with the fly.</p>
           <Button size="sm" onClick={openSongLibrary}>
             Choose a song
           </Button>

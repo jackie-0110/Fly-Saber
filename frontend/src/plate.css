@@ -754,7 +754,8 @@
 
 .session-readouts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Visual input → Brain → Motor output → Performance; the Brain stage holds the controls. */
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
   padding: 12px 0 0;
 }
 .readout-block {
@@ -777,7 +778,7 @@
   line-height: 1.2;
   text-align: center;
 }
-.readout-block:first-of-type {
+.readout-block:first-child {
   padding-left: 0;
 }
 .readout-block h2 {
@@ -851,10 +852,15 @@
   border-radius: 0;
   background: transparent;
 }
+/* Sidebar tabs (docs/sidebar-tabs.md): a 14px icon beside the label, stacked at 1280px and below. */
 .inspector-tabs [data-slot='tabs-trigger'] {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 6px;
   height: 100%;
-  padding: 0 2px;
+  min-height: 44px;
+  padding: 0 8px;
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -864,16 +870,33 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+.inspector-tabs [data-slot='tabs-trigger'] svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
 .inspector-tabs [data-slot='tabs-trigger']:hover {
   color: var(--ink);
 }
 .inspector-tabs [data-slot='tabs-trigger'][data-state='active'] {
   margin-bottom: -1px;
-  border-bottom-color: var(--ink);
-  background: transparent;
+  border-bottom-color: var(--focus);
+  background: var(--brand-wash);
   box-shadow: none;
   color: var(--ink);
   font-weight: 650;
+}
+.inspector-tabs [data-slot='tabs-trigger'][data-state='active'] svg {
+  color: var(--focus);
+}
+@media (max-width: 1280px) {
+  .inspector-tabs [data-slot='tabs-trigger'] {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 6px 3px;
+    line-height: 1.1;
+  }
 }
 
 .activity-tab {
@@ -917,131 +940,125 @@
   min-height: 0;
   border-radius: 0;
 }
+/*
+ * Camera tools ride the right edge as one slim column, the way map controls do, so the
+ * specimen keeps the full width and nothing overlays the bottom of the brain.
+ */
 .brain-stage-toolbar {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 1;
-  pointer-events: none;
-}
-.brain-stage-toolbar > div {
-  display: flex;
-  gap: 2px;
-  pointer-events: auto;
-}
-.brain-stage-toolbar button {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 2px;
-  background: var(--field-2);
-  color: var(--field-ink-2);
-}
-.brain-stage-toolbar svg {
-  width: 15px;
-  height: 15px;
-}
-
-.inset-dock {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  left: 10px;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  pointer-events: none;
-}
-.inset-dock > * {
-  pointer-events: auto;
-}
-.brain-dock {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  align-self: stretch;
-  gap: 4px 14px;
-  padding: 3px 8px 3px 3px;
+  gap: 1px;
+  padding: 3px;
   border: 1px solid var(--field-rule);
   border-radius: 3px;
   background: var(--field-2);
   color: var(--field-ink-2);
 }
-.brain-camera-controls {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-}
-.brain-camera-controls button {
+.brain-stage-toolbar button {
+  width: 28px;
   height: 28px;
-  padding: 0 7px;
+  border: 0;
   border-radius: 2px;
+  background: transparent;
   color: var(--field-ink-2);
-  font-size: var(--text-xs);
 }
-.brain-camera-controls button:hover,
-.neuron-selection-heading button:hover {
+.brain-stage-toolbar .axis-button {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.brain-stage-toolbar svg {
+  width: 15px;
+  height: 15px;
+}
+.brain-tool-divider {
+  width: 16px;
+  height: 1px;
+  margin: 2px 0;
   background: var(--field-rule);
-  color: var(--field-ink);
 }
-.brain-display-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-left: auto;
-  font-size: var(--text-xs);
+/* The title sits clear of the tool column. */
+.brain-stage .inset-label {
+  max-width: calc(100% - 70px);
 }
-.brain-display-controls label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+
+.inset-dock {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 2;
+  max-width: calc(100% - 64px);
+  pointer-events: none;
 }
-.brain-display-controls input {
-  width: 56px;
-  accent-color: var(--field-ink);
-}
-.brain-display-controls input:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
+.inset-dock > * {
+  pointer-events: auto;
 }
 .brain-stage-3d:fullscreen .inset-dock {
-  right: 24px;
   bottom: 24px;
   left: 24px;
 }
 
-/* Neuron inspector reads as a callout on the specimen. */
-/* Compact and scrollable so most of the view stays free to drag. */
+/* Neuron inspector: the selected neuron's card, closable with × or Esc. */
 .neuron-inspector {
-  width: min(300px, 100%);
-  max-height: 120px;
-  padding: 6px 6px 8px 10px;
+  width: min(320px, 100%);
+  max-height: 190px;
+  padding: 4px 4px 6px 10px;
   overflow: auto;
   border: 1px solid var(--field-rule);
   border-radius: 3px;
   background: var(--field-2);
   color: var(--field-ink);
 }
+/* A first-visit tip: plain text on the field, gone after the first drag or pick. */
+.brain-hint {
+  padding: 5px 9px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--field-2) 82%, transparent);
+  color: var(--field-ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  pointer-events: none;
+  animation: brain-hint-in 0.4s ease-out 0.6s both;
+}
+@keyframes brain-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
 .neuron-selection-heading,
 .neuron-selection-heading > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 2px;
 }
 .neuron-selection-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--field-ink);
   font-size: var(--text-sm);
   font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .neuron-selection-heading button {
   color: var(--field-ink-2);
 }
-/* The empty-state hint repeats the legend below the view. */
+.neuron-selection-heading button:hover {
+  background: var(--field-rule);
+  color: var(--field-ink);
+}
 .neuron-inspector > p {
-  display: none;
-  padding: 2px 4px 0 0;
+  padding: 0 4px 0 0;
   color: var(--field-ink-2);
   font-size: var(--text-xs);
   line-height: 1.5;
@@ -1065,6 +1082,52 @@
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+}
+
+/* Below the view: display settings share a row with the count, legend with activity. */
+.brain-view-row,
+.brain-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+.brain-view-row .neuron-count {
+  margin-left: auto;
+  padding-top: 8px;
+}
+.brain-legend-row {
+  border-top: 1px solid var(--rule);
+}
+.brain-legend-row > * {
+  border-top: 0;
+}
+.brain-legend-row .brain-backend-note {
+  padding: 6px 0;
+}
+/* Display settings sit with the filters below the view, on paper. */
+.brain-display-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding-top: 8px;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+.brain-display-controls label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.brain-display-controls input {
+  width: 64px;
+  accent-color: var(--ink);
+}
+.brain-display-controls input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .brain-fallback {
@@ -1164,16 +1227,37 @@
   color: var(--ink-2);
   font-size: var(--text-xs);
 }
-.brain-color-legend > span:last-child {
-  margin-left: auto;
-  color: var(--ink-3);
-}
 .type-swatch {
   width: 8px;
   height: 8px;
   flex-shrink: 0;
   border-radius: 50%;
 }
+/* Live activity: diverging scale, inhibited blue to excited vermilion through paper. */
+.activity-scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.activity-scale i {
+  width: 96px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--activity-inhibit),
+    var(--field) 50%,
+    var(--activity-excite)
+  );
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.activity-scale span:first-child {
+  color: var(--activity-inhibit);
+}
+.activity-scale span:last-child {
+  color: var(--activity-excite);
+}
+
 .brain-backend-note {
   display: flex;
   align-items: baseline;
@@ -1235,11 +1319,59 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+.inspector-prose h3 {
+  margin: 18px 0 6px;
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+/* Key figures first, read at a glance like a figure's summary row. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 4px 0 4px;
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+.stat-grid > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.stat-grid dd {
+  color: var(--ink);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.stat-grid dt {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
 .next-steps {
-  margin-top: 16px;
+  margin-top: 8px;
   padding-left: 18px;
   list-style: decimal;
   color: var(--ink-3);
+}
+.next-steps[data-state='done'] {
+  list-style: none;
+  padding-left: 0;
+}
+.next-steps[data-state='done'] strong::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--signal-green);
+  vertical-align: 1px;
 }
 .next-steps li + li {
   margin-top: 12px;
@@ -1259,8 +1391,60 @@
   margin: 0;
   overflow: auto;
 }
+/* Session: what is running now, then how to start, then the run's setup. */
+.session-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--signal-amber);
+  border-radius: 2px;
+  background: var(--sheet);
+}
+.session-status[data-live='true'] {
+  border-left-color: var(--signal-green);
+}
+.session-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+.session-hint {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.session-status button {
+  margin-top: 2px;
+}
+.session-score {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+.session-score > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+.session-score dd {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+.session-score dt {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
 .session-overview {
-  padding: 16px 0;
+  padding: 18px 0 16px;
 }
 .inspector-section-heading {
   display: flex;
@@ -1280,7 +1464,7 @@
 }
 .overview-list > div {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 10px;
   padding: 8px 0;
   border-top: 1px solid var(--rule);
@@ -1315,10 +1499,10 @@
 .brain-display-controls select {
   height: 26px;
   padding: 0 4px;
-  border: 1px solid var(--field-rule);
+  border: 1px solid var(--rule-strong);
   border-radius: 2px;
-  background: var(--field-2);
-  color: var(--field-ink);
+  background: var(--sheet);
+  color: var(--ink);
   font-size: var(--text-xs);
 }
 /* Two fixed lines: changing text while the camera moves must not resize the neuron view. */
@@ -1339,7 +1523,7 @@
   white-space: nowrap;
 }
 .brain-connection-summary .edge-in {
-  color: oklch(0.48 0.13 255);
+  color: oklch(0.5 0.15 305);
   font-weight: 600;
 }
 .brain-connection-summary .edge-out {
@@ -1349,70 +1533,154 @@
 
 /* ---------- Brain controls: lesion, blindfold, mood, live ---------- */
 
-.brain-controls {
+/* Brain stage: lesion and mood, the controls that act inside the brain. */
+.brain-stage-heading {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--rule);
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 16px;
 }
-.brain-controls h2 {
+.brain-reset {
+  height: 20px;
+  margin: -2px -6px -2px 0;
+  padding: 0 6px;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+.brain-reset svg {
+  width: 11px;
+  height: 11px;
+}
+.brain-reset:disabled {
+  visibility: hidden;
+}
+.lesion-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.lesion-toggle:hover:not(:disabled) {
   color: var(--ink);
-  font-size: var(--text-md);
-  font-weight: 650;
+}
+.lesion-toggle:disabled {
+  opacity: 0.5;
+}
+.lesion-box {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+}
+.lesion-toggle[aria-pressed='true'] {
+  color: var(--ink);
+}
+.lesion-toggle[aria-pressed='true'] .lesion-box {
+  border-color: var(--signal-red);
+  background: var(--signal-red);
+}
+.lesion-toggle[aria-pressed='true'] .lesion-box::after {
+  content: '';
+  position: absolute;
+  inset: 5px 2px auto;
+  height: 1.5px;
+  background: var(--sheet);
+}
+.mood-slider {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 10px;
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+.mood-slider input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--ink);
+}
+.mood-ends {
+  display: flex;
+  grid-column: 2;
+  justify-content: space-between;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
   line-height: 1.2;
 }
 .brain-controls-status {
-  flex-basis: 100%;
+  margin-top: 4px;
   color: var(--signal-red);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  line-height: 1.4;
 }
 .brain-controls-status:empty {
   display: none;
 }
-.brain-controls [aria-pressed='true'] {
-  border-color: var(--signal-red);
-  background: var(--signal-red);
-  color: var(--sheet);
-}
-.mood-slider {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-}
-.mood-slider .mood-end {
-  color: var(--ink-3);
-  font-size: var(--text-xs);
-}
-.mood-slider input {
-  width: 84px;
-  accent-color: var(--ink);
-}
 
 /* ---------- Signal path pieces: eye lattice, saber grid, status popover ---------- */
 
-.eye-lattice {
-  display: block;
-  width: 96px;
-  height: 54px;
+/* The two eyes double as blindfold switches. */
+.eye-toggles {
+  display: flex;
+  gap: 4px;
   margin-top: 6px;
+}
+.eye-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+.eye-toggle svg {
+  display: block;
+  width: 44px;
+  height: 50px;
   fill: var(--rule-strong);
 }
-.session-readouts .readout-block:first-of-type {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 12px;
+.eye-toggle:hover:not(:disabled) {
+  border-color: var(--rule);
+  color: var(--ink);
 }
-.session-readouts .readout-block:first-of-type h2 {
-  grid-column: 1 / -1;
+.eye-toggle:hover:not(:disabled) svg {
+  fill: var(--ink-3);
 }
-.session-readouts .readout-block:first-of-type .readout-status {
-  margin-top: 6px;
+.eye-toggle:disabled {
+  cursor: not-allowed;
+}
+.eye-toggle[aria-pressed='true'] {
+  color: var(--signal-red);
+}
+.eye-toggle[aria-pressed='true'] svg {
+  fill: var(--rule);
+}
+.eye-blindfold {
+  stroke: var(--signal-red);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.session-readouts .readout-block:first-child .readout-status {
+  margin-top: 4px;
 }
 .motor-grid {
   display: flex;
@@ -1919,9 +2187,6 @@
     min-height: 56px;
     padding: 8px 0;
   }
-  .inspector-tabs {
-    height: 36px;
-  }
   .song-header,
   .inspector-tabs {
     margin-bottom: 8px;
@@ -2010,7 +2275,7 @@
     row-gap: 12px;
   }
   .readout-block,
-  .readout-block:first-of-type {
+  .readout-block:first-child {
     padding: 0;
   }
   .readout-block + .readout-block {
@@ -2038,12 +2303,15 @@
     margin-top: 12px;
   }
   .neuron-inspector {
-    max-height: 120px;
+    max-height: 150px;
+  }
+  .inspector-tabs {
+    height: auto;
   }
   .inspector-tabs [data-slot='tabs-trigger'] {
-    min-height: 40px;
+    min-height: 56px;
   }
-  .brain-camera-controls button,
+  .brain-stage-toolbar button,
   .neuron-selection-heading button {
     min-width: 32px;
     min-height: 32px;
@@ -2097,6 +2365,246 @@
 .scene-title > .live-session-status {
   font-variation-settings: 'wdth' 87.5;
   letter-spacing: -0.02em;
+}
+
+/* ---------- Theme toggle ---------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.theme-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- Dark theme (after replicas.dev) ---------- */
+
+/*
+ * The light plate's tokens flip in index.css; this layer adds what the reference does
+ * beyond color: a faint 64px grid behind the page, square corners, "+" registration
+ * marks on the insets, light display type with tight tracking, and small labels and
+ * buttons set in uppercase Geist Mono. Mint is the only accent.
+ */
+[data-theme='dark'] .app-shell {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: -1px -1px;
+}
+[data-theme='dark'] .app-header {
+  border-bottom-color: var(--rule);
+}
+[data-theme='dark'] .brand {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+[data-theme='dark'] .brand-word {
+  font-weight: 400;
+}
+[data-theme='dark'] .brand-mark {
+  color: var(--mint);
+}
+[data-theme='dark'] .workspace-name {
+  border-left-color: var(--rule);
+}
+
+/* Square corners everywhere except the round status dots and cell-type swatches. */
+[data-theme='dark'] .app-shell :not(.status-dot, .type-swatch),
+[data-theme='dark'] [data-radix-popper-content-wrapper] * {
+  border-radius: 0;
+}
+[data-theme='dark'] .song-search-actions button {
+  background: var(--mint);
+  color: #111111;
+}
+[data-theme='dark'] .song-search-actions button:hover {
+  background: #6ff2bc;
+}
+
+/* Display type: General Sans at regular weight, tracked in like the replicas.dev hero. */
+[data-theme='dark'] .current-song-title h1 {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+[data-theme='dark']
+  :is(
+    .inset-label h2,
+    .scene-empty h2,
+    .library-heading h2,
+    .inspector-prose h2,
+    .neuron-selection-heading h3
+  ) {
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+[data-theme='dark'] .panel-letter {
+  color: var(--mint);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+/* Small section labels and buttons: 11px uppercase Geist Mono, bold, tight. */
+[data-theme='dark']
+  :is(
+    .readout-block h2,
+    .inspector-section-heading h2,
+    .library-section-label,
+    .theme-toggle,
+    .backend-status,
+    .current-difficulty,
+    .difficulty-buttons button,
+    .live-tag,
+    .scene-empty button,
+    .song-search-actions button,
+    .load-more
+  ) {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+[data-theme='dark'] :is(.backend-status, .library-section-label > span:last-child) {
+  font-weight: 500;
+}
+[data-theme='dark'] .theme-toggle {
+  height: 30px;
+  padding: 0 11px;
+  border-color: rgb(255 255 255 / 0.5);
+  color: rgb(255 255 255 / 0.7);
+}
+[data-theme='dark'] .theme-toggle:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+[data-theme='dark'] .library-section-label {
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+[data-theme='dark'] .readout-block + .readout-block::before {
+  background: var(--paper);
+}
+
+/* Tabs read as navigation, like the reference's top nav: General Sans, sentence case. */
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'] {
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
+}
+[data-theme='dark'] .inspector-tabs [data-slot='tabs-trigger'][data-state='active'] {
+  font-weight: 500;
+}
+
+/* Insets: a hairline frame with "+" marks at the corners, as on the reference's hero card. */
+[data-theme='dark'] :is(.game-viewport, .brain-stage) {
+  box-shadow: 0 0 0 1px var(--rule);
+}
+[data-theme='dark'] :is(.game-viewport, .brain-stage)::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: 2;
+  pointer-events: none;
+  --mark: rgb(255 255 255 / 0.32);
+  background:
+    linear-gradient(var(--mark), var(--mark)) 4px 0 / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 0 4px / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) calc(100% - 4px) 0 / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 100% 4px / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) 4px 100% / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 0 calc(100% - 4px) / 9px 1px,
+    linear-gradient(var(--mark), var(--mark)) calc(100% - 4px) 100% / 1px 9px,
+    linear-gradient(var(--mark), var(--mark)) 100% calc(100% - 4px) / 9px 1px;
+  background-repeat: no-repeat;
+}
+[data-theme='dark'] :is(.camera-toolbar, .brain-stage-toolbar) {
+  border-color: var(--field-rule);
+  background: var(--paper);
+}
+
+/* Primary actions read like "Get started": solid mint, near-black text. */
+[data-theme='dark'] .playback-buttons button {
+  border-color: var(--rule-strong);
+  background: transparent;
+}
+[data-theme='dark'] .playback-buttons .primary-play,
+[data-theme='dark'] .scene-empty button {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: #111111;
+}
+[data-theme='dark'] .playback-buttons .primary-play:hover,
+[data-theme='dark'] .scene-empty button:hover {
+  border-color: #6ff2bc;
+  background: #6ff2bc;
+  color: #111111;
+}
+
+/* Difficulty ramp, lifted so every step clears the black sheet. */
+[data-theme='dark'] [data-difficulty='Easy'] {
+  --diff: oklch(0.86 0.06 250);
+}
+[data-theme='dark'] [data-difficulty='Normal'] {
+  --diff: oklch(0.8 0.09 252);
+}
+[data-theme='dark'] [data-difficulty='Hard'] {
+  --diff: oklch(0.74 0.12 256);
+}
+[data-theme='dark'] [data-difficulty='Expert'] {
+  --diff: oklch(0.68 0.15 262);
+}
+[data-theme='dark'] [data-difficulty='ExpertPlus'] {
+  --diff: oklch(0.64 0.17 268);
+}
+/* Selected chips match the reference's "Announcing" pill: mint rule, mint wash, mint text. */
+[data-theme='dark'] .difficulty-buttons button[aria-pressed='true'] {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 12%, transparent);
+  color: var(--mint);
+}
+[data-theme='dark'] .live-tag {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 10%, transparent);
+  color: var(--mint);
+}
+[data-theme='dark'] .brain-connection-summary .edge-in {
+  color: oklch(0.75 0.14 305);
+}
+[data-theme='dark'] .brain-connection-summary .edge-out {
+  color: oklch(0.8 0.13 70);
+}
+[data-theme='dark'] .status-popover {
+  border-color: var(--rule);
+  background: var(--paper);
+  box-shadow: none;
+}
+[data-theme='dark'] .song-card.is-loaded {
+  box-shadow: inset 2px 0 0 var(--mint);
+}
+
+/* Mono figures drop the Archivo/Martian width axis, which General Sans and Geist lack. */
+[data-theme='dark'] * {
+  font-variation-settings: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {

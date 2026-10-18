@@ -168,7 +168,7 @@ test('connections default to a sample, can be hidden, filtered, and traced for t
   // Selection is never sampled.
   const incident = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
   await expect(summary).toContainText(shown(incident))
-  await expect(summary).toContainText('Blue: incoming')
+  await expect(summary).toContainText('Violet: incoming')
   await expect(summary).toContainText('Gold: outgoing')
   const incoming = edges.post.filter((post) => post === 0).length
   await expect(page.locator('.neuron-metadata')).toContainText(`${format(incoming)} connections /`)
@@ -383,7 +383,8 @@ test('brain controls toggle before a song and reset together', async ({ page }) 
   await page.goto('/')
   const panel = page.getByRole('region', { name: 'Brain controls' })
   const lesion = panel.getByRole('button', { name: 'Lesion looming detectors' })
-  const leftEye = panel.getByRole('button', { name: 'Blindfold left eye' })
+  // Blindfolds live on the eyes in Visual input, outside the Brain stage.
+  const leftEye = page.getByRole('button', { name: 'Blindfold left eye' })
   await expect(panel.getByRole('slider', { name: /Arousal/ })).toBeEnabled()
   await lesion.click()
   await leftEye.click()

@@ -1,11 +1,11 @@
 import { BackendStatus } from '@/components/backend-status'
-import { BrainControlsPanel } from '@/components/brain-controls'
 import { BrainPreview } from '@/components/brain-preview'
 import { FlyMark } from '@/components/fly-mark'
 import { GamePreview } from '@/components/game-preview'
 import { SessionTimeline } from '@/components/session-timeline'
 import { SessionReadouts } from '@/components/session-readouts'
 import { SongHeader } from '@/components/song-header'
+import { ThemeToggle } from '@/components/theme-toggle'
 import './plate.css'
 
 export default function App() {
@@ -21,6 +21,7 @@ export default function App() {
         <span className="workspace-name">Connectome-constrained visuomotor control</span>
         <div className="header-actions">
           <BackendStatus />
+          <ThemeToggle />
         </div>
       </header>
       <main className="workspace">
@@ -30,7 +31,6 @@ export default function App() {
           <div className="transport">
             <SessionTimeline />
             <SessionReadouts />
-            <BrainControlsPanel />
           </div>
         </section>
         <aside className="inspector" aria-label="Brain and session inspector">
