@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react'
-import { RotateCcw, SlidersHorizontal, X, Zap } from 'lucide-react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { ChevronDown, Minus, RotateCcw, SlidersHorizontal, X, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FloatingWindow } from '@/components/floating-window'
+import type { Frame } from '@/components/floating-window'
 import { RangeControl } from '@/components/range-control'
 import type { ControlSection, Controls, MoodPreset } from '@/brain/data'
 import {
@@ -49,6 +51,34 @@ const MOOD_STEP = 0.05
 // descending-neuron rates by their tiny resting spread and amplifies the noise with them.
 const NOISE_ON = 0.05
 
+const WINDOW_KEY = 'fly-saber-controls-window'
+const NARROW = '(max-width: 899px)'
+
+function useNarrow() {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia(NARROW)
+      query.addEventListener('change', notify)
+      return () => query.removeEventListener('change', notify)
+    },
+    () => window.matchMedia(NARROW).matches,
+  )
+}
+
+/** First open: inside the right of the game view, so the neuron view and readouts stay in sight. */
+function defaultFrame(): Frame {
+  const game = document.querySelector('.game-viewport')?.getBoundingClientRect()
+  const w = 380
+  if (!game) return { x: window.innerWidth - w - 24, y: 64, w, h: 560 }
+  return {
+    x: game.right - w - 12,
+    y: game.top + 12,
+    w,
+    // Ends inside the game view, so the readouts below it stay in sight too.
+    h: Math.min(640, game.height - 24),
+  }
+}
+
 function groupedSections(config: Controls) {
   const known = new Set(PATHWAYS.flatMap((p) => p.groups))
   const byGroup = new Map(config.sections.map((s) => [s.group, s]))
@@ -77,6 +107,8 @@ export function BrainControlsPanel() {
   const brain = usePlayer((s) => s.brain)
   const controlsError = useSession((s) => s.controlsError)
   const panel = useRef<HTMLElement>(null)
+  const narrow = useNarrow()
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -110,41 +142,48 @@ export function BrainControlsPanel() {
   const setMood = (name: string, level: number) =>
     change({ mood: { ...useBrainControls.getState().controls.mood, [name]: level } })
 
-  return (
-    <section
-      ref={panel}
-      className="controls-sheet"
-      role="dialog"
-      aria-modal="false"
-      aria-label="Brain controls panel"
-      tabIndex={-1}
-    >
-      <header className="controls-sheet-header">
-        <div>
-          <h2>Brain controls</h2>
-          <p>{summary ?? 'The untouched brain. Every change applies live, mid-song too.'}</p>
-        </div>
-        <div className="controls-sheet-actions">
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={disabled || isUntouched(controls)}
-            onClick={() => change(noControls)}
-          >
-            <RotateCcw aria-hidden="true" />
-            Reset all
-          </Button>
+  const title = (
+    <>
+      <div className="controls-title-text">
+        <h2>Brain controls</h2>
+        <p>{summary ?? 'The untouched brain. Every change applies live, mid-song too.'}</p>
+      </div>
+      <div className="controls-sheet-actions">
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={disabled || isUntouched(controls)}
+          onClick={() => change(noControls)}
+        >
+          <RotateCcw aria-hidden="true" />
+          Reset all
+        </Button>
+        {!narrow && (
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Close brain controls"
-            title="Close (Esc)"
-            onClick={() => setOpen(false)}
+            aria-label={collapsed ? 'Expand brain controls' : 'Collapse brain controls'}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand' : 'Collapse to the title bar'}
+            onClick={() => setCollapsed(!collapsed)}
           >
-            <X aria-hidden="true" />
+            {collapsed ? <ChevronDown aria-hidden="true" /> : <Minus aria-hidden="true" />}
           </Button>
-        </div>
-      </header>
+        )}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Close brain controls"
+          title="Close (Esc)"
+          onClick={() => setOpen(false)}
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </div>
+    </>
+  )
+  const content = (
+    <>
       {message && (
         <p className="controls-sheet-message" role="status">
           {message}
@@ -302,7 +341,34 @@ export function BrainControlsPanel() {
           </section>
         </div>
       )}
-    </section>
+    </>
+  )
+
+  // Phones get a sheet under the header; wider screens a window you can move and resize.
+  if (narrow)
+    return (
+      <section
+        ref={panel}
+        className="controls-sheet"
+        role="dialog"
+        aria-modal="false"
+        aria-label="Brain controls panel"
+        tabIndex={-1}
+      >
+        <header className="controls-sheet-header">{title}</header>
+        {content}
+      </section>
+    )
+  return (
+    <FloatingWindow
+      storageKey={WINDOW_KEY}
+      defaultFrame={defaultFrame}
+      label="Brain controls panel"
+      title={title}
+      collapsed={collapsed}
+    >
+      {content}
+    </FloatingWindow>
   )
 }
 

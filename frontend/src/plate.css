@@ -2477,20 +2477,126 @@
  * The full controls open over the inspector column, so the game view stays in sight
  * while a judge changes the brain. One scrolling column: trigger, mood, sections, eyes.
  */
+/* Phones: a full-width sheet under the header, so the header button still closes it. */
 .controls-sheet {
-  position: absolute;
-  inset: -1px;
-  z-index: 20;
+  position: fixed;
+  inset: 52px 0 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 16px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  outline: none;
+}
+
+/*
+ * Wider screens: a window over the page that you move by its title bar and resize from
+ * any edge or corner (FloatingWindow), so the controls and the neuron view share the screen.
+ */
+.floating-window {
+  position: fixed;
+  z-index: 40;
   display: flex;
   flex-direction: column;
   min-height: 0;
   padding: 0 16px;
   border: 1px solid var(--rule-strong);
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--paper);
+  box-shadow:
+    0 1px 2px oklch(0.235 0.014 200 / 0.08),
+    0 12px 32px oklch(0.235 0.014 200 / 0.16);
   outline: none;
 }
-.controls-sheet-header {
+.floating-window-title {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.floating-window-title:active {
+  cursor: grabbing;
+}
+.floating-window-title:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.floating-window[data-collapsed] .floating-window-title {
+  border-bottom: 0;
+}
+/* Invisible grab strips along each edge and corner. */
+.resize-handle {
+  position: absolute;
+  z-index: 1;
+}
+.resize-handle[data-edge='n'],
+.resize-handle[data-edge='s'] {
+  right: 10px;
+  left: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+.resize-handle[data-edge='e'],
+.resize-handle[data-edge='w'] {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+.resize-handle[data-edge='n'] {
+  top: -4px;
+}
+.resize-handle[data-edge='s'] {
+  bottom: -4px;
+}
+.resize-handle[data-edge='e'] {
+  right: -4px;
+}
+.resize-handle[data-edge='w'] {
+  left: -4px;
+}
+.resize-handle[data-edge='ne'],
+.resize-handle[data-edge='nw'],
+.resize-handle[data-edge='se'],
+.resize-handle[data-edge='sw'] {
+  width: 14px;
+  height: 14px;
+}
+.resize-handle[data-edge='ne'] {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+.resize-handle[data-edge='sw'] {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+.resize-handle[data-edge='nw'] {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+.resize-handle[data-edge='se'] {
+  right: -4px;
+  bottom: -4px;
+  cursor: nwse-resize;
+}
+/* A visible grip in the corner people reach for first. */
+.resize-handle[data-edge='se']::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-3);
+}
+
+.controls-sheet-header,
+.floating-window-title {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2498,12 +2604,14 @@
   padding: 14px 0 10px;
   border-bottom: 1px solid var(--ink);
 }
-.controls-sheet-header h2 {
+.controls-sheet-header h2,
+.floating-window-title h2 {
   color: var(--ink);
   font-size: var(--text-lg);
   font-weight: 650;
 }
-.controls-sheet-header p {
+.controls-sheet-header p,
+.floating-window-title p {
   margin-top: 3px;
   color: var(--ink-2);
   font-size: var(--text-sm);
@@ -2681,17 +2789,6 @@
   white-space: nowrap;
 }
 
-@media (max-width: 899px) {
-  /* Full screen under the header, so the header's Brain controls button still closes it. */
-  .controls-sheet {
-    position: fixed;
-    inset: 52px 0 0;
-    z-index: 50;
-    border: 0;
-    border-top: 1px solid var(--rule);
-  }
-}
-
 /* Header entry point: the one primary button in the header, with a count of changes. */
 .brain-controls-button {
   display: inline-flex;
@@ -2855,6 +2952,10 @@
 }
 [data-theme='dark'] :is(.backend-status, .library-section-label > span:last-child) {
   font-weight: 500;
+}
+[data-theme='dark'] .floating-window {
+  border-color: var(--rule-strong);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.6);
 }
 [data-theme='dark'] .brain-controls-button {
   height: 30px;

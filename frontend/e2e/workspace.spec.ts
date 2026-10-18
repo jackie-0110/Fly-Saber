@@ -401,7 +401,7 @@ test('the full controls panel sets moods, lesions, stimulation, jitter and eyes,
   await page.goto('/')
   await page.getByRole('button', { name: /^Brain controls/ }).click()
   const sheet = page.getByRole('dialog', { name: 'Brain controls panel' })
-  const summary = sheet.locator('.controls-sheet-header p')
+  const summary = sheet.locator('.controls-title-text p')
   await expect(summary).toHaveText(/untouched brain/)
   await expect(sheet.locator('.section-row')).toHaveCount(12)
 
@@ -458,4 +458,43 @@ test('the header button opens the controls and counts the changes in force', asy
   await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toBeVisible()
   await button.click()
   await expect(page.getByRole('dialog', { name: 'Brain controls panel' })).toHaveCount(0)
+})
+
+test('the controls float beside the neuron view, move, resize and remember their place', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'phones get a sheet under the header instead')
+  await page.goto('/')
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
+  const win = page.getByRole('dialog', { name: 'Brain controls panel' })
+  const box = async () => (await win.boundingBox())!
+  const stage = (await page.locator('.brain-stage').boundingBox())!
+  const opened = await box()
+  expect(opened.x + opened.width, 'opens clear of the neuron view').toBeLessThanOrEqual(stage.x)
+
+  const title = (await win.locator('.floating-window-title').boundingBox())!
+  await page.mouse.move(title.x + 30, title.y + 20)
+  await page.mouse.down()
+  await page.mouse.move(title.x - 170, title.y + 50, { steps: 6 })
+  await page.mouse.up()
+  const moved = await box()
+  expect(moved.x).toBeCloseTo(opened.x - 200, 0)
+  expect(moved.y).toBeCloseTo(opened.y + 30, 0)
+
+  const corner = (await win.locator('.resize-handle[data-edge="se"]').boundingBox())!
+  await page.mouse.move(corner.x + 7, corner.y + 7)
+  await page.mouse.down()
+  await page.mouse.move(corner.x + 67, corner.y - 53, { steps: 6 })
+  await page.mouse.up()
+  const resized = await box()
+  expect(resized.width).toBeCloseTo(moved.width + 60, 0)
+  expect(resized.height).toBeCloseTo(moved.height - 60, 0)
+
+  await page.reload()
+  await page.getByRole('button', { name: /^Brain controls/ }).click()
+  expect(await box()).toEqual(resized)
+  await win.getByRole('button', { name: 'Collapse brain controls' }).click()
+  await expect(win.getByRole('button', { name: 'Hold to trigger escape' })).toHaveCount(0)
+  expect((await box()).height).toBeLessThan(120)
 })

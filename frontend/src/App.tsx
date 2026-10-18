@@ -37,9 +37,9 @@ export default function App() {
         </section>
         <aside className="inspector" aria-label="Brain and session inspector">
           <BrainPreview />
-          <BrainControlsPanel />
         </aside>
       </main>
+      <BrainControlsPanel />
     </div>
   )
 }
