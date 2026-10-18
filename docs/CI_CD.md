@@ -12,7 +12,7 @@
 - Weekly: Dependabot opens dependency update PRs.
 
 The delivery boundary is a tested image in GHCR. CI does not restart an external
-server; the Vultr host is deployed by hand with `scripts/deploy_vultr.sh` (below).
+server; the Vultr host is deployed by hand with `infra/deploy/deploy_vultr.sh` (below).
 
 ## Build and run locally
 
@@ -49,9 +49,9 @@ Startup loads each bundle and compiles every brain for every map size before the
 server listens, so the first response takes tens of seconds, longer on a small
 host. The health check allows 180 s.
 
-CI's container smoke test mounts `docker/smoke/normalized` (one tiny map), checks
+CI's container smoke test mounts `infra/docker/smoke/normalized` (one tiny map), checks
 that `/api/brains` lists `real`, and plays one session with it through
-`docker/smoke_session.py`.
+`infra/docker/smoke_session.py`.
 
 ## Deploy on Vultr
 
@@ -66,7 +66,7 @@ On the new server, once:
 ```bash
 curl -fsSL https://get.docker.com | sh            # Docker
 git clone https://github.com/jackie-0110/Fly-Saber.git && cd Fly-Saber   # or SSH with a deploy key
-bash scripts/deploy_vultr.sh
+bash infra/deploy/deploy_vultr.sh
 ```
 
 The script builds the image (trained brains included), downloads the allowlisted demo
@@ -84,10 +84,10 @@ songs into the Docker volume `fly-saber-maps` on first run, starts the container
    fetched on port 80 and the site shows "Backend disconnected".
 
 Or run everything from your laptop, including the Worker secret and an end-to-end check:
-`bash scripts/go_live.sh` (defaults: server `64.177.52.103`, site
+`bash infra/deploy/go_live.sh` (defaults: server `64.177.52.103`, site
 `flysaber.jackie-courtney.com`; see the header of the script for overrides).
 
-To update: `git pull && bash scripts/deploy_vultr.sh` (songs are kept). Logs:
+To update: `git pull && bash infra/deploy/deploy_vultr.sh` (songs are kept). Logs:
 `docker logs -f fly-saber`. Never rebuild the brain subgraph on the server; the
 bundles carry the exact files the checkpoints were trained on.
 

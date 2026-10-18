@@ -38,7 +38,7 @@ frontend/playwright-report/
 slurm-*.out
 logs/
 
-# Demo checkpoints shipped with their exact subgraph (scripts/bundle_checkpoint.py)
+# Demo checkpoints shipped with their exact subgraph (scripts/training/bundle_checkpoint.py)
 !bundles/**/*.npz
 
 # Downloaded Impeccable engines and per-machine hook state
@@ -47,3 +47,10 @@ logs/
 .impeccable/config.local.json
 .impeccable/hook.cache.json
 .impeccable/hook.pending.json
+
+# Temporary editor/patch files and incremental build metadata
+*.tmp
+*.bak
+*.orig
+*.rej
+*.tsbuildinfo

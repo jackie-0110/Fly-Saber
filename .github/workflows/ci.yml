@@ -110,7 +110,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file: docker/Dockerfile
+          file: infra/docker/Dockerfile
           load: true
           tags: fly-saber:ci
           cache-from: type=gha
@@ -118,13 +118,13 @@ jobs:
       - name: Verify container frontend and API
         run: |
           docker run --detach --name fly-saber-smoke --publish 127.0.0.1:8000:8000 \
-            --mount type=bind,src="$PWD/docker/smoke/normalized",dst=/app/data/maps/normalized,readonly \
+            --mount type=bind,src="$PWD/infra/docker/smoke/normalized",dst=/app/data/maps/normalized,readonly \
             fly-saber:ci
           curl --fail --retry 90 --retry-delay 2 --retry-all-errors --retry-max-time 240 --connect-timeout 5 --max-time 10 http://127.0.0.1:8000/api/games
           curl --fail http://127.0.0.1:8000/ | grep -q '<div id="root">'
           curl --fail http://127.0.0.1:8000/api/maps
           curl --fail http://127.0.0.1:8000/api/brains | jq -e 'any(.[]; .id == "real")'
-          docker exec -i fly-saber-smoke python - < docker/smoke_session.py
+          docker exec -i fly-saber-smoke python - < infra/docker/smoke_session.py
           docker exec fly-saber-smoke python -c "from fly_saber.config import load_config; from fly_saber.eye import EyeConfig; load_config(EyeConfig, 'eye')"
       - name: Container logs and cleanup
         if: always()

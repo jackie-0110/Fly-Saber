@@ -1,9 +1,12 @@
 # Results (Person 1)
 
+The headline numbers with sources, the lesion matrix, mood validation and live control
+measurements are summarised in [SUMMARY.md](SUMMARY.md).
+
 Behavior cloning runs on HiPerGator (one NVIDIA L4 each). One folder per run:
 `bc/<variant>/<run_name>/seed<n>/` with `bc_log.json` (a row every 50 updates),
 `config.json`, and `eval_bc_<update>.json` (greedy play on held-out and training songs,
-256 windows of 10 s, same windows for every brain; `scripts/eval_checkpoints.py`).
+256 windows of 10 s, same windows for every brain; `scripts/training/eval_checkpoints.py`).
 
 Settings: 5 s windows, 256 games per update, readout fitted on expert play before training,
 brain learning rate 1e-4 (readout-only runs: 0, brain frozen), notes at a fixed 7 m/s.
@@ -38,7 +41,7 @@ windows for every condition, readout re-centered for each condition as the serve
 (#36). Differences of 2 to 3 points are within noise.
 
 - `controls/eval_bc_950_full.json`: every lesion and every mood at -1 and +1
-  (`scripts/eval_checkpoints.py --full --splits heldout --windows 64`).
+  (`scripts/training/eval_checkpoints.py --full --splits heldout --windows 64`).
 - `controls/moods_bc_950.json`: each mood at -0.5, -0.3, -0.15, +0.15, +0.3, +0.5, and four
   presets at 0.15 and 0.3 (`training.play_eval.play_conditions`).
 

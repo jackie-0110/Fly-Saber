@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { CAMERA_SETTLE_MS, MOVING_EDGE_LIMIT, SAMPLE_EDGE_LIMIT } from '../src/brain/rendering.ts'
+import {
+  CAMERA_SETTLE_MS,
+  MOVING_EDGE_LIMIT,
+  SAMPLE_EDGE_LIMIT,
+} from '../src/features/brain/rendering.ts'
 
 declare global {
   interface Window {

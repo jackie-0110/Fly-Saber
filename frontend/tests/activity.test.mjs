@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { decodeActivity } from '../src/game/activity.ts'
+import { decodeActivity } from '../src/features/session/activity.ts'
 
 const sizes = { neurons: 4, types: 2 }
 function message(kind, slot, step, values, reserved = 0) {

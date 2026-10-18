@@ -1,23 +1,23 @@
-.PHONY: setup data subgraph export-web maps training-maps train-bc train-ppo serve frontend test test-python test-frontend lint fmt build check docker-build
+.PHONY: setup data subgraph export-web maps training-maps train-bc train-ppo serve frontend test test-python test-frontend lint fmt build check docker-build clean
 
 setup:
 	uv sync --locked --dev
 	cd frontend && npm ci
 
 data:
-	uv run python scripts/fetch_data.py
+	uv run python scripts/data/fetch_data.py
 
 subgraph:
-	uv run python scripts/build_subgraph.py
+	uv run python scripts/connectome/build_subgraph.py
 
 export-web:
-	uv run python scripts/export_web.py
+	uv run python scripts/web/export_web.py
 
 maps:
-	uv run python scripts/fetch_maps.py
+	uv run python scripts/data/fetch_maps.py
 
 training-maps:
-	uv run python scripts/fetch_training_maps.py
+	uv run python scripts/data/fetch_training_maps.py
 
 train-bc:
 	uv run python -m training.bc
@@ -45,7 +45,7 @@ build:
 check: lint test
 
 docker-build:
-	docker build -f docker/Dockerfile -t fly-saber:local .
+	docker build -f infra/docker/Dockerfile -t fly-saber:local .
 
 lint:
 	uv run ruff check .
@@ -58,3 +58,10 @@ fmt:
 	uv run ruff check --fix .
 	uv run ruff format .
 	cd frontend && npm run format
+
+# Only generated artifacts; keep installed dependencies and local data/checkpoints.
+clean:
+	rm -rf .mypy_cache .pytest_cache .ruff_cache test-results
+	rm -rf frontend/dist frontend/playwright-report frontend/test-results
+	rm -rf frontend/node_modules/.tmp frontend/node_modules/.vite
+	find src scripts tests infra -type d -name __pycache__ -prune -exec rm -rf {} +

@@ -1,6 +1,6 @@
 # Interactive brain controls for the UI (owner: Person 1). Exported to
 # frontend/public/data/brain/controls.json; the server turns UI state into
-# interventions with brain/model/controls.py. Groups are names from groups.json.
+# interventions with src/brain/model/controls.py. Groups are names from groups.json.
 
 # Brain sections a user can lesion (silence) or stimulate.
 sections:

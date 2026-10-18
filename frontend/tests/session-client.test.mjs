@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { emptySession, SessionClient } from '../src/game/session-client.ts'
-import { flyMotion } from '../src/game/fly-motion.ts'
-import { interventionsMessage, isUntouched, noControls } from '../src/game/interventions.ts'
+import { emptySession, SessionClient } from '../src/features/session/session-client.ts'
+import { flyMotion } from '../src/features/game/fly-motion.ts'
+import { interventionsMessage, isUntouched, noControls } from '../src/features/session/interventions.ts'
 
 class Socket extends EventTarget {
   readyState = 0
@@ -29,6 +29,17 @@ class Socket extends EventTarget {
     new Int8Array(data, 8).set(values)
     this.dispatchEvent(new MessageEvent('message', { data }))
   }
+  receiveEye(step, slot = 0) {
+    const data = new ArrayBuffer(14)
+    const view = new DataView(data)
+    view.setUint8(0, 3)
+    view.setUint8(1, slot)
+    view.setUint32(4, step, true)
+    view.setUint16(8, 1, true)
+    view.setUint16(10, 1, true)
+    new Uint8Array(data, 12).set([128, 255])
+    this.dispatchEvent(new MessageEvent('message', { data }))
+  }
 }
 const score = { score: 75, combo: 3, max_combo: 3, hits: 3, misses: 1, accuracy: 0.75 }
 const ready = { type: 'ready', map_id: 'abc12_hard', slots: [{ slot: 0, brain: 'expert' }] }
@@ -47,21 +58,18 @@ function setup() {
   const sockets = []
   const state = { ...emptySession }
   const activity = []
-  let time = 0,
-    failures = 0
+  const eyes = []
+  let time = 0, failures = 0
   const client = new SessionClient({
     url: () => 'ws://test/ws/session',
     getTime: () => time,
     onChange: (next) => Object.assign(state, next),
     onFailure: () => failures++,
     onActivity: (frame) => activity.push([frame.kind, frame.step, [...frame.values]]),
-    makeSocket: () => {
-      const socket = new Socket()
-      sockets.push(socket)
-      return socket
-    },
+    onEyeImage: (frame) => eyes.push([frame.step, [...frame.left], [...frame.right]]),
+    makeSocket: () => { const socket = new Socket(); sockets.push(socket); return socket },
   })
-  return { client, state, sockets, activity, time: (t) => (time = t), failures: () => failures }
+  return { client, state, sockets, activity, eyes, time: (t) => time = t, failures: () => failures }
 }
 
 test('start waits for ready, drives real motor frames, handles score/events and preserves pause state', async (t) => {
@@ -293,4 +301,31 @@ test('a server error after ready is shown without ending the session', async (t)
   assert.deepEqual(s.state.score, score)
   s.client.setInterventions(noControls)
   assert.equal(s.state.controlsError, '')
+})
+
+test('eye stream drops stale and other-slot images, preserves pause, and resets after seek', async (t) => {
+  const s = setup()
+  t.after(() => s.client.disconnect())
+  const pending = s.client.prepare('abc12_hard', 'real')
+  const socket = s.sockets[0]
+  socket.open(); socket.receive(brainReady); await pending
+  socket.receiveEye(1)
+  assert.equal(s.eyes.length, 0)
+  s.client.play()
+  socket.receiveEye(60)
+  socket.receiveEye(60)
+  socket.receiveEye(59)
+  socket.receiveEye(62, 1)
+  assert.deepEqual(s.eyes, [[60, [128], [255]]])
+  s.client.pause()
+  socket.receiveEye(62)
+  assert.equal(s.eyes.length, 1)
+  s.client.play()
+  socket.receiveEye(64)
+  assert.equal(s.eyes.at(-1)[0], 64)
+  s.time(0.1); s.client.seek()
+  socket.receiveEye(3)
+  assert.equal(s.eyes.at(-1)[0], 3)
+  socket.receiveActivity(1, 3, [1, 2, 3])
+  assert.equal(s.activity.length, 1, 'eye packets never consume activity sequence numbers')
 })

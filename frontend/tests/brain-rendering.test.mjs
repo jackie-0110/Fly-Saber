@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { connectionIndex, MOVING_EDGE_LIMIT } from '../src/brain/rendering.ts'
+import { connectionIndex, MOVING_EDGE_LIMIT } from '../src/features/brain/rendering.ts'
 
 const readAsset = (name) =>
   JSON.parse(readFileSync(new URL(`../public/data/brain/${name}.json`, import.meta.url)))

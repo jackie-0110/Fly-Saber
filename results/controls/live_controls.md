@@ -45,7 +45,7 @@ travel of each slider then shows a gradient instead of an instant collapse.
 
 Any neural noise, down to 1/250 of `max_noise`, takes the fly from 34.5% to about 2% with
 about 20 bad cuts per window, so the page offers it as an on/off switch. The likely cause
-is in `brain/model/brain.py`: noise is added to every neuron each substep, and the readout
+is in `src/brain/model/brain.py`: noise is added to every neuron each substep, and the readout
 (`readout_norm`) divides descending-neuron rates by their resting spread (`dn_std`), which
 is tiny, so the noise is amplified with the signal. Worth a look by the model owner if
 noise should behave like a dial.

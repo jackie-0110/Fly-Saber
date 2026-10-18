@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { strToU8, zipSync } from 'fflate'
-import { beatClock, formatTime, lowerBound, parseChart, sampleClock } from '../src/game/chart.ts'
-import { importSong, mapKey, parseSongResult, searchSongs } from '../src/game/songs.ts'
+import { beatClock, formatTime, lowerBound, parseChart, sampleClock } from '../src/features/songs/chart.ts'
+import { importSong, mapKey, parseSongResult, searchSongs } from '../src/features/songs/songs.ts'
 import { info, mapZip, result, v2, v3, wav } from './song-fixtures.ts'
 
 const options = { id: 'fixture_normal', name: 'Normal', characteristic: 'Standard', bpm: 120, speed: 10, jumpOffset: 0, offset: 0 }

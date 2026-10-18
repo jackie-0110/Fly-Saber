@@ -4,7 +4,7 @@
 //   node --experimental-strip-types scripts/measure-live-controls.mjs [map] [start_s] [seconds] [first-words]
 //   BACKEND=wss://host/ws/session ... (default: the public API)
 // `first-words` limits the run to conditions starting with those words, comma separated.
-import { interventionsMessage, noControls } from '../src/game/interventions.ts'
+import { interventionsMessage, noControls } from '../src/features/session/interventions.ts'
 
 const BACKEND = process.env.BACKEND ?? 'wss://api.jackie-courtney.com/ws/session'
 const BRAIN = process.env.BRAIN ?? 'real'
