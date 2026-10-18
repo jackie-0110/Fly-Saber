@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from server.catalog import Catalog
 from server.protocol import (
+    EYE_IMAGE,
     NEURON_ACTIVITY,
     TYPE_ACTIVITY,
     Brain,
@@ -72,6 +73,10 @@ class Sim(Protocol):
         None for a player without a brain."""
         ...
 
+    def eye_image(self) -> bytes | None:
+        """Left/right uint16 counts followed by processed uint8 luminance; None without a brain."""
+        ...
+
 
 class SimFactory(Protocol):
     """Makes one player's sims; n_neurons is 0 for players without a brain."""
@@ -80,6 +85,8 @@ class SimFactory(Protocol):
     cell_types: list[str]
 
     def __call__(self, map_data: dict[str, Any], seed: int) -> Sim: ...
+
+    def eye_lattice(self) -> dict[str, list[list[float]]]: ...
 
 
 @dataclass(frozen=True)
@@ -94,6 +101,7 @@ class SlotRun:
     render_state: RenderState
     done: bool = False
     neurons_sent_step: int | None = None
+    eye_sent_step: int | None = None
 
 
 class Session:
@@ -232,6 +240,7 @@ class Session:
     def reset_slots(self, song_t: float) -> None:
         for run in self.slots:
             run.render_state, run.done = run.sim.reset(song_t), False
+            run.neurons_sent_step = run.eye_sent_step = None
 
     async def play(self, song_t: float) -> None:
         await self.stop_ticker()
@@ -264,6 +273,12 @@ class Session:
             if stepped:
                 messages.append(Frame(slot=slot, render_state=run.render_state))
                 messages += activity(slot, run)
+                step, last_eye = run.render_state.step, run.eye_sent_step
+                if last_eye is None or not 0 < step - last_eye < 2:
+                    image = run.sim.eye_image()
+                    if image is not None:
+                        messages.append(binary_message(EYE_IMAGE, slot, step, image))
+                        run.eye_sent_step = step
                 if run.done:
                     messages.append(Ended(slot=slot, score=run.render_state.score))
         return messages

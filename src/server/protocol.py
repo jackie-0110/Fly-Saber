@@ -195,9 +195,9 @@ class Error(Message):
     message: str
 
 
-# Binary messages: kinds 1 and 2 carry int8 activity (section 6).
+# Binary messages: activity (section 6) and processed eye luminance (section 3).
 
-NEURON_ACTIVITY, TYPE_ACTIVITY = 1, 2
+NEURON_ACTIVITY, TYPE_ACTIVITY, EYE_IMAGE = 1, 2, 3
 
 
 def binary_message(kind: int, slot: int, step: int, payload: bytes) -> bytes:

@@ -15,6 +15,7 @@ imports keep their existing names (`brain`, `fly_saber`, `training`, `server`);
 | `src/server/` | FastAPI app, catalogs, live sessions and protocol |
 | `frontend/src/app/` | React entry point, workspace shell and global styles |
 | `frontend/src/features/brain/` | Neuron data, rendering, live activity buffer and brain UI |
+| `frontend/src/features/eye/` | Eye lattice, live luminance frames and eye-view UI |
 | `frontend/src/features/game/` | Game scene, fly model and motor animation |
 | `frontend/src/features/session/` | Backend/protocol client, audio transport, state and session UI |
 | `frontend/src/features/songs/` | Chart parsing, song downloads, catalog and song selection UI |

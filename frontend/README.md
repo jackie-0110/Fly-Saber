@@ -81,6 +81,7 @@ Test the Worker locally against a running server with
 
 - `src/app/`: application entry point, workspace shell and styles.
 - `src/features/brain/`: neuron data, rendering, activity buffer and brain controls.
+- `src/features/eye/`: eye lattice, live luminance frames and eye-view UI.
 - `src/features/game/`: game scene and fly model/motion.
 - `src/features/session/`: backend connection, live protocol, audio transport, stores and session UI.
 - `src/features/songs/`: chart parsing, community catalog, imports and song selection UI.

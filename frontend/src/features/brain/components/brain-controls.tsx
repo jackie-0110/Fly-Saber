@@ -8,6 +8,7 @@ import type { Controls } from '@/features/brain/data'
 import { isUntouched, noControls } from '@/features/session/interventions'
 import { useSession } from '@/features/session/session'
 import { usePlayer } from '@/features/session/store'
+import { EyeMosaic } from '@/features/eye/eye-mosaic'
 
 /*
  * Brain controls sit in the signal path where they act: the blindfolds on the two eyes in
@@ -44,23 +45,6 @@ function useControlsState() {
   return { config, failed, controls, change, brain, disabled: !config || brain === 'expert' }
 }
 
-// Ghost hex lattice for one compound eye, centred in an 80 × 90 box. Shape only: the live
-// stream fills the brain's 437 eye columns (docs/PROTOCOL.md, section 2).
-const OMMATIDIA = (() => {
-  const points: [number, number][] = []
-  const spacing = 4.2
-  const rowHeight = spacing * 0.866
-  for (let row = -11; row <= 11; row++) {
-    const y = row * rowHeight
-    const offset = row % 2 ? spacing / 2 : 0
-    for (let col = -9; col <= 9; col++) {
-      const x = col * spacing + offset
-      if ((x / 30) ** 2 + (y / 37) ** 2 <= 1) points.push([40 + x, 45 + y])
-    }
-  }
-  return points
-})()
-
 /** The fly's two eyes; pressing one blindfolds it. */
 export function EyeToggles() {
   const { controls, change, disabled } = useControlsState()
@@ -81,12 +65,7 @@ export function EyeToggles() {
           title={eye.blind ? `Remove the ${eye.side} blindfold` : `Blindfold the ${eye.side} eye`}
           onClick={() => change({ [eye.key]: !eye.blind })}
         >
-          <svg viewBox="0 0 80 90" aria-hidden="true">
-            {OMMATIDIA.map(([x, y]) => (
-              <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" />
-            ))}
-            {eye.blind && <path className="eye-blindfold" d="M6 52 L74 30" />}
-          </svg>
+          <EyeMosaic side={eye.side} blind={eye.blind} />
           <span>{eye.label}</span>
         </button>
       ))}

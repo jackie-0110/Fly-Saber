@@ -92,7 +92,7 @@ Pull requests run Python 3.11 and 3.12, the frontend, and a Docker smoke test in
 src/                 Python packages: brain, fly_saber, training, server
 frontend/
   src/app/           App entry point, shell and styles
-  src/features/      Brain, game, session and songs code with their components
+  src/features/      Brain, eye, game, session and songs code with their components
   src/components/    Shared UI primitives and presentation helpers
   src/lib/           Shared utilities and theme
   tests/, e2e/       Frontend unit and browser tests

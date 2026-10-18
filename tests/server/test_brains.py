@@ -223,6 +223,25 @@ def test_lesioned_neuron_reads_below_rest(client: TestClient) -> None:
     assert changes and all(change < 0 for change in changes)
 
 
+def test_eye_stream_matches_lattice_and_blindfolded_observation(client: TestClient) -> None:
+    lattice = client.get("/api/eye_lattice?brain=real").json()
+    with client.websocket_connect("/ws/session") as ws:
+        start(ws, ["real", "expert"])
+        ws.send_json(
+            {"type": "set_interventions", "slot": 0, "eye": {"blind_left": 1, "blind_right": 1}}
+        )
+        frames, binary = activity(ws)
+    images = [(slot, step, payload) for kind, slot, step, payload in binary if kind == 3]
+    assert images
+    for slot, step, payload in images:
+        assert slot == 0 and (slot, step) in frames
+        assert struct.unpack_from("<HH", payload) == (len(lattice["left"]), len(lattice["right"]))
+        # Blinding removes contrast to background 0.5, it does not invent black objects.
+        assert payload[4:] == bytes([128]) * (len(lattice["left"]) + len(lattice["right"]))
+    assert all(b[1] - a[1] >= 2 for a, b in pairwise(images))
+    assert len(images) >= len(frames) // 4 - 1
+
+
 def test_interventions_recenter_the_readout(tmp_path: Path) -> None:
     """set_interventions re-centers the readout on the modified brain (PR #36); without it
     every lesion collapsed the trained fly to about 0% hits."""

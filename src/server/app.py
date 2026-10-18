@@ -93,6 +93,18 @@ def create_app(
     def brain_list() -> list[Brain]:
         return [b.info for b in brains]
 
+    @app.get("/api/eye_lattice")
+    def eye_lattice(brain: str | None = None) -> dict[str, list[list[float]]]:
+        # Default to the demo brain's measured columns, never the expert's synthetic eye.
+        selected = (
+            by_id.get(brain)
+            if brain is not None
+            else (by_id.get("real") or next((b for b in brains if b.make_sim.n_neurons), brains[0]))
+        )
+        if selected is None:
+            raise HTTPException(404, f"unknown brain {brain}")
+        return selected.make_sim.eye_lattice()
+
     @app.get("/api/maps")
     def maps() -> list[MapSummary]:
         return catalog.list_maps()

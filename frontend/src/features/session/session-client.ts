@@ -2,6 +2,8 @@ import { decodeActivity } from './activity.ts'
 import type { ActivityFrame } from './activity.ts'
 import { flyMotion } from '../game/fly-motion.ts'
 import type { SaberAction } from '../game/fly-motion.ts'
+import { decodeEyeImage } from '../eye/eye-data.ts'
+import type { EyeFrame } from '../eye/eye-data.ts'
 import { interventionsMessage, isUntouched, noControls } from './interventions.ts'
 import type { BrainControls } from './interventions.ts'
 
@@ -42,6 +44,7 @@ interface ClientOptions {
   onFailure: () => void
   /** Brain activity while playing, in step order; never called for a brain-less player. */
   onActivity?: (frame: ActivityFrame) => void
+  onEyeImage?: (frame: EyeFrame) => void
   makeSocket?: (url: string) => WebSocket
 }
 
@@ -72,6 +75,7 @@ export class SessionClient {
   private started = false
   private activitySizes = { neurons: 0, types: 0 }
   private activitySteps = new Map<number, number>()
+  private eyeStep = -1
   private controls = noControls
   private readonly options: ClientOptions
 
@@ -103,6 +107,7 @@ export class SessionClient {
   private clearRun() {
     this.removed = new Set()
     this.activitySteps.clear()
+    this.eyeStep = -1
     flyMotion.reset()
     this.update({ score: null, sabers: [], removed: this.removed, lastEvent: null })
   }
@@ -155,7 +160,7 @@ export class SessionClient {
       socket.addEventListener('message', (event) => {
         if (this.socket !== socket) return
         if (event.data instanceof ArrayBuffer) {
-          this.receiveActivity(event.data)
+          this.receiveBinary(event.data)
           return
         }
         if (typeof event.data !== 'string') return
@@ -233,8 +238,17 @@ export class SessionClient {
     })
   }
 
-  private receiveActivity(data: ArrayBuffer) {
-    if (this.status !== 'playing' || !this.options.onActivity) return
+  private receiveBinary(data: ArrayBuffer) {
+    if (this.status !== 'playing') return
+    const eye = decodeEyeImage(data)
+    if (eye) {
+      if (eye.slot === 0 && eye.step > this.eyeStep) {
+        this.eyeStep = eye.step
+        this.options.onEyeImage?.(eye)
+      }
+      return
+    }
+    if (!this.options.onActivity) return
     const frame = decodeActivity(data, this.activitySizes)
     if (!frame || frame.slot !== 0) return
     if (frame.step <= (this.activitySteps.get(frame.kind) ?? -1)) return
