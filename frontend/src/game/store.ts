@@ -8,7 +8,6 @@ import { loadCatalog, loadServerSong, withLiveCharts } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
 import { useSession } from './session.ts'
-import type { BrainOption, ServerMap } from './catalog.ts'
 
 type InspectorTab = 'activity' | 'songs' | 'session' | 'details' | 'next'
 
@@ -20,8 +19,9 @@ interface PlayerState extends PlaybackSnapshot {
   error: string
   inspectorTab: InspectorTab
   brain: string
-  brains: BrainOption[]
-  serverMaps: ServerMap[]
+  // Inline type imports keep the shared import block untouched for parallel branches.
+  brains: import('./catalog.ts').BrainOption[]
+  serverMaps: import('./catalog.ts').ServerMap[]
   catalog: 'idle' | 'loading' | 'ready' | 'error'
   refreshCatalog: () => Promise<void>
   setBrain: (id: string) => void
