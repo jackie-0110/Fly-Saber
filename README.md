@@ -185,4 +185,4 @@ Who builds what in detail: [`docs/archive/project/FLY_SABER_TEAM_SPLIT.md`](docs
 
 ## License
 
-No license has been chosen yet. Until one is added, ask the team before reusing the code. The connectome data and the music carry their own licenses (above).
+The code in this repository is released under the [MIT License](LICENSE). The connectome data and the demo music keep their own licenses (see Acknowledgements): the trained brains in `bundles/` are derived from [MaleCNS](https://male-cns.janelia.org/), and the demo songs are by Kevin MacLeod under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
