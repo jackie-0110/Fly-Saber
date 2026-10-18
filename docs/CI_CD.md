@@ -30,8 +30,9 @@ an unprivileged user, and exposes port 8000. Its health check requests `/api/gam
 The Docker context allowlist excludes secrets, local environments, raw data,
 checkpoints, and build output.
 
-The image includes configs and the demo audio allowlist. Provide normalized maps
-and licensed audio through a volume on the deployment host when available:
+The image includes configs, the demo audio allowlist and the trained brains in
+`bundles/`, each with the subgraph it was trained on. Provide normalized maps and
+licensed audio through a volume on the deployment host when available:
 
 ```bash
 docker run --rm -p 8000:8000 \
@@ -41,8 +42,16 @@ docker run --rm -p 8000:8000 \
 
 That maps directory should contain `demo_allowlist.json`, `normalized/`, and
 `audio/` as described in [PROTOCOL.md](PROTOCOL.md). Without downloaded maps the
-UI and API still start, and the map list is empty. Backend sessions use the live Fly Saber environment played by the scripted expert.
-Container delivery preserves that simulation behavior.
+UI and API still start, and the map list is empty. `/api/brains` lists the scripted
+expert plus every brain mode in `configs/brains.yaml` that has a bundle.
+
+Startup loads each bundle and compiles every brain for every map size before the
+server listens, so the first response takes tens of seconds, longer on a small
+host. The health check allows 180 s.
+
+CI's container smoke test mounts `docker/smoke/normalized` (one tiny map), checks
+that `/api/brains` lists `real`, and plays one session with it through
+`docker/smoke_session.py`.
 
 ## Deploy on Vultr
 

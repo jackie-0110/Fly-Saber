@@ -19,12 +19,13 @@ import httpx
 from fly_saber.maps.adapt import difficulty
 from fly_saber.maps.allowlist import AllowlistEntry
 from fly_saber.maps.beatsaver_client import download_level, map_metadata, search_maps
+from fly_saber.maps.chart import MAP_ERRORS
 from fly_saber.maps.normalize import normalize_level
 
 MOD_FLAGS = ("chroma", "ne", "me", "vivify")
 CURRICULUM_DIFFICULTIES = {"Easy", "Normal", "Hard"}
 # What a malformed upload can raise from download through normalization.
-REJECTED = (ValueError, KeyError, StopIteration, zipfile.BadZipFile, httpx.HTTPStatusError)
+REJECTED = (*MAP_ERRORS, zipfile.BadZipFile, httpx.HTTPStatusError)
 
 
 @dataclass(frozen=True)

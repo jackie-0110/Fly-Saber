@@ -8,7 +8,12 @@ import pytest
 
 from fly_saber.maps.allowlist import AllowlistEntry
 from fly_saber.maps.chart import BpmChange, UnsupportedMapError
-from fly_saber.maps.normalize import beats_to_seconds, normalize_level, spawn_distance_m
+from fly_saber.maps.normalize import (
+    beats_to_seconds,
+    normalize_level,
+    sample_clock,
+    spawn_distance_m,
+)
 
 ALLOWED = AllowlistEntry(
     key="abc", title="Fixture", artist="Artist", license="CC BY 4.0", song_url="u", split="train"
@@ -18,6 +23,7 @@ INFO = {
     "_version": "2.0.0",
     "_songName": "Fixture",
     "_songAuthorName": "Artist",
+    "_songFilename": "song.ogg",
     "_levelAuthorName": "Mapper",
     "_beatsPerMinute": 120,
     "_songTimeOffset": 0,
@@ -59,11 +65,48 @@ V3_EASY = {
     "obstacles": [{"b": 3, "d": 1, "y": 2, "w": 2, "h": 3}],
 }
 
+# Same chart again in v4: objects index into shared data arrays.
+V4_EASY = {
+    "version": "4.0.0",
+    "colorNotes": [{"b": 4}, {"b": 2, "i": 1}, {"b": 8, "i": 2}],
+    "colorNotesData": [{"x": 1, "d": 1}, {"x": 2, "y": 1, "c": 1, "d": 4}, {"x": 5}],
+    "bombNotes": [{"b": 6}],
+    "bombNotesData": [{"y": 2}],
+    "obstacles": [{"b": 3}],
+    "obstaclesData": [{"d": 1, "y": 2, "w": 2, "h": 3}],
+}
 
-def write_level(root: Path, easy: dict[str, Any], info: dict[str, Any] = INFO) -> Path:
+INFO_V4 = {
+    "version": "4.0.1",
+    "song": {"title": "Fixture", "author": "Artist"},
+    "audio": {"songFilename": "song.ogg", "bpm": 120, "audioDataFilename": "AudioData.dat"},
+    "difficultyBeatmaps": [
+        {
+            "characteristic": "Standard",
+            "difficulty": "Easy",
+            "beatmapAuthors": {"mappers": ["Mapper"]},
+            "noteJumpMovementSpeed": 10,
+            "noteJumpStartBeatOffset": 0,
+            "beatmapDataFilename": "Easy.dat",
+        }
+    ],
+}
+
+# 120 BPM for 16 beats: 8 s of 44.1 kHz samples.
+AUDIO_V4 = {"version": "4.0.0", "songFrequency": 44100, "bpmData": [{"ei": 352800, "eb": 16}]}
+
+
+def write_level(
+    root: Path,
+    easy: dict[str, Any],
+    info: dict[str, Any] = INFO,
+    audio: dict[str, Any] | None = None,
+) -> Path:
     root.mkdir()
     (root / "Info.dat").write_text(json.dumps(info))
     (root / "Easy.dat").write_text(json.dumps(easy))
+    if audio is not None:
+        (root / "AudioData.dat").write_text(json.dumps(audio))
     return root
 
 
@@ -74,10 +117,11 @@ def normalize(level: Path) -> dict[str, Any]:
     return normalized
 
 
-def test_v2_and_v3_normalize_identically(tmp_path: Path) -> None:
+def test_every_format_normalizes_identically(tmp_path: Path) -> None:
     v2 = normalize(write_level(tmp_path / "v2", V2_EASY))
-    v3 = normalize(write_level(tmp_path / "v3", V3_EASY))
-    assert v2 == v3
+    assert normalize(write_level(tmp_path / "v3", V3_EASY)) == v2
+    assert normalize(write_level(tmp_path / "v4", V4_EASY)) == v2
+    assert normalize(write_level(tmp_path / "info4", V4_EASY, INFO_V4, AUDIO_V4)) == v2
 
 
 def test_normalized_notes_are_sorted_in_seconds_with_bombs_and_off_grid_dropped(
@@ -118,3 +162,33 @@ def test_v2_bpm_changes_are_rejected(tmp_path: Path) -> None:
     easy = {**V2_EASY, "_BPMChanges": [{"_time": 4, "_BPM": 240}]}
     with pytest.raises(UnsupportedMapError):
         normalize(write_level(tmp_path / "v2", easy))
+
+
+def test_v4_audio_regions_set_the_note_times(tmp_path: Path) -> None:
+    easy = {
+        "version": "4.0.0",
+        "colorNotes": [{"b": 2}, {"b": 4}, {"b": 6}],
+        "colorNotesData": [{}],
+    }
+    audio = {
+        "songFrequency": 100,
+        "bpmData": [{"ei": 200, "eb": 4}, {"si": 200, "ei": 300, "sb": 4, "eb": 8}],
+    }
+    normalized = normalize(write_level(tmp_path / "v4", easy, INFO_V4, audio))
+    assert [n["time_sec"] for n in normalized["notes"]] == [1.0, 2.0, 2.5]
+
+
+def test_gapped_v4_audio_regions_are_rejected() -> None:
+    with pytest.raises(UnsupportedMapError):
+        sample_clock(
+            {
+                "songFrequency": 100,
+                "bpmData": [{"ei": 200, "eb": 4}, {"si": 250, "ei": 300, "sb": 4, "eb": 8}],
+            }
+        )
+
+
+def test_rotating_v4_charts_are_rejected(tmp_path: Path) -> None:
+    easy = {**V4_EASY, "colorNotes": [{"b": 4, "r": 1}]}
+    with pytest.raises(UnsupportedMapError):
+        normalize(write_level(tmp_path / "v4", easy))

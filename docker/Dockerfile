@@ -41,6 +41,6 @@ RUN chown -R fly_saber:fly_saber data
 COPY --from=frontend /frontend/dist frontend/dist/
 USER fly_saber
 EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/games', timeout=3)"]
 CMD ["uvicorn", "server.app:serve", "--factory", "--host", "0.0.0.0", "--port", "8000"]
