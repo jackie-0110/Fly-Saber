@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { CAMERA_SETTLE_MS, MOVING_EDGE_LIMIT } from '../src/brain/rendering.ts'
+
+declare global {
+  interface Window {
+    brainRendering: {
+      lines: { count: number; indexed: boolean; matrix?: number[] }[]
+      uploads: number
+    }
+  }
+}
 
 const neurons = JSON.parse(
   readFileSync(new URL('../public/data/brain/neurons.json', import.meta.url), 'utf8'),
@@ -7,6 +17,9 @@ const neurons = JSON.parse(
 const groups = JSON.parse(
   readFileSync(new URL('../public/data/brain/groups.json', import.meta.url), 'utf8'),
 ) as Record<string, number[]>
+const edges = JSON.parse(
+  readFileSync(new URL('../public/data/brain/edges.json', import.meta.url), 'utf8'),
+) as { n_edges: number; pre: number[]; post: number[]; weight: number[] }
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/maps', (route) => route.fulfill({ json: [] }))
@@ -21,7 +34,9 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://api.beatsaver.com/**', (route) => route.fulfill({ json: { docs: [] } }))
 })
 
-test('production workspace loads without runtime errors or failed assets', async ({ page }) => {
+test('production workspace loads without runtime errors or failed assets', async ({
+  page,
+}, testInfo) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('requestfailed', (request) => errors.push(request.url()))
@@ -40,6 +55,7 @@ test('production workspace loads without runtime errors or failed assets', async
   )
   await page.waitForLoadState('networkidle')
   expect(errors).toEqual([])
+  await page.screenshot({ path: testInfo.outputPath('brain-connections.png'), fullPage: true })
 })
 
 test('playback controls stay disabled until a song is loaded', async ({ page }) => {
@@ -106,6 +122,201 @@ test('group filters restrict cell types and preserve original neuron IDs', async
       .locator('option')
       .evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value)),
   ).toEqual(['', ...t5.map(String)])
+})
+
+test('complete connections can be hidden, filtered, and traced for the selected neuron', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/')
+  const summary = page.locator('.brain-connection-summary')
+  const format = (value: number) => value.toLocaleString('en-US')
+  const shown = (value: number) => `${format(value)} of ${format(edges.n_edges)} connections shown`
+  await expect(summary).toContainText(shown(edges.n_edges))
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
+  await page.getByRole('checkbox', { name: 'Connections', exact: true }).uncheck()
+  await expect(summary).toContainText(shown(0))
+  await page.getByRole('checkbox', { name: 'Connections', exact: true }).check()
+  await page.getByRole('button', { name: 'Select next neuron' }).click()
+  const incident = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
+  await expect(summary).toContainText(shown(incident))
+  await expect(summary).toContainText('Blue: incoming')
+  await expect(summary).toContainText('Gold: outgoing')
+  const incoming = edges.post.filter((post) => post === 0).length
+  await expect(page.locator('.neuron-metadata')).toContainText(`${format(incoming)} connections /`)
+  await page.screenshot({ path: testInfo.outputPath('selected-connections.png'), fullPage: true })
+
+  await page.getByLabel('Neuron group', { exact: true }).selectOption('T4')
+  const visible = new Set(groups.T4)
+  const filtered = edges.pre.filter(
+    (pre, edge) => visible.has(pre) && visible.has(edges.post[edge]),
+  ).length
+  await expect(summary).toContainText(shown(filtered))
+  await expect(summary).not.toContainText('Blue: incoming')
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
+  await expect(summary).toContainText(shown(edges.n_edges))
+})
+
+test('missing connections show a recoverable data error', async ({ page }) => {
+  await page.route('**/data/brain/edges.json', (route) => route.fulfill({ status: 404, body: '' }))
+  await page.goto('/')
+  await expect(
+    page.getByText('Could not load the brain data files.', { exact: true }),
+  ).toBeVisible()
+  await page.unroute('**/data/brain/edges.json')
+  await page.getByRole('button', { name: 'Retry 3D view', exact: true }).click()
+  await expect(page.locator('.brain-connection-summary')).toContainText(
+    `${edges.n_edges.toLocaleString('en-US')} of ${edges.n_edges.toLocaleString('en-US')} connections shown`,
+  )
+})
+
+test('camera movement uses a resident preview buffer and restores every connection', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(45_000)
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  // Inspect actual WebGL submissions rather than relying on a fast test machine.
+  await page.addInitScript(() => {
+    window.brainRendering = { lines: [], uploads: 0 }
+    for (const Type of [WebGLRenderingContext, WebGL2RenderingContext]) {
+      const draw = Type.prototype.drawElements
+      Type.prototype.drawElements = function (...args) {
+        if (
+          this.canvas instanceof HTMLCanvasElement &&
+          this.canvas.getAttribute('aria-label') === '3D neurons and directed connections' &&
+          args[0] === this.LINES
+        ) {
+          const program = this.getParameter(this.CURRENT_PROGRAM) as WebGLProgram
+          const location = this.getUniformLocation(program, 'modelViewMatrix')
+          window.brainRendering.lines.push({
+            count: args[1],
+            indexed: true,
+            matrix: location
+              ? Array.from(this.getUniform(program, location) as Float32Array)
+              : undefined,
+          })
+        }
+        return draw.apply(this, args)
+      }
+      const upload = Type.prototype.bufferData
+      Type.prototype.bufferData = function (...args: unknown[]) {
+        if (
+          this.canvas instanceof HTMLCanvasElement &&
+          this.canvas.getAttribute('aria-label') === '3D neurons and directed connections'
+        ) {
+          window.brainRendering.uploads++
+        }
+        return Reflect.apply(upload, this, args)
+      }
+    }
+  })
+  await page.goto('/')
+  const summary = page.locator('.brain-connection-summary')
+  const allShown = `${edges.n_edges.toLocaleString('en-US')} of ${edges.n_edges.toLocaleString('en-US')} connections shown`
+  await expect(summary).toContainText(allShown)
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
+  const stage = page.locator('.brain-stage-3d')
+  await stage.scrollIntoViewIfNeeded()
+  const resolution = () =>
+    stage.locator('canvas').evaluate((element) => {
+      const canvas = element as HTMLCanvasElement
+      return canvas.width / canvas.getBoundingClientRect().width
+    })
+  const restingResolution = await resolution()
+  const box = (await stage.boundingBox())!
+  await page.evaluate(() => {
+    window.brainRendering = { lines: [], uploads: 0 }
+  })
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.4)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5, { steps: 8 })
+  await expect(summary).toContainText('Movement preview')
+  const movingBox = (await stage.boundingBox())!
+  expect(movingBox.width).toBeCloseTo(box.width, 1)
+  expect(movingBox.height).toBeCloseTo(box.height, 1)
+  await expect(summary).toContainText(`${MOVING_EDGE_LIMIT.toLocaleString('en-US')} of`)
+  await expect.poll(resolution).toBeLessThanOrEqual(1.01)
+  await expect
+    .poll(() => page.evaluate(() => window.brainRendering.lines.at(-1)?.count))
+    .toBe(MOVING_EDGE_LIMIT * 2)
+  await page.screenshot({ path: testInfo.outputPath('moving-connections.png'), fullPage: true })
+  await page.mouse.up()
+  await expect(summary).toContainText(allShown)
+  await expect
+    .poll(() => page.evaluate(() => window.brainRendering.lines.at(-1)?.count))
+    .toBe(edges.n_edges * 2)
+  await expect.poll(resolution).toBeCloseTo(restingResolution, 1)
+  const settledBox = (await stage.boundingBox())!
+  expect(settledBox.width).toBeCloseTo(box.width, 1)
+  expect(settledBox.height).toBeCloseTo(box.height, 1)
+  const rendering = await page.evaluate(() => window.brainRendering)
+  expect(rendering.lines.every((draw) => draw.indexed)).toBe(true)
+  expect(rendering.uploads).toBe(0)
+  // Watch beyond several settling intervals: late damping updates must not
+  // flip the renderer back to the preview after full detail has returned.
+  const stable = await page.evaluate(
+    async ({ duration, fullCount }) => {
+      const start = window.brainRendering.lines.length
+      await new Promise((resolve) => setTimeout(resolve, duration))
+      return {
+        full: window.brainRendering.lines.slice(start).every((draw) => draw.count === fullCount),
+        text: document.querySelector('.brain-connection-summary')?.textContent,
+      }
+    },
+    { duration: CAMERA_SETTLE_MS * 4, fullCount: edges.n_edges * 2 },
+  )
+  expect(stable.full).toBe(true)
+  expect(stable.text).toContain(allShown)
+  await page.screenshot({ path: testInfo.outputPath('settled-connections.png'), fullPage: true })
+
+  // Layout changes must update the projection without refitting/resetting the
+  // camera. Inspect the matrix actually submitted for the connection geometry.
+  const cameraBeforeResize = await page.evaluate(() => window.brainRendering.lines.at(-1)?.matrix)
+  expect(cameraBeforeResize).toHaveLength(16)
+  const drawsBeforeResize = await page.evaluate(() => window.brainRendering.lines.length)
+  const viewport = page.viewportSize()!
+  await page.setViewportSize({ width: viewport.width - 32, height: viewport.height })
+  await expect
+    .poll(() => page.evaluate(() => window.brainRendering.lines.length))
+    .toBeGreaterThan(drawsBeforeResize)
+  await expect
+    .poll(() =>
+      page.evaluate((before) => {
+        const after = window.brainRendering.lines.at(-1)?.matrix ?? []
+        return Math.max(...before.map((value, i) => Math.abs(value - (after[i] ?? Infinity))))
+      }, cameraBeforeResize!),
+    )
+    .toBeLessThan(0.0001)
+
+  // Selection retains all incident connections even while the camera is moving.
+  await page.getByRole('button', { name: 'Select next neuron' }).click()
+  const selectedCount = edges.pre.filter((pre, edge) => pre === 0 || edges.post[edge] === 0).length
+  await stage.scrollIntoViewIfNeeded()
+  const selectedBox = (await stage.boundingBox())!
+  await page.evaluate(() => {
+    window.brainRendering.lines = []
+  })
+  await page.mouse.move(
+    selectedBox.x + selectedBox.width * 0.4,
+    selectedBox.y + selectedBox.height * 0.4,
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    selectedBox.x + selectedBox.width * 0.6,
+    selectedBox.y + selectedBox.height * 0.5,
+    { steps: 4 },
+  )
+  await expect(summary).toContainText(`${selectedCount.toLocaleString('en-US')} of`)
+  await expect(summary).not.toContainText('Movement preview')
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.brainRendering.lines.slice(-2).reduce((sum, draw) => sum + draw.count, 0),
+      ),
+    )
+    .toBe(selectedCount * 2)
+  await page.mouse.up()
+  expect(errors).toEqual([])
 })
 
 test('backend badge detects a disconnect and recovery without implying a live session', async ({

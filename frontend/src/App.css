@@ -225,23 +225,6 @@
   justify-content: space-between;
   gap: 15px;
 }
-.saber-legend {
-  display: flex;
-  align-items: center;
-  gap: 19px;
-  color: #bac1c4;
-  font-size: 10px;
-}
-.saber-legend span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.saber-legend i {
-  width: 5px;
-  height: 5px;
-  border-radius: 1px;
-}
 .coral {
   background: #e1a18f;
 }
@@ -649,6 +632,10 @@
   width: 70px;
   accent-color: #a5d4cf;
 }
+.brain-display-controls input[type='checkbox'] {
+  width: 13px;
+  height: 13px;
+}
 .brain-display-controls input:focus-visible {
   outline: 2px solid #a5d4cf;
   outline-offset: 3px;
@@ -725,6 +712,21 @@
 .brain-color-legend > span:last-child {
   margin-left: auto;
   color: #9daeb3;
+}
+.brain-connection-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1.5em 1.5em;
+  gap: 4px;
+  padding: 7px 19px;
+  color: #b3c0c4;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.brain-connection-summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .type-swatch {
   width: 7px;
@@ -1070,10 +1072,6 @@
   .session-readouts {
     grid-template-columns: 1fr 1.1fr 1.1fr;
   }
-  .saber-legend {
-    gap: 10px;
-    font-size: 9px;
-  }
   .camera-view-label {
     display: none;
   }
@@ -1154,10 +1152,6 @@
     left: 18px;
     right: 15px;
     bottom: 17px;
-  }
-  .saber-legend {
-    font-size: 8px;
-    gap: 12px;
   }
   .camera-toolbar {
     gap: 1px;
@@ -1312,7 +1306,7 @@
     min-height: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto auto auto;
     grid-template-areas:
       'title'
       'filters'
@@ -1321,6 +1315,7 @@
       'camera'
       'help'
       'legend'
+      'connections'
       'selection'
       'note';
   }
@@ -1377,6 +1372,10 @@
   .brain-color-legend {
     grid-area: legend;
     padding: 7px 14px;
+  }
+  .brain-connection-summary {
+    grid-area: connections;
+    padding: 6px 14px;
   }
   .neuron-inspector {
     grid-area: selection;

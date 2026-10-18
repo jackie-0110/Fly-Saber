@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { Color, Spherical, Vector3 } from 'three'
+import { BufferAttribute, BufferGeometry, Color, Spherical, Vector3 } from 'three'
+import type { MutableRefObject } from 'react'
 import { cellTypeColor } from './data'
 import type { BrainData } from './data'
+import { CAMERA_SETTLE_MS, connectionIndex, MOVING_EDGE_LIMIT } from './rendering'
 
 export type CameraAction =
   'reset' | 'x' | 'y' | 'z' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
@@ -12,17 +14,132 @@ export type CameraAction =
 interface SceneProps {
   data: BrainData
   indices: number[]
+  edgeIndices: number[]
+  showConnections: boolean
   selected: number | null
   onSelect: (index: number | null) => void
   onNavigateReady: (navigate: ((action: CameraAction) => void) | null) => void
   onFailure: () => void
   pointSize: number
   opacity: number
+  onMotionChange: (moving: boolean) => void
 }
 
-function Navigation({ data, onNavigateReady }: Pick<SceneProps, 'data' | 'onNavigateReady'>) {
+function Connections({
+  data,
+  edgeIndices,
+  selected,
+  moving,
+}: Pick<SceneProps, 'data' | 'edgeIndices' | 'selected'> & {
+  moving: MutableRefObject<boolean>
+}) {
+  const geometry = useMemo(() => {
+    const { index, outgoing } = connectionIndex(data, edgeIndices, selected)
+    const result = new BufferGeometry()
+    result.setAttribute('position', new BufferAttribute(data.positions, 3))
+    result.setIndex(new BufferAttribute(index, 1))
+    if (selected !== null) {
+      result.addGroup(0, outgoing, 0)
+      result.addGroup(outgoing, index.length - outgoing, 1)
+    }
+    result.computeBoundingSphere()
+    return result
+  }, [data, edgeIndices, selected])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  useFrame(() => {
+    const count =
+      moving.current && selected === null
+        ? Math.min(edgeIndices.length, MOVING_EDGE_LIMIT)
+        : edgeIndices.length
+    geometry.setDrawRange(0, count * 2)
+  })
+  return (
+    <lineSegments raycast={() => {}} renderOrder={-1}>
+      <primitive object={geometry} attach="geometry" />
+      {selected === null ? (
+        <lineBasicMaterial
+          color="#729baf"
+          transparent
+          opacity={0.025}
+          depthWrite={false}
+          depthTest={false}
+        />
+      ) : (
+        <>
+          <lineBasicMaterial
+            attach="material-0"
+            color="#f0c987"
+            transparent
+            opacity={0.75}
+            depthWrite={false}
+            depthTest={false}
+          />
+          <lineBasicMaterial
+            attach="material-1"
+            color="#8ec5ff"
+            transparent
+            opacity={0.75}
+            depthWrite={false}
+            depthTest={false}
+          />
+        </>
+      )}
+    </lineSegments>
+  )
+}
+
+function Navigation({
+  data,
+  onNavigateReady,
+  onMotionChange,
+}: Pick<SceneProps, 'data' | 'onNavigateReady' | 'onMotionChange'>) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const fittedData = useRef<BrainData | null>(null)
+  const moving = useRef(false)
   const { camera, size, invalidate } = useThree()
+  const dragging = useRef(false)
+  const lastChange = useRef(0)
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const finishMotion = useCallback(() => {
+    if (dragging.current || !moving.current) return
+    moving.current = false
+    clearTimeout(settleTimer.current)
+    onMotionChange(false)
+    // The demand loop may already be asleep; render the full graph once more.
+    invalidate()
+  }, [onMotionChange, invalidate])
+  const queueSettle = useCallback(() => {
+    lastChange.current = performance.now()
+    clearTimeout(settleTimer.current)
+    // Wake the demand loop after the final event. Finish inside useFrame, after
+    // OrbitControls updates, so a slow frame cannot restore detail mid-damping.
+    settleTimer.current = setTimeout(invalidate, CAMERA_SETTLE_MS + 1)
+  }, [invalidate])
+  const beginMotion = useCallback(() => {
+    if (!moving.current) {
+      moving.current = true
+      onMotionChange(true)
+    }
+    queueSettle()
+  }, [onMotionChange, queueSettle])
+  const cameraChanged = useCallback(() => {
+    // Tiny late damping changes can arrive after settling. Only a new input
+    // gesture or navigation command may re-enter the reduced-detail preview.
+    if (moving.current) queueSettle()
+  }, [queueSettle])
+  useFrame(() => {
+    if (moving.current && performance.now() - lastChange.current >= CAMERA_SETTLE_MS) {
+      finishMotion()
+    }
+  }, -0.5)
+  useEffect(
+    () => () => {
+      clearTimeout(settleTimer.current)
+      moving.current = false
+      onMotionChange(false)
+    },
+    [moving, onMotionChange],
+  )
   const aspect = size.width / Math.max(1, size.height)
   const distance =
     (data.radius /
@@ -34,6 +151,7 @@ function Navigation({ data, onNavigateReady }: Pick<SceneProps, 'data' | 'onNavi
     (action: CameraAction) => {
       const orbit = controls.current
       if (!orbit) return
+      beginMotion()
       if (['reset', 'x', 'y', 'z'].includes(action)) {
         orbit.target.set(0, 0, 0)
         camera.up.set(0, 1, 0)
@@ -60,12 +178,17 @@ function Navigation({ data, onNavigateReady }: Pick<SceneProps, 'data' | 'onNavi
       orbit.update()
       invalidate()
     },
-    [camera, data.radius, distance, invalidate],
+    [camera, data.radius, distance, invalidate, beginMotion],
   )
 
   useEffect(() => {
-    navigate('reset')
-  }, [navigate])
+    // Resize updates the projection and future fit distance, never the user's
+    // current orbit, zoom, or pan. Fit once for each newly loaded dataset.
+    if (fittedData.current !== data) {
+      fittedData.current = data
+      navigate('reset')
+    }
+  }, [data, navigate])
   useEffect(() => {
     onNavigateReady(navigate)
     return () => onNavigateReady(null)
@@ -75,6 +198,16 @@ function Navigation({ data, onNavigateReady }: Pick<SceneProps, 'data' | 'onNavi
       ref={controls}
       makeDefault
       enableDamping
+      dampingFactor={0.18}
+      onChange={cameraChanged}
+      onStart={() => {
+        dragging.current = true
+        beginMotion()
+      }}
+      onEnd={() => {
+        dragging.current = false
+        cameraChanged()
+      }}
       minDistance={data.radius * 0.3}
       maxDistance={distance * 4}
     />
@@ -135,10 +268,21 @@ function NeuronCloud({
 }
 
 export default function BrainScene(props: SceneProps) {
+  const moving = useRef(false)
+  const [cameraMoving, setCameraMoving] = useState(false)
+  const { onMotionChange } = props
+  const updateMotion = useCallback(
+    (value: boolean) => {
+      moving.current = value
+      setCameraMoving(value)
+      onMotionChange(value)
+    },
+    [onMotionChange],
+  )
   return (
     <Canvas
       frameloop="demand"
-      dpr={[1, 1.75]}
+      dpr={cameraMoving ? 1 : [1, 1.75]}
       camera={{ fov: 42, near: 0.01, far: 100 }}
       gl={{ antialias: true, alpha: true }}
       raycaster={{
@@ -151,7 +295,7 @@ export default function BrainScene(props: SceneProps) {
         },
       }}
       onCreated={({ gl }) => {
-        gl.domElement.setAttribute('aria-label', '3D neuron point cloud')
+        gl.domElement.setAttribute('aria-label', '3D neurons and directed connections')
       }}
       onContextMenu={(event) => event.preventDefault()}
       onPointerMissed={(event) => {
@@ -159,7 +303,12 @@ export default function BrainScene(props: SceneProps) {
       }}
     >
       <ContextMonitor onFailure={props.onFailure} />
-      <Navigation data={props.data} onNavigateReady={props.onNavigateReady} />
+      <Navigation
+        data={props.data}
+        onNavigateReady={props.onNavigateReady}
+        onMotionChange={updateMotion}
+      />
+      {props.showConnections && <Connections {...props} moving={moving} />}
       <NeuronCloud {...props} />
     </Canvas>
   )

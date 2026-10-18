@@ -22,10 +22,25 @@ export interface BrainAsset {
 
 export interface BrainData {
   asset: BrainAsset
+  edges: BrainEdges
   groups: Record<string, number[]>
   positions: Float32Array
   radius: number
   distinctPositionCount: number
+}
+
+export interface BrainEdges {
+  schema_version: 1
+  source: string
+  n_neurons: number
+  n_edges: number
+  n_synapses: number
+  body_id: number[]
+  pre: number[]
+  post: number[]
+  // Anatomical synapse counts, not learned model efficacies.
+  weight: number[]
+  sign: number[]
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,7 +52,7 @@ function isFiniteArray(value: unknown, length: number): value is number[] {
 }
 
 // Keep array index i unchanged: the backend activity stream and groups use that index.
-export function parseBrainData(raw: unknown, rawGroups: unknown): BrainData {
+export function parseBrainData(raw: unknown, rawGroups: unknown, rawEdges: unknown): BrainData {
   if (!isRecord(raw) || raw.schema_version !== 1 || typeof raw.source !== 'string') {
     throw new Error('Unsupported brain export. Expected neuron schema version 1.')
   }
@@ -93,6 +108,7 @@ export function parseBrainData(raw: unknown, rawGroups: unknown): BrainData {
     }
   }
   const asset = raw as unknown as BrainAsset
+  const edges = parseBrainEdges(rawEdges, asset)
   const center = min.map((v, axis) => (v + max[axis]) / 2)
   const scale = 2 / extent
   const positions = new Float32Array(count * 3)
@@ -109,6 +125,7 @@ export function parseBrainData(raw: unknown, rawGroups: unknown): BrainData {
   }
   return {
     asset,
+    edges,
     groups: rawGroups as Record<string, number[]>,
     positions,
     radius,
@@ -116,15 +133,102 @@ export function parseBrainData(raw: unknown, rawGroups: unknown): BrainData {
   }
 }
 
+function parseBrainEdges(raw: unknown, asset: BrainAsset): BrainEdges {
+  if (!isRecord(raw) || raw.schema_version !== 1 || typeof raw.source !== 'string')
+    throw new Error('Unsupported brain connections export. Expected edge schema version 1.')
+  const count = raw.n_edges
+  if (
+    raw.n_neurons !== asset.n_neurons ||
+    !isFiniteArray(raw.body_id, asset.n_neurons) ||
+    !raw.body_id.every((id, i) => id === asset.body_id[i])
+  )
+    throw new Error('Brain connections do not match the neuron ordering.')
+  if (
+    typeof count !== 'number' ||
+    !Number.isSafeInteger(count) ||
+    count < 0 ||
+    count > 5_000_000 ||
+    !isFiniteArray(raw.pre, count) ||
+    !isFiniteArray(raw.post, count) ||
+    !isFiniteArray(raw.weight, count) ||
+    !isFiniteArray(raw.sign, count)
+  )
+    throw new Error('Invalid connection arrays in the brain export.')
+  let synapses = 0
+  for (let edge = 0; edge < count; edge++) {
+    const pre = raw.pre[edge]
+    const post = raw.post[edge]
+    const weight = raw.weight[edge]
+    if (
+      !Number.isInteger(pre) ||
+      pre < 0 ||
+      pre >= asset.n_neurons ||
+      !Number.isInteger(post) ||
+      post < 0 ||
+      post >= asset.n_neurons ||
+      !Number.isSafeInteger(weight) ||
+      weight < 1 ||
+      raw.sign[edge] !== asset.sign[pre]
+    )
+      throw new Error(`Invalid endpoints, synapse count, or sign for connection ${edge}.`)
+    synapses += weight
+  }
+  if (!Number.isSafeInteger(synapses) || raw.n_synapses !== synapses)
+    throw new Error('Invalid total synapse count in the brain connections export.')
+  return raw as unknown as BrainEdges
+}
+
 export async function loadBrainData(signal: AbortSignal): Promise<BrainData> {
   const base = `${import.meta.env.BASE_URL}data/brain/`
   const responses = await Promise.all(
-    ['neurons.json', 'groups.json'].map((file) => fetch(`${base}${file}`, { signal })),
+    ['neurons.json', 'groups.json', 'edges.json'].map((file) =>
+      fetch(`${base}${file}`, { signal }),
+    ),
   )
   if (responses.some((response) => !response.ok))
     throw new Error('Could not load the brain data files.')
-  const [asset, groups] = await Promise.all(responses.map((response) => response.json()))
-  return parseBrainData(asset, groups)
+  const [asset, groups, edges] = await Promise.all(responses.map((response) => response.json()))
+  return parseBrainData(asset, groups, edges)
+}
+
+// Both endpoints must survive the filters. Selection reveals only incident edges.
+export function filterEdgeIndices(
+  data: BrainData,
+  indices: number[],
+  selected: number | null = null,
+): number[] {
+  const visible = new Uint8Array(data.asset.n_neurons)
+  for (const index of indices) visible[index] = 1
+  const result: number[] = []
+  const { pre, post, n_edges } = data.edges
+  for (let edge = 0; edge < n_edges; edge++) {
+    if (
+      visible[pre[edge]] &&
+      visible[post[edge]] &&
+      (selected === null || pre[edge] === selected || post[edge] === selected)
+    )
+      result.push(edge)
+  }
+  return result
+}
+
+export function neuronConnectionStats(data: BrainData, index: number) {
+  let incoming = 0,
+    outgoing = 0,
+    incomingSynapses = 0,
+    outgoingSynapses = 0
+  const { pre, post, weight, n_edges } = data.edges
+  for (let edge = 0; edge < n_edges; edge++) {
+    if (pre[edge] === index) {
+      outgoing++
+      outgoingSynapses += weight[edge]
+    }
+    if (post[edge] === index) {
+      incoming++
+      incomingSynapses += weight[edge]
+    }
+  }
+  return { incoming, outgoing, incomingSynapses, outgoingSynapses }
 }
 
 export function filterNeuronIndices(data: BrainData, group: string, cellType: string): number[] {

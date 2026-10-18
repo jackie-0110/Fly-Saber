@@ -155,28 +155,20 @@
   background: #c7e3dd;
 }
 .scene-bottomline {
-  bottom: 36px;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.scene-bottomline .camera-toolbar {
+  margin-left: auto;
 }
 .camera-tool-divider {
   width: 1px;
   height: 17px;
   margin: 0 3px;
   background: #4b595e;
-}
-.game-camera-help {
-  position: absolute;
-  left: 24px;
-  bottom: 12px;
-  right: 24px;
-  font-size: 10px;
-  line-height: 1.4;
-  color: #a2b3b7;
-  pointer-events: none;
-}
-.game-camera-help span {
-  float: right;
-  font-size: 10px;
-  color: #a2b3b7;
 }
 .game-scene-fallback {
   position: absolute;
@@ -243,10 +235,8 @@
   color: #edc7b8;
 }
 .chart-warnings {
-  position: absolute;
-  bottom: 95px;
-  left: 24px;
-  max-width: min(440px, calc(100% - 48px));
+  max-width: min(440px, 100%);
+  margin-right: auto;
   padding: 8px 11px;
   background: #2d302ce8;
   border: 1px solid #5d6152;
@@ -769,9 +759,6 @@
     gap: 2px 8px;
     font-size: 11px;
   }
-  .game-camera-help span {
-    display: none;
-  }
   .song-volume input {
     display: none;
   }
@@ -819,22 +806,12 @@
     font-size: 22px;
   }
   .scene-bottomline {
-    bottom: 40px;
+    bottom: 16px;
     flex-wrap: wrap;
     gap: 9px;
   }
-  .saber-legend {
-    width: 100%;
-    font-size: 9px;
-  }
   .camera-toolbar {
     margin-left: auto;
-  }
-  .game-camera-help {
-    font-size: 10px;
-    left: 18px;
-    right: 15px;
-    bottom: 15px;
   }
   .timeline-controls {
     gap: 10px;
@@ -890,7 +867,6 @@
     font-size: 16px;
   }
   .chart-warnings {
-    bottom: 133px;
     font-size: 9px;
   }
 }
@@ -980,43 +956,6 @@
   }
 }
 
-.library-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 12px 18px;
-}
-.live-library h2 {
-  font-size: 20px;
-  margin: 0;
-}
-.live-brain-picker {
-  display: grid;
-  gap: 8px;
-  margin-block: 4px;
-  font-size: 12px;
-}
-.live-brain-picker select {
-  width: 100%;
-  min-width: 0;
-  min-height: 40px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #262729;
-  color: #e3e6e5;
-  font: inherit;
-}
-.live-brain-picker select:focus-visible {
-  outline: 2px solid #a4d9cf;
-  outline-offset: 2px;
-}
-.catalog-license {
-  padding: 0 4px 14px;
-  margin: 0;
-  font-size: 11px;
-  color: #b2b9b7;
-}
 .song-attribution {
   flex-basis: 100%;
   font-size: 12px;
@@ -1033,9 +972,6 @@
   color: #b4d8cb;
 }
 @media (max-width: 600px) {
-  .live-brain-picker select {
-    font-size: 16px;
-  }
   .scene-title .live-session-status {
     max-width: 130px;
     overflow-wrap: anywhere;
@@ -1044,29 +980,6 @@
 
 .song-card + .song-card {
   border-top: 1px solid var(--line);
-}
-.library-sources {
-  border-bottom: 1px solid var(--line);
-}
-.library-sources button {
-  font-size: 11px;
-  box-shadow: none;
-}
-.library-sources button[aria-pressed='true'] {
-  color: var(--mint);
-  background: #b6d5d012;
-}
-.live-library > p {
-  font-size: 12px;
-  line-height: 1.7;
-  color: #b8c6c4;
-}
-.live-library > button {
-  font-size: 12px;
-  color: var(--mint);
-}
-.live-library > [role='alert'] {
-  color: #edc7b8;
 }
 .performance-values strong,
 .song-time,
@@ -1111,8 +1024,5 @@
     top: 66px;
     left: 18px;
     width: min(280px, calc(100% - 36px));
-  }
-  .game-camera-help span {
-    display: none;
   }
 }
