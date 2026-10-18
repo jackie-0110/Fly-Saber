@@ -10,6 +10,7 @@ import { SessionClient } from './session-client.ts'
 import type { SessionStatus } from './session-client.ts'
 import { useSession } from './session.ts'
 import { liveActivity } from '../brain/live-activity.ts'
+import { liveEye } from '../eyeview/eye-state.ts'
 
 type InspectorTab = 'activity' | 'songs' | 'session' | 'details' | 'next'
 
@@ -59,10 +60,14 @@ export const liveSession = new SessionClient({
   url: sessionUrl,
   getTime: () => transport.getTime(),
   onChange: (state) => {
-    if (state.status && clearsActivity.has(state.status)) liveActivity.clear()
+    if ((state.status && clearsActivity.has(state.status)) || state.score === null) {
+      liveActivity.clear()
+      liveEye.clear()
+    }
     useSession.setState(state)
   },
   onActivity: (frame) => liveActivity.receive(frame),
+  onEyeImage: (frame) => liveEye.receive(frame),
   onFailure: () => {
     transport.pause()
   },

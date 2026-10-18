@@ -1731,6 +1731,110 @@
   height: 15px;
 }
 
+/* ---------- Person B: processed fly eye mosaic and game inset ---------- */
+
+.eye-readout-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.eye-expand {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: zoom-in;
+}
+.eye-expand:hover {
+  background: var(--rule);
+}
+.eye-expand:focus-visible,
+.eye-retry:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.eye-expand > svg {
+  width: 16px;
+  height: 16px;
+}
+.eye-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  height: 100%;
+}
+.eye-pair > div {
+  min-width: 0;
+}
+.eye-mosaic {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.eye-mosaic.is-waiting {
+  fill: var(--rule-strong);
+}
+.eye-readout-copy {
+  min-width: 0;
+}
+.eye-retry {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.eye-inset {
+  position: absolute;
+  z-index: 5;
+  top: 58px;
+  right: 12px;
+  width: min(360px, calc(100% - 24px));
+  padding: 12px;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink);
+}
+.eye-inset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.eye-inset-header h2 {
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+.eye-inset .eye-pair {
+  height: auto;
+  gap: 16px;
+}
+.eye-inset .eye-mosaic {
+  height: clamp(90px, 13vw, 155px);
+}
+.eye-inset .eye-pair span {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+.eye-inset-caption {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
 .status-trigger {
   display: flex;
   align-items: center;

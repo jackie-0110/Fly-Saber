@@ -235,10 +235,16 @@ class SlowSim:
     def activity(self) -> tuple[bytes, bytes] | None:
         return self.sim.activity()
 
+    def eye_image(self) -> bytes | None:
+        return self.sim.eye_image()
+
 
 class SlowSims:
     n_neurons = 0
     cell_types: list[str] = []
+
+    def eye_lattice(self) -> dict[str, list[list[float]]]:
+        return EXPERT_BRAIN.make_sim.eye_lattice()
 
     def __call__(self, map_data: dict[str, Any], seed: int) -> SlowSim:
         return SlowSim(EXPERT_BRAIN.make_sim(map_data, seed), step_sec=0.5)

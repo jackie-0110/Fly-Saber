@@ -4,6 +4,7 @@ Owner: Person 2. See FLY_SABER_HANDOFF.md for the spec.
 """
 
 import dataclasses
+import struct
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Literal
@@ -76,6 +77,11 @@ class LiveSaber:
         self.interventions = interventions
         self.n_neurons = n_neurons
         self.cell_types = list(neuron_cell_types)
+        # Column-table order is the brain's input order. The wire groups eyes by side,
+        # preserving order within each side, even if the column table is interleaved.
+        left = np.asarray(env.left_eye)
+        self.eye_order = np.concatenate([np.flatnonzero(left), np.flatnonzero(~left)])
+        self.eye_counts = struct.pack("<HH", int(left.sum()), int((~left).sum()))
         self.reset_fn = jax.jit(env.reset)
 
         def step(state: SaberState, obs: jax.Array, carry: Any, iv: Any, key: jax.Array) -> Any:
@@ -88,6 +94,12 @@ class LiveSaber:
 
     def __call__(self, map_data: dict[str, Any], seed: int) -> "EnvSaberSim":
         return EnvSaberSim(self, map_data, seed)
+
+    def eye_lattice(self) -> dict[str, list[list[float]]]:
+        """Viewing angles in degrees in exactly the kind 3 payload order."""
+        angles = np.degrees(np.asarray(self.env.directions))
+        left = np.asarray(self.env.left_eye)
+        return {"left": angles[left].tolist(), "right": angles[~left].tolist()}
 
 
 def expert_sims() -> LiveSaber:
@@ -217,6 +229,18 @@ class EnvSaberSim:
             return None
         rates, means = self.encoded
         return np.asarray(rates).tobytes(), np.asarray(means).tobytes()
+
+    def eye_image(self) -> bytes | None:
+        """Stream the already rendered observation, after blur, noise and lost contrast.
+
+        Reusing obs avoids a second render or different noise from what the brain sees.
+        Blindfolds and dropped facets read as gray background, matching the brain input.
+        """
+        if self.live.n_neurons == 0 or self.obs is None:
+            return None
+        luminance = np.asarray(self.obs[0])[self.live.eye_order]
+        pixels = np.clip(np.rint(luminance * 255), 0, 255).astype(np.uint8)
+        return self.live.eye_counts + bytes(pixels.tobytes())
 
     def render_state(self) -> RenderState:
         assert self.state is not None
