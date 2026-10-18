@@ -132,7 +132,8 @@ def web_columns(
 
 
 def web_controls(controls: Any, groups: dict[str, list[int]]) -> dict[str, Any]:
-    """Lesionable sections and mood sliders for the UI (a brain.model.controls.ControlsConfig)."""
+    """Lesionable sections, mood sliders and mood presets for the UI (a
+    brain.model.controls.ControlsConfig)."""
     return {
         "schema_version": SCHEMA_VERSION,
         "sections": [
@@ -152,11 +153,15 @@ def web_controls(controls: Any, groups: dict[str, list[int]]) -> dict[str, Any]:
                 "low_label": m.low_label,
                 "high_label": m.high_label,
                 "description": m.description,
-                "min": -1.0,
-                "max": 1.0,
+                "min": m.range[0],
+                "max": m.range[1],
                 "default": 0.0,
             }
             for m in controls.moods
+        ],
+        "presets": [
+            {"name": p.name, "label": p.label, "description": p.description, "mood": p.mood}
+            for p in controls.presets
         ],
         "stimulation": {"min": 0.0, "max": controls.max_stimulation},
         "noise": {"min": 0.0, "max": controls.max_noise, "default": 0.0},

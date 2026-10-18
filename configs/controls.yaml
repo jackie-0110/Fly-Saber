@@ -49,6 +49,7 @@ moods:
     label: Arousal
     group: octopamine
     current: 1.0
+    range: [-0.15, 0.3]
     low_label: Drowsy
     high_label: Wired
     description: Drives octopamine neurons, which turn up the gain of the circuits they reach.
@@ -56,6 +57,7 @@ moods:
     label: Reward drive
     group: dopamine
     current: 1.0
+    range: [0.0, 0.5]
     low_label: Apathetic
     high_label: Eager
     description: Drives dopamine neurons, which signal reward and motivation and raise their targets' gain.
@@ -63,9 +65,30 @@ moods:
     label: Calm
     group: serotonin
     current: 1.0
+    range: [-0.5, 0.5]
     low_label: Agitated
     high_label: Calm
     description: Drives serotonin neurons. In this model serotonin turns gain down, a stand-in for quiescence.
+
+# Slider ranges (`range` above) keep the trained fly playable; measured in results/controls.
+# Presets set several moods at once and may go past the sliders.
+presets:
+  - name: depressed
+    label: Depressed
+    description: Drowsy and apathetic. The fly barely swings and misses most notes.
+    mood: {arousal: -0.3, reward_drive: -0.3}
+  - name: anxious
+    label: Anxious
+    description: Wired and agitated. The fly swings at everything and cuts the wrong way.
+    mood: {arousal: 0.3, calm: -0.3}
+  - name: excited
+    label: Excited
+    description: Wired and eager. The fly flails, with far more wrong cuts than hits.
+    mood: {arousal: 0.3, reward_drive: 0.3}
+  - name: content
+    label: Content
+    description: Calm and eager. The fly cuts cleanly but runs into bombs.
+    mood: {calm: 0.3, reward_drive: 0.3}
 
 max_stimulation: 5.0   # largest opto current a user can apply to a section
 max_noise: 0.5         # largest neural noise std (the "jitter" slider)

@@ -1,0 +1,191 @@
+{
+ "untouched": {
+  "hit_rate": 0.3294486777229942,
+  "hits": 735,
+  "misses": 1446,
+  "bad_cuts": 50,
+  "bombs": 14
+ },
+ "arousal -0.5": {
+  "hit_rate": 0.04853932584269663,
+  "hits": 108,
+  "misses": 2076,
+  "bad_cuts": 41,
+  "bombs": 13
+ },
+ "arousal -0.3": {
+  "hit_rate": 0.0602247191011236,
+  "hits": 134,
+  "misses": 2029,
+  "bad_cuts": 62,
+  "bombs": 13
+ },
+ "arousal -0.15": {
+  "hit_rate": 0.1447191011235955,
+  "hits": 322,
+  "misses": 1830,
+  "bad_cuts": 73,
+  "bombs": 17
+ },
+ "arousal +0.15": {
+  "hit_rate": 0.33767400089806915,
+  "hits": 752,
+  "misses": 1396,
+  "bad_cuts": 79,
+  "bombs": 11
+ },
+ "arousal +0.3": {
+  "hit_rate": 0.2324955116696589,
+  "hits": 518,
+  "misses": 1586,
+  "bad_cuts": 124,
+  "bombs": 9
+ },
+ "arousal +0.5": {
+  "hit_rate": 0.08849955076370171,
+  "hits": 197,
+  "misses": 1723,
+  "bad_cuts": 306,
+  "bombs": 10
+ },
+ "reward_drive -0.5": {
+  "hit_rate": 0.29065588499550765,
+  "hits": 647,
+  "misses": 1471,
+  "bad_cuts": 108,
+  "bombs": 16
+ },
+ "reward_drive -0.3": {
+  "hit_rate": 0.2930337078651685,
+  "hits": 652,
+  "misses": 1484,
+  "bad_cuts": 89,
+  "bombs": 17
+ },
+ "reward_drive -0.15": {
+  "hit_rate": 0.2750561797752809,
+  "hits": 612,
+  "misses": 1550,
+  "bad_cuts": 63,
+  "bombs": 16
+ },
+ "reward_drive +0.15": {
+  "hit_rate": 0.17213483146067415,
+  "hits": 383,
+  "misses": 1795,
+  "bad_cuts": 47,
+  "bombs": 24
+ },
+ "reward_drive +0.3": {
+  "hit_rate": 0.1559550561797753,
+  "hits": 347,
+  "misses": 1828,
+  "bad_cuts": 50,
+  "bombs": 19
+ },
+ "reward_drive +0.5": {
+  "hit_rate": 0.1674898967220476,
+  "hits": 373,
+  "misses": 1762,
+  "bad_cuts": 92,
+  "bombs": 20
+ },
+ "calm -0.5": {
+  "hit_rate": 0.1821043165467626,
+  "hits": 405,
+  "misses": 1751,
+  "bad_cuts": 68,
+  "bombs": 20
+ },
+ "calm -0.3": {
+  "hit_rate": 0.27358490566037735,
+  "hits": 609,
+  "misses": 1550,
+  "bad_cuts": 67,
+  "bombs": 22
+ },
+ "calm -0.15": {
+  "hit_rate": 0.33213644524236985,
+  "hits": 740,
+  "misses": 1441,
+  "bad_cuts": 47,
+  "bombs": 20
+ },
+ "calm +0.15": {
+  "hit_rate": 0.2757847533632287,
+  "hits": 615,
+  "misses": 1524,
+  "bad_cuts": 91,
+  "bombs": 21
+ },
+ "calm +0.3": {
+  "hit_rate": 0.2508976660682226,
+  "hits": 559,
+  "misses": 1579,
+  "bad_cuts": 90,
+  "bombs": 18
+ },
+ "calm +0.5": {
+  "hit_rate": 0.14754835807467387,
+  "hits": 328,
+  "misses": 1830,
+  "bad_cuts": 65,
+  "bombs": 23
+ },
+ "depressed (drowsy + apathetic) x0.15": {
+  "hit_rate": 0.12769784172661872,
+  "hits": 284,
+  "misses": 1856,
+  "bad_cuts": 84,
+  "bombs": 17
+ },
+ "depressed (drowsy + apathetic) x0.3": {
+  "hit_rate": 0.08943820224719101,
+  "hits": 199,
+  "misses": 1961,
+  "bad_cuts": 65,
+  "bombs": 12
+ },
+ "anxious (wired + agitated) x0.15": {
+  "hit_rate": 0.2505623031938821,
+  "hits": 557,
+  "misses": 1599,
+  "bad_cuts": 67,
+  "bombs": 10
+ },
+ "anxious (wired + agitated) x0.3": {
+  "hit_rate": 0.10476618705035971,
+  "hits": 233,
+  "misses": 1815,
+  "bad_cuts": 176,
+  "bombs": 7
+ },
+ "content (calm + eager) x0.15": {
+  "hit_rate": 0.19146067415730336,
+  "hits": 426,
+  "misses": 1758,
+  "bad_cuts": 41,
+  "bombs": 31
+ },
+ "content (calm + eager) x0.3": {
+  "hit_rate": 0.20915619389587073,
+  "hits": 466,
+  "misses": 1706,
+  "bad_cuts": 56,
+  "bombs": 25
+ },
+ "excited (wired + eager) x0.15": {
+  "hit_rate": 0.24786324786324787,
+  "hits": 551,
+  "misses": 1601,
+  "bad_cuts": 71,
+  "bombs": 15
+ },
+ "excited (wired + eager) x0.3": {
+  "hit_rate": 0.09883198562443846,
+  "hits": 220,
+  "misses": 1747,
+  "bad_cuts": 259,
+  "bombs": 9
+ }
+}

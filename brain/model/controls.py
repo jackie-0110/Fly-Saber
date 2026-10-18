@@ -6,7 +6,7 @@ calls `from_controls` and passes the result to every brain step.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +32,18 @@ class Mood:
     low_label: str
     high_label: str
     description: str
+    range: tuple[float, float] = (-1.0, 1.0)
+    """The UI slider's ends within -1..1, chosen so the trained fly stays playable."""
+
+
+@dataclass(frozen=True)
+class Preset:
+    """Several moods set at once (`from_controls`'s `mood`), for one-click buttons."""
+
+    name: str
+    label: str
+    description: str
+    mood: dict[str, float]
 
 
 @dataclass(frozen=True)
@@ -40,15 +52,29 @@ class ControlsConfig:
     moods: list[Mood]
     max_stimulation: float
     max_noise: float
+    presets: list[Preset] = field(default_factory=list)
 
 
 def load_controls(path: str | Path = "configs/controls.yaml") -> ControlsConfig:
+    """Raises ValueError if a slider range or preset is outside -1..1 or names an unknown mood."""
     raw = yaml.safe_load(Path(path).read_text())
+    moods = [Mood(**{**m, "range": tuple(m.get("range", (-1.0, 1.0)))}) for m in raw["moods"]]
+    for m in moods:
+        lo, hi = m.range
+        if not -1.0 <= lo <= 0.0 <= hi <= 1.0:
+            raise ValueError(f"mood {m.name}: range {m.range} must hold 0 and sit within -1..1")
+    presets = [Preset(**p) for p in raw.get("presets", [])]
+    names = {m.name for m in moods}
+    for p in presets:
+        for mood, level in p.mood.items():
+            if mood not in names or not -1.0 <= level <= 1.0:
+                raise ValueError(f"preset {p.name}: {mood}={level} is not a mood level in -1..1")
     return ControlsConfig(
         sections=[Section(**s) for s in raw["sections"]],
-        moods=[Mood(**m) for m in raw["moods"]],
+        moods=moods,
         max_stimulation=float(raw["max_stimulation"]),
         max_noise=float(raw["max_noise"]),
+        presets=presets,
     )
 
 
