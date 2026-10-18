@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { Check, LoaderCircle, Music2, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { difficultyLabel } from '@/game/chart'
 import type { ServerMap } from '@/game/catalog'
@@ -7,14 +7,11 @@ import { usePlayer } from '@/game/store'
 
 const DIFFICULTIES = ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']
 
-/** Brain picker and the server's own maps: the songs a brain is guaranteed to play. */
-export function LivePlay() {
+/** The brain that plays every live song. Loads the server catalog on mount. */
+export function BrainPicker() {
   const brains = usePlayer((s) => s.brains)
   const brain = usePlayer((s) => s.brain)
-  const maps = usePlayer((s) => s.serverMaps)
   const catalog = usePlayer((s) => s.catalog)
-  const chart = usePlayer((s) => s.chart)
-  const loading = usePlayer((s) => s.loading)
 
   useEffect(() => {
     const { refreshCatalog } = usePlayer.getState()
@@ -26,25 +23,9 @@ export function LivePlay() {
     return () => clearInterval(retry)
   }, [])
 
-  const songs = useMemo(() => {
-    const grouped = new Map<string, ServerMap[]>()
-    for (const map of maps) {
-      const key = `${map.song.title}\u0000${map.song.artist}`
-      grouped.set(key, [...(grouped.get(key) ?? []), map])
-    }
-    const rank = (map: ServerMap) => DIFFICULTIES.indexOf(map.difficulty.name)
-    return [...grouped.values()].map((group) => group.sort((a, b) => rank(a) - rank(b)))
-  }, [maps])
   const selected = brains.find((b) => b.id === brain)
-
   return (
-    <section className="live-play" aria-labelledby="live-play-heading">
-      <div className="library-heading">
-        <h2 id="live-play-heading">Live play</h2>
-      </div>
-      <p className="library-intro">
-        The fly moves when a brain plays the song on the server. Choose a brain, then a song.
-      </p>
+    <div className="brain-picker-block">
       <label className="brain-picker">
         Fly brain
         <select
@@ -74,20 +55,83 @@ export function LivePlay() {
           </Button>
         </div>
       )}
-      {catalog === 'loading' && !maps.length && (
-        <p className="library-loading" role="status">
-          <LoaderCircle className="spin" />
-          Loading server songs…
-        </p>
-      )}
-      {songs.length > 0 && (
-        <div className="song-results" aria-label="Server songs">
-          {songs.map((group) => (
-            <article className="song-card" key={group[0].map_id}>
-              <div className="server-song-copy song-card-copy">
-                <h3>{group[0].song.title}</h3>
-                <p>{group[0].song.artist}</p>
-                <small>Mapped by {group[0].song.mapper}</small>
+    </div>
+  )
+}
+
+function matches(map: ServerMap, query: string) {
+  const text = query.trim().toLowerCase()
+  return (
+    !text ||
+    [map.song.title, map.song.artist, map.song.mapper].some((v) => v.toLowerCase().includes(text))
+  )
+}
+
+/**
+ * The server's own maps as ordinary song cards, pinned above community results and
+ * filtered by the same search. These always go live, so they carry an "Always live" tag.
+ */
+export function ServerSongs({ query }: { query: string }) {
+  const maps = usePlayer((s) => s.serverMaps)
+  const catalog = usePlayer((s) => s.catalog)
+  const chart = usePlayer((s) => s.chart)
+  const loading = usePlayer((s) => s.loading)
+
+  const songs = useMemo(() => {
+    const grouped = new Map<string, ServerMap[]>()
+    for (const map of maps.filter((m) => matches(m, query))) {
+      const key = `${map.song.title}\u0000${map.song.artist}`
+      grouped.set(key, [...(grouped.get(key) ?? []), map])
+    }
+    const rank = (map: ServerMap) => DIFFICULTIES.indexOf(map.difficulty.name)
+    return [...grouped.values()].map((group) => group.sort((a, b) => rank(a) - rank(b)))
+  }, [maps, query])
+
+  if (catalog === 'loading' && !maps.length)
+    return (
+      <p className="library-loading" role="status">
+        <LoaderCircle className="spin" />
+        Loading ready-to-play songs…
+      </p>
+    )
+  if (!songs.length) return null
+  return (
+    <>
+      <div className="library-section-label">
+        <span>Ready to play</span>
+        <span>{songs.length === 1 ? '1 song' : `${songs.length} songs`}</span>
+      </div>
+      <div className="song-results" aria-label="Server songs">
+        {songs.map((group) => {
+          const loaded = group.some((map) => map.map_id === chart?.map_id)
+          // Card click plays Expert when the song has it: the brains were trained there.
+          const main = group.find((map) => map.difficulty.name === 'Expert') ?? group.at(-1)!
+          return (
+            <article className={`song-card${loaded ? ' is-loaded' : ''}`} key={group[0].map_id}>
+              <button
+                type="button"
+                className="song-card-main"
+                disabled={!!loading}
+                onClick={() => void usePlayer.getState().selectServer(main.map_id)}
+                aria-label={`Load ${group[0].song.title} by ${group[0].song.artist}`}
+              >
+                <div className="song-cover">
+                  <Music2 aria-hidden="true" />
+                </div>
+                <div className="song-card-copy">
+                  <h3>{group[0].song.title}</h3>
+                  <p>{group[0].song.artist}</p>
+                  <small>Mapped by {group[0].song.mapper}</small>
+                </div>
+                {loaded ? (
+                  <Check className="song-load-icon" />
+                ) : (
+                  <Play className="song-load-icon" />
+                )}
+              </button>
+              <div className="song-card-meta">
+                <span className="live-tag">Always live</span>
+                <span>{group[0].song.license ?? 'Server map'}</span>
               </div>
               <div className="difficulty-buttons">
                 {group.map((map) => (
@@ -105,9 +149,9 @@ export function LivePlay() {
                 ))}
               </div>
             </article>
-          ))}
-        </div>
-      )}
-    </section>
+          )
+        })}
+      </div>
+    </>
   )
 }
