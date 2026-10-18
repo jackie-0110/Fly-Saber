@@ -4,7 +4,7 @@ import type { PlaybackSnapshot } from './transport.ts'
 import type { Chart, Song } from './chart.ts'
 import { downloadSong, importSongFile } from './songs.ts'
 import type { SongResult } from './songs.ts'
-import { loadServerSong, withLiveCharts } from './catalog.ts'
+import { loadCatalog, loadServerSong, withLiveCharts } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
 import type { SessionStatus } from './session-client.ts'
@@ -21,6 +21,11 @@ interface PlayerState extends PlaybackSnapshot {
   error: string
   inspectorTab: InspectorTab
   brain: string
+  // Inline type imports keep the shared import block untouched for parallel branches.
+  brains: import('./catalog.ts').BrainOption[]
+  serverMaps: import('./catalog.ts').ServerMap[]
+  catalog: 'idle' | 'loading' | 'ready' | 'error'
+  refreshCatalog: () => Promise<void>
   setBrain: (id: string) => void
   selectServer: (mapId: string) => Promise<void>
   setInspectorTab: (tab: InspectorTab) => void
@@ -126,6 +131,23 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   error: '',
   inspectorTab: 'activity',
   brain: '',
+  brains: [],
+  serverMaps: [],
+  catalog: 'idle',
+  refreshCatalog: async () => {
+    if (get().catalog === 'loading') return
+    set({ catalog: 'loading' })
+    try {
+      const { maps, brains } = await loadCatalog(new AbortController().signal)
+      // Without a brain, live songs refuse to start and the fly never moves.
+      const brain = brains.some((b) => b.id === get().brain)
+        ? get().brain
+        : ((brains.find((b) => b.id === 'real') ?? brains[0])?.id ?? '')
+      set({ brains, serverMaps: maps, brain, catalog: 'ready' })
+    } catch {
+      set({ catalog: 'error' })
+    }
+  },
   setBrain: (brain) => {
     cancelSession()
     transport.pause()

@@ -35,6 +35,7 @@ export function SongHeader() {
             <span>{formatTime(duration)}</span>
             <span>{chart.notes.filter((n) => !n.is_bomb).length.toLocaleString()} notes</span>
             <span>Mapped by {song.mapper}</span>
+            {!live && <span className="preview-only">Preview · the fly stays still</span>}
             {live && (
               <span>
                 {song.split === 'community'
