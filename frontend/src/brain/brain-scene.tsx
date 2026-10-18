@@ -108,7 +108,21 @@ function cloudMaterial(ink: boolean) {
 }
 
 export type CameraAction =
-  'reset' | 'x' | 'y' | 'z' | 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
+  | 'reset'
+  | 'x'
+  | 'y'
+  | 'z'
+  | 'left'
+  | 'right'
+  | 'up'
+  | 'down'
+  | 'in'
+  | 'out'
+  // Fly the orbit centre to one neuron (by original index) and close in on it.
+  | { focus: number }
+
+// Seconds for a focus flight; long enough to follow, short enough not to wait on.
+const FLIGHT_SECONDS = 0.45
 
 interface SceneProps {
   data: BrainData
@@ -118,6 +132,7 @@ interface SceneProps {
   showConnections: boolean
   selected: number | null
   onSelect: (index: number | null) => void
+  onFocus: (index: number) => void
   onNavigateReady: (navigate: ((action: CameraAction) => void) | null) => void
   onFailure: () => void
   pointSize: number
@@ -254,19 +269,57 @@ function Navigation({
         Math.min(Math.atan(Math.tan((21 * Math.PI) / 180) * aspect), (21 * Math.PI) / 180),
       )) *
     1.12
+  // An in-progress focus flight: target and camera ease from their start to their end.
+  const flight = useRef<{
+    elapsed: number
+    fromTarget: Vector3
+    toTarget: Vector3
+    fromCamera: Vector3
+    toCamera: Vector3
+  } | null>(null)
+  useFrame((_, delta) => {
+    const trip = flight.current
+    const orbit = controls.current
+    if (!trip || !orbit) return
+    trip.elapsed = Math.min(FLIGHT_SECONDS, trip.elapsed + delta)
+    const t = trip.elapsed / FLIGHT_SECONDS
+    const ease = 1 - (1 - t) ** 3
+    orbit.target.lerpVectors(trip.fromTarget, trip.toTarget, ease)
+    camera.position.lerpVectors(trip.fromCamera, trip.toCamera, ease)
+    orbit.update()
+    beginMotion()
+    if (t >= 1) flight.current = null
+    invalidate()
+  })
   const navigate = useCallback(
     (action: CameraAction) => {
       const orbit = controls.current
       if (!orbit) return
       beginMotion()
+      flight.current = null
+      if (typeof action === 'object') {
+        const toTarget = new Vector3().fromArray(data.positions, action.focus * 3)
+        // Keep the viewing direction; close in to about a third of the fit unless already nearer.
+        const offset = camera.position.clone().sub(orbit.target)
+        offset.setLength(Math.min(offset.length(), Math.max(data.radius * 0.45, distance * 0.35)))
+        flight.current = {
+          elapsed: 0,
+          fromTarget: orbit.target.clone(),
+          toTarget,
+          fromCamera: camera.position.clone(),
+          toCamera: toTarget.clone().add(offset),
+        }
+        invalidate()
+        return
+      }
       if (['reset', 'x', 'y', 'z'].includes(action)) {
         orbit.target.set(0, 0, 0)
-        camera.up.set(0, 1, 0)
+        // Never change camera.up: OrbitControls fixes its orbit axis from `up` when it is
+        // created, so a top view that swapped `up` made the next drag swing the brain away.
+        // A hair of z keeps the top view off the pole, with -z (anterior) up on screen.
         if (action === 'x') camera.position.set(distance, 0, 0)
-        else if (action === 'y') {
-          camera.position.set(0, distance, 0)
-          camera.up.set(0, 0, -1)
-        } else camera.position.set(0, 0, distance)
+        else if (action === 'y') camera.position.set(0, distance, distance * 1e-3)
+        else camera.position.set(0, 0, distance)
       } else {
         const offset = camera.position.clone().sub(orbit.target)
         if (action === 'in' || action === 'out') {
@@ -285,7 +338,7 @@ function Navigation({
       orbit.update()
       invalidate()
     },
-    [camera, data.radius, distance, invalidate, beginMotion],
+    [camera, data.positions, data.radius, distance, invalidate, beginMotion],
   )
 
   useEffect(() => {
@@ -306,6 +359,8 @@ function Navigation({
       makeDefault
       enableDamping
       dampingFactor={0.18}
+      // Scroll zooms toward the pointer, so the part under the cursor is the part you reach.
+      zoomToCursor
       onChange={cameraChanged}
       onStart={() => {
         dragging.current = true
@@ -326,9 +381,13 @@ function NeuronCloud({
   indices,
   selected,
   onSelect,
+  onFocus,
   pointSize,
   opacity,
-}: Pick<SceneProps, 'data' | 'indices' | 'selected' | 'onSelect' | 'pointSize' | 'opacity'>) {
+}: Pick<
+  SceneProps,
+  'data' | 'indices' | 'selected' | 'onSelect' | 'onFocus' | 'pointSize' | 'opacity'
+>) {
   const palette = useScenePalette()
   const geometry = useMemo(() => {
     const positions = new Float32Array(indices.length * 3)
@@ -414,6 +473,12 @@ function NeuronCloud({
           if (event.delta > 4 || event.index === undefined) return
           event.stopPropagation()
           onSelect(indices[event.index])
+        }}
+        onDoubleClick={(event) => {
+          if (event.index === undefined) return
+          event.stopPropagation()
+          onSelect(indices[event.index])
+          onFocus(indices[event.index])
         }}
       >
         <shaderMaterial ref={sketchRef} {...sketchProps} />

@@ -60,6 +60,8 @@
   --activity-excite: oklch(0.6 0.18 36);
   --activity-inhibit: oklch(0.52 0.15 258);
   --focus: oklch(0.5 0.13 150);
+  /* Active sidebar tab background (docs/sidebar-tabs.md) */
+  --brand-wash: color-mix(in oklch, var(--signal-green) 9%, transparent);
 
   /* Type */
   --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
@@ -117,6 +119,7 @@
   --activity-excite: #ff7a4d;
   --activity-inhibit: #5b9bff;
   --focus: var(--mint);
+  --brand-wash: color-mix(in srgb, var(--mint) 9%, transparent);
   /* The hero grid on replicas.dev: 64px cells in barely-there hairlines */
   --grid-line: #151615;
 

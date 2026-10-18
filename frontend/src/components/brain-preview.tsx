@@ -11,12 +11,18 @@ import {
 } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import {
+  Activity,
+  ArrowUpRight,
   Brain,
   ChevronLeft,
   ChevronRight,
+  Crosshair,
   Expand,
+  Info,
   Minimize,
+  Music2,
   RotateCcw,
+  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -120,6 +126,7 @@ function SceneFallback({ message, onRetry }: { message: string; onRetry?: () => 
 
 export function BrainPreview() {
   const inspectorTab = usePlayer((state) => state.inspectorTab)
+  const live = useLiveActivity()
   const setInspectorTab = usePlayer((state) => state.setInspectorTab)
   const [data, setData] = useState<BrainData | null>(null)
   const [error, setError] = useState('')
@@ -264,6 +271,11 @@ export function BrainPreview() {
       '-': 'out',
       Home: 'reset',
     }
+    if (event.key === 'Escape' && selected !== null) {
+      event.preventDefault()
+      setSelected(null)
+      return
+    }
     if (action[event.key]) {
       event.preventDefault()
       navigate.current?.(action[event.key])
@@ -283,11 +295,27 @@ export function BrainPreview() {
       className="brain-inspector"
     >
       <TabsList className="inspector-tabs" aria-label="Brain inspector view">
-        <TabsTrigger value="activity">Neurons</TabsTrigger>
-        <TabsTrigger value="songs">Songs</TabsTrigger>
-        <TabsTrigger value="session">Session</TabsTrigger>
-        <TabsTrigger value="details">Details</TabsTrigger>
-        <TabsTrigger value="next">Next steps</TabsTrigger>
+        {/* Icons per docs/sidebar-tabs.md (PR #74); the visible label is the name. */}
+        <TabsTrigger value="activity">
+          <Brain aria-hidden="true" />
+          <span>Neurons</span>
+        </TabsTrigger>
+        <TabsTrigger value="songs">
+          <Music2 aria-hidden="true" />
+          <span>Songs</span>
+        </TabsTrigger>
+        <TabsTrigger value="session">
+          <Activity aria-hidden="true" />
+          <span>Session</span>
+        </TabsTrigger>
+        <TabsTrigger value="details">
+          <Info aria-hidden="true" />
+          <span>Details</span>
+        </TabsTrigger>
+        <TabsTrigger value="next">
+          <ArrowUpRight aria-hidden="true" />
+          <span>Next steps</span>
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="songs" className="songs-tab" forceMount>
         <SongLibrary />
@@ -331,6 +359,7 @@ export function BrainPreview() {
                   showConnections={showConnections}
                   selected={selected}
                   onSelect={setSelected}
+                  onFocus={(index) => navigate.current?.({ focus: index })}
                   onNavigateReady={onNavigateReady}
                   onFailure={onContextLost}
                   pointSize={pointSize}
@@ -341,31 +370,85 @@ export function BrainPreview() {
             </SceneBoundary>
           )}
           {data && !indices.length && <p className="brain-empty">No neurons match both filters.</p>}
-          <div className="brain-stage-toolbar">
-            <div>
+          <div className="brain-stage-toolbar" aria-label="Brain camera controls">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={!cameraReady}
+              aria-label="Reset"
+              title="Fit all displayed neurons (Home)"
+              onClick={() => navigate.current?.('reset')}
+            >
+              <RotateCcw aria-hidden="true" />
+            </Button>
+            <span className="brain-tool-divider" />
+            {(['x', 'y', 'z'] as const).map((axis) => (
               <Button
+                key={axis}
                 variant="ghost"
                 size="icon-xs"
+                className="axis-button"
                 disabled={!cameraReady}
-                aria-label="Fit all displayed neurons"
-                onClick={() => navigate.current?.('reset')}
+                aria-label={`${axis.toUpperCase()} view`}
+                title={`View along display ${axis.toUpperCase()} axis`}
+                onClick={() => navigate.current?.(axis)}
               >
-                <RotateCcw aria-hidden="true" />
+                {axis.toUpperCase()}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={isFullscreen ? 'Exit neuron view fullscreen' : 'Expand neuron view'}
-                onClick={toggleFullscreen}
-              >
-                {isFullscreen ? <Minimize aria-hidden="true" /> : <Expand aria-hidden="true" />}
-              </Button>
-            </div>
+            ))}
+            <span className="brain-tool-divider" />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={!cameraReady}
+              aria-label="Zoom in"
+              title="Zoom in (+)"
+              onClick={() => navigate.current?.('in')}
+            >
+              <ZoomIn aria-hidden="true" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={!cameraReady}
+              aria-label="Zoom out"
+              title="Zoom out (−)"
+              onClick={() => navigate.current?.('out')}
+            >
+              <ZoomOut aria-hidden="true" />
+            </Button>
+            <span className="brain-tool-divider" />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={isFullscreen ? 'Exit neuron view fullscreen' : 'Expand neuron view'}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? <Minimize aria-hidden="true" /> : <Expand aria-hidden="true" />}
+            </Button>
           </div>
+          {/* Bottom-left: a one-line browser until a neuron is picked, then its card. */}
           <div className="inset-dock">
-            <div className="neuron-inspector">
+            <div
+              className="neuron-inspector"
+              data-selected={selected !== null && !!asset}
+              aria-label="Neuron inspector"
+              role="group"
+            >
               <div className="neuron-selection-heading">
-                <h3>Neuron inspector</h3>
+                <h3>
+                  {selected === null || !asset ? (
+                    'Neurons'
+                  ) : (
+                    <>
+                      <span
+                        className="type-swatch"
+                        style={{ background: cellTypeColor(asset.type[selected]) }}
+                      />
+                      {asset.cell_types[asset.type[selected]]}
+                    </>
+                  )}
+                </h3>
                 <div>
                   <Button
                     variant="ghost"
@@ -385,19 +468,35 @@ export function BrainPreview() {
                   >
                     <ChevronRight aria-hidden="true" />
                   </Button>
+                  {selected !== null && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled={!cameraReady}
+                        onClick={() => navigate.current?.({ focus: selected })}
+                        aria-label="Focus camera on this neuron"
+                        title="Focus camera on this neuron"
+                      >
+                        <Crosshair aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => setSelected(null)}
+                        aria-label="Clear selection"
+                        title="Clear selection (Esc)"
+                      >
+                        <X aria-hidden="true" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               {selected === null || !asset ? (
-                <p>
-                  Click a neuron or use the previous/next buttons to inspect its identity and
-                  position.
-                </p>
+                <p>Drag to rotate · right-drag pan · scroll zoom · double-click focus</p>
               ) : (
                 <dl className="neuron-metadata" aria-live="polite">
-                  <div>
-                    <dt>Cell type</dt>
-                    <dd>{asset.cell_types[asset.type[selected]]}</dd>
-                  </div>
                   <div>
                     <dt>Body ID / index</dt>
                     <dd>
@@ -455,89 +554,6 @@ export function BrainPreview() {
                 </dl>
               )}
             </div>
-            <div className="brain-dock">
-              <div className="brain-camera-controls" aria-label="Brain camera controls">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  disabled={!cameraReady}
-                  onClick={() => navigate.current?.('reset')}
-                  title="Reset camera (Home)"
-                >
-                  <RotateCcw aria-hidden="true" />
-                  Reset
-                </Button>
-                {(['x', 'y', 'z'] as const).map((axis) => (
-                  <Button
-                    key={axis}
-                    variant="ghost"
-                    size="xs"
-                    disabled={!cameraReady}
-                    onClick={() => navigate.current?.(axis)}
-                    title={`View along display ${axis.toUpperCase()} axis`}
-                  >
-                    {axis.toUpperCase()} view
-                  </Button>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={!cameraReady}
-                  aria-label="Zoom in"
-                  onClick={() => navigate.current?.('in')}
-                >
-                  <ZoomIn aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={!cameraReady}
-                  aria-label="Zoom out"
-                  onClick={() => navigate.current?.('out')}
-                >
-                  <ZoomOut aria-hidden="true" />
-                </Button>
-              </div>
-              <div className="brain-display-controls">
-                <label>
-                  Connections
-                  <select
-                    aria-label="Connection detail"
-                    value={detail}
-                    disabled={!data}
-                    onChange={(event) => setDetail(event.target.value as ConnectionDetail)}
-                  >
-                    <option value="off">Off</option>
-                    <option value="sample">Sample</option>
-                    <option value="all">All</option>
-                  </select>
-                </label>
-                <label>
-                  Point size
-                  <input
-                    aria-label="Neuron point size"
-                    type="range"
-                    min="1"
-                    max="5"
-                    step="0.5"
-                    value={pointSize}
-                    onChange={(event) => setPointSize(Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  Opacity
-                  <input
-                    aria-label="Neuron point opacity"
-                    type="range"
-                    min="0.15"
-                    max="1"
-                    step="0.05"
-                    value={opacity}
-                    onChange={(event) => setOpacity(Number(event.target.value))}
-                  />
-                </label>
-              </div>
-            </div>
           </div>
         </div>
         {fullscreenError && (
@@ -583,28 +599,72 @@ export function BrainPreview() {
               </select>
             </label>
           </div>
-          <div className="neuron-count" role="status">
-            {asset
-              ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
-              : 'Loading neuron coordinates and connections…'}
-            {(group || cellType) && (
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => {
-                  selectGroup('')
-                  selectType('')
-                }}
-              >
-                Clear filters
-              </Button>
-            )}
+          <div className="brain-view-row">
+            <div className="brain-display-controls">
+              <label>
+                Connections
+                <select
+                  aria-label="Connection detail"
+                  value={detail}
+                  disabled={!data}
+                  onChange={(event) => setDetail(event.target.value as ConnectionDetail)}
+                >
+                  <option value="off">Off</option>
+                  <option value="sample">Sample</option>
+                  <option value="all">All</option>
+                </select>
+              </label>
+              <label>
+                Point size
+                <input
+                  aria-label="Neuron point size"
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.5"
+                  value={pointSize}
+                  onChange={(event) => setPointSize(Number(event.target.value))}
+                />
+              </label>
+              <label>
+                Opacity
+                <input
+                  aria-label="Neuron point opacity"
+                  type="range"
+                  min="0.15"
+                  max="1"
+                  step="0.05"
+                  value={opacity}
+                  onChange={(event) => setOpacity(Number(event.target.value))}
+                />
+              </label>
+            </div>
+            <div className="neuron-count" role="status">
+              {asset
+                ? `${number.format(indices.length)} of ${number.format(asset.n_neurons)} neurons shown`
+                : 'Loading neuron coordinates and connections…'}
+              {(group || cellType) && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => {
+                    selectGroup('')
+                    selectType('')
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </div>
-          <ColorLegend
-            swatch={
-              selected === null || !asset ? 'var(--ink-3)' : cellTypeColor(asset.type[selected])
-            }
-          />
+          <div className="brain-legend-row">
+            <ColorLegend
+              swatch={
+                selected === null || !asset ? 'var(--ink-3)' : cellTypeColor(asset.type[selected])
+              }
+            />
+            <ActivityNote />
+          </div>
           <div className="brain-connection-summary" role="status">
             <span>
               {!data || !showConnections
@@ -646,7 +706,6 @@ export function BrainPreview() {
               </span>
             )}
           </div>
-          <ActivityNote />
         </div>
       </TabsContent>
       <TabsContent value="session" className="session-tab">
@@ -654,60 +713,59 @@ export function BrainPreview() {
       </TabsContent>
       <TabsContent value="details" className="inspector-prose">
         <h2>About the neuron view</h2>
+        <dl className="stat-grid">
+          <div>
+            <dd>{asset ? number.format(asset.n_neurons) : '—'}</dd>
+            <dt>Neurons</dt>
+          </div>
+          <div>
+            <dd>{edges ? number.format(edges.n_edges) : '—'}</dd>
+            <dt>Directed connections</dt>
+          </div>
+          <div>
+            <dd>{edges ? number.format(edges.n_synapses) : '—'}</dd>
+            <dt>Synapses</dt>
+          </div>
+          <div>
+            <dd>{asset ? number.format(asset.cell_types.length) : '—'}</dd>
+            <dt>Cell types</dt>
+          </div>
+        </dl>
+        <h3>The points</h3>
         <p>
-          This view uses the supplied MaleCNS visual-to-motor subgraph. The few points below the
-          main brain are ascending-neuron soma locations present in this export. It is a subset of
-          the source connectome.
+          Each point is one neuron of the MaleCNS visual-to-motor subgraph, placed at its location,
+          not drawn with its branching shape. Some positions are copied from a partner neuron or
+          estimated from a cell-type mean; select a neuron to see its position source. The few
+          points below the main brain are ascending-neuron somata present in this export.
         </p>
+        <h3>The lines</h3>
         <p>
-          Connections come from the exact graph bundled with the trained real fly model (bc_950,
-          training update 950). Lines join presynaptic to postsynaptic neuron locations; they do not
-          trace axon paths. By default the overview draws an evenly spaced sample of 20,000 real
-          connections; choose All to draw every connection. With All, camera movement draws the
-          sample at a lower pixel resolution and full detail returns when the camera settles.
-          Selected-neuron connections are always complete. Filters keep connections only when both
-          neurons are visible; selecting a neuron shows its visible incoming (blue) and outgoing
-          (gold) connections. Inspector totals include all its connections, including those hidden
-          by filters. Overlapping positions can hide individual lines.
+          Lines join presynaptic to postsynaptic neuron locations from the exact graph bundled with
+          the trained real fly model (bc_950); they do not trace axon paths. The overview draws an
+          evenly spaced sample of 20,000 connections, or every one with Connections: All. A selected
+          neuron always shows all its visible connections: incoming in violet, outgoing in gold.
+          Filters keep a connection only when both neurons are visible, while the inspector totals
+          count every connection.
         </p>
+        <h3>Activity and weights</h3>
         <p>
-          Synapse counts describe anatomical connections, not learned weights or firing activity.
-          Training keeps the wiring fixed and adjusts neuron and cell-type-pair parameters.
+          Synapse counts are anatomy, not learned weights. Training keeps the wiring fixed and
+          adjusts neuron and cell-type-pair parameters. During live play, color switches from cell
+          type to each neuron&apos;s change from rest: vermilion excited, blue inhibited.
         </p>
+        <h3>Limits</h3>
         <p>
-          Points summarize neuron locations, not their full branching shapes. Some positions are
-          copied from a partner neuron or estimated from a cell-type mean. Select a neuron to see
-          its position source.
-        </p>
-        <p>
-          Long axons and a continuous ventral nerve cord shape require additional neuron skeletons
-          or morphology data. Those structures cannot be reconstructed from these location points
-          alone.
+          Long axons and a continuous ventral nerve cord would need neuron skeletons or morphology
+          data; location points alone cannot reconstruct them.
         </p>
         <dl className="detail-list">
           <div>
-            <dt>Neuron count</dt>
-            <dd>{asset ? number.format(asset.n_neurons) : 'Not loaded'}</dd>
-          </div>
-          <div>
-            <dt>Directed connections</dt>
-            <dd>{edges ? number.format(edges.n_edges) : 'Not loaded'}</dd>
-          </div>
-          <div>
-            <dt>Synapses</dt>
-            <dd>{edges ? number.format(edges.n_synapses) : 'Not loaded'}</dd>
-          </div>
-          <div>
-            <dt>Cell types</dt>
-            <dd>{asset ? number.format(asset.cell_types.length) : 'Not loaded'}</dd>
+            <dt>Activity stream</dt>
+            <dd>{live ? 'Live' : 'Starts with live play'}</dd>
           </div>
           <div>
             <dt>Export schema</dt>
             <dd>{asset ? `v${asset.schema_version}` : 'Not loaded'}</dd>
-          </div>
-          <div>
-            <dt>Activity stream</dt>
-            <dd>Awaiting backend</dd>
           </div>
         </dl>
         <p className="brain-source-caption">
@@ -717,18 +775,37 @@ export function BrainPreview() {
         </p>
       </TabsContent>
       <TabsContent value="next" className="inspector-prose">
-        <h2>Planned features</h2>
-        <ul className="next-steps">
+        <h2>Roadmap</h2>
+        <h3>Working now</h3>
+        <ul className="next-steps" data-state="done">
           <li>
-            <strong>Real-time Fly Saber</strong>
+            <strong>Live Fly Saber</strong>
             <p>
-              Live songs connect the song clock to server saber actions, judged notes and scores.
-              Choose a server song and player in the Songs tab to start.
+              Ready-to-play songs run on the server: the brain sees the notes through its eyes and
+              drives both sabers, with judged notes and score streamed back.
             </p>
           </li>
           <li>
-            <strong>Live experiments</strong>
-            <p>Lesion controls, real versus scrambled wiring, and a recorded replay fallback.</p>
+            <strong>Brain experiments</strong>
+            <p>
+              Blindfold either eye, lesion the looming detectors and shift arousal from the signal
+              path under the game view, mid-song or before it.
+            </p>
+          </li>
+          <li>
+            <strong>Live neuron activity</strong>
+            <p>Each neuron&apos;s change from rest is drawn on the 3D brain as the fly plays.</p>
+          </li>
+        </ul>
+        <h3>Next</h3>
+        <ul className="next-steps">
+          <li>
+            <strong>Real versus scrambled wiring</strong>
+            <p>Play the same song on a brain with shuffled connections to show what wiring buys.</p>
+          </li>
+          <li>
+            <strong>Recorded replay</strong>
+            <p>A saved run that plays back when the server is unreachable.</p>
           </li>
         </ul>
       </TabsContent>
