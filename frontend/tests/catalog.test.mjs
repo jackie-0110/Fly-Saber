@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { loadCatalog, loadServerSong, withLiveCharts } from '../src/game/catalog.ts'
+import { loadCatalog, loadServerSong, withLiveCharts } from '../src/features/songs/catalog.ts'
 
 const map = {
   schema_version: 1, map_id: 'abc12_hard', split: 'heldout',

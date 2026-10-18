@@ -1,20 +1,17 @@
 """Evaluation conditions and the learning-curve figure."""
 
 import json
-import sys
 from pathlib import Path
 
 import jax
 import jax.numpy as jnp
 
 from brain.model.controls import ControlsConfig, Mood, Section
+from scripts.training import plot_learning_curves
 from tests.training.test_bc import IDLE_BIAS, bc_config
 from tests.training.test_brain_policy import EYE, SABER, model_config, write_subgraph
 from training.brain_policy import build
 from training.play_eval import Trained, conditions, play_conditions
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-import plot_learning_curves  # noqa: E402
 
 CONTROLS = ControlsConfig(
     sections=[Section("eye_left", "Left eye", ""), Section("looming_detectors", "Looming", "")],

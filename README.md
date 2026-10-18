@@ -2,7 +2,7 @@
 
 **A fruit fly brain built from the real connectome plays a rhythm game, and you can rewire it while it plays.**
 
-[**Live demo**](https://flysaber.jackie-courtney.com) · [Results](results/README.md) · [Protocol](docs/PROTOCOL.md) · [Milestones](MILESTONE.md) · [Spec](FLY_SABER_HANDOFF.md)
+[**Live demo**](https://flysaber.jackie-courtney.com) · [Results](results/README.md) · [Protocol](docs/PROTOCOL.md) · [Milestones](docs/project/MILESTONE.md) · [Spec](docs/project/FLY_SABER_HANDOFF.md)
 
 [![CI](https://github.com/jackie-0110/Fly-Saber/actions/workflows/ci.yml/badge.svg)](https://github.com/jackie-0110/Fly-Saber/actions/workflows/ci.yml)
 
@@ -16,11 +16,11 @@ Built for SwampHacks.
 
 ## How it works
 
-1. **Connectome.** `brain/connectome` extracts a visual-to-motor subgraph from MaleCNS v1.0: photoreceptors through lamina, medulla and lobula to the visual projection neurons, then the descending neurons that drive movement. That's 19,463 neurons of 1,633 cell types and 6.2 million synapses, with neurotransmitter signs.
-2. **Brain model.** `brain/model/brain.py` is a leaky rate network on that wiring. The connections stay fixed. Training sets each neuron's time constant, bias and output scale, one scale per pair of cell types, and a linear readout from the descending neurons to the sabers. Octopamine, dopamine and serotonin neurons scale the gain of the neurons they reach.
-3. **Eye and game.** `fly_saber/` is a JAX game environment. The fly's eye samples the scene in 437 hexagonal columns (217 left, 220 right), luminance plus color, wired to the brain's own photoreceptor columns. Each saber picks a cell and a cut direction.
-4. **Training.** `training/bc.py` uses behavior cloning: the fly imitates a scripted expert across community BeatSaver charts, trained on HiPerGator GPUs.
-5. **Live play.** `server/` steps the trained brain at 30 Hz per session over a WebSocket, and streams saber actions, judged notes and per-neuron activity. Lesions, blindfolds and moods apply mid-song without recompiling.
+1. **Connectome.** `src/brain/connectome/` extracts a visual-to-motor subgraph from MaleCNS v1.0: photoreceptors through lamina, medulla and lobula to the visual projection neurons, then the descending neurons that drive movement. That's 19,463 neurons of 1,633 cell types and 6.2 million synapses, with neurotransmitter signs.
+2. **Brain model.** `src/brain/model/brain.py` is a leaky rate network on that wiring. The connections stay fixed. Training sets each neuron's time constant, bias and output scale, one scale per pair of cell types, and a linear readout from the descending neurons to the sabers. Octopamine, dopamine and serotonin neurons scale the gain of the neurons they reach.
+3. **Eye and game.** `src/fly_saber/` is a JAX game environment. The fly's eye samples the scene in 437 hexagonal columns (217 left, 220 right), luminance plus color, wired to the brain's own photoreceptor columns. Each saber picks a cell and a cut direction.
+4. **Training.** `src/training/bc.py` uses behavior cloning: the fly imitates a scripted expert across community BeatSaver charts, trained on HiPerGator GPUs.
+5. **Live play.** `src/server/` steps the trained brain at 30 Hz per session over a WebSocket, and streams saber actions, judged notes and per-neuron activity. Lesions, blindfolds and moods apply mid-song without recompiling.
 6. **Browser.** `frontend/` (React and three.js) plays the song, renders the game, and lights the neuron cloud by each neuron's firing change from rest.
 
 The wire format is in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
@@ -82,42 +82,48 @@ make check    # lint, strict types, pytest, frontend build, desktop and mobile b
 
 Daily commands: `make serve` (API on :8000), `make frontend` (Vite dev server on :5173), `make test`, `make lint`, `make fmt`. Tests use small synthetic graphs and maps, so they need no connectome, GPU, credentials or audio.
 
-To rebuild the brain from scratch: `make data` downloads the MaleCNS files (about 1.2 GB, no account needed), `make subgraph` extracts the subgraph, and `make train-bc` trains, or use `training/slurm/` on HiPerGator.
+To rebuild the brain from scratch: `make data` downloads the MaleCNS files (about 1.2 GB, no account needed), `make subgraph` extracts the subgraph, and `make train-bc` trains, or use `infra/slurm/` on HiPerGator.
 
 Pull requests run Python 3.11 and 3.12, the frontend, and a Docker smoke test in which the trained fly plays a full session inside the container. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
 
 ## Repository layout
 
+```text
+src/                 Python packages: brain, fly_saber, training, server
+frontend/
+  src/app/           App entry point, shell and styles
+  src/features/      Brain, game, session and songs code with their components
+  src/components/    Shared UI primitives and presentation helpers
+  src/lib/           Shared utilities and theme
+  tests/, e2e/       Frontend unit and browser tests
+scripts/             Maintenance commands grouped by data, connectome, training, web
+infra/               Docker build and smoke fixtures, deployment scripts, SLURM jobs
+configs/             YAML config for every component
+bundles/             Trained brains with their exact subgraphs
+data/                Raw downloads, processed data and song maps
+results/             Training runs and control evaluations
+docs/                Technical docs, project plans and frontend notes
+tests/               Python tests, one folder per package
 ```
-brain/       Connectome pipeline, the rate network, interventions
-fly_saber/   The game: JAX env, compound eye, scripted expert, map parsing
-training/    Behavior cloning, evaluation, checkpoints, HiPerGator SLURM scripts
-server/      FastAPI app and the live WebSocket sessions
-frontend/    React and three.js app: game scene, neuron cloud, brain controls
-bundles/     Trained brains, each with its own subgraph
-configs/     YAML config for every component
-scripts/     Data, map, export and evaluation entry points
-results/     Training runs and control evaluations
-docs/        Protocol, architecture, data notes, CI and deployment
-tests/       pytest, one folder per package
-```
+
+See [Repository guide](docs/REPOSITORY.md) for module boundaries, commands and file placement.
 
 ## Team
 
 | Person | Focus | Owns |
 |---|---|---|
-| 1 | Brain and RL | `brain/`, training runs on HiPerGator, `results/`, hosting |
-| 2 | Game, imitation, server | `fly_saber/`, `training/bc.py`, `server/` |
+| 1 | Brain and RL | `src/brain/`, training runs on HiPerGator, `results/`, hosting |
+| 2 | Game, imitation, server | `src/fly_saber/`, `src/training/bc.py`, `src/server/` |
 | 3 | Experience | `frontend/`, the demo |
 
-Who builds what in detail: [`FLY_SABER_TEAM_SPLIT.md`](FLY_SABER_TEAM_SPLIT.md). Branches use the owner's prefix (`p1/`, `p2/`, `p3/`), and `main` always runs the demo.
+Who builds what in detail: [`docs/project/FLY_SABER_TEAM_SPLIT.md`](docs/project/FLY_SABER_TEAM_SPLIT.md). Branches use the owner's prefix (`p1/`, `p2/`, `p3/`), and `main` always runs the demo.
 
 ## Documentation
 
 | Doc | What |
 |---|---|
-| [`FLY_SABER_HANDOFF.md`](FLY_SABER_HANDOFF.md) | The full spec |
-| [`MILESTONE.md`](MILESTONE.md) | What stands between us and the MVP |
+| [`docs/project/FLY_SABER_HANDOFF.md`](docs/project/FLY_SABER_HANDOFF.md) | The full spec |
+| [`docs/project/MILESTONE.md`](docs/project/MILESTONE.md) | What stands between us and the MVP |
 | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | Map schema, `render_state`, WebSocket messages, interventions, activity stream |
 | [`docs/DATA_NOTES.md`](docs/DATA_NOTES.md) | What the connectome files actually contain |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component boundaries and conventions |

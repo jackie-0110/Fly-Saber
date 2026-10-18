@@ -1,4 +1,4 @@
-# Connectome rate network (owner: Person 1). See FLY_SABER_HANDOFF.md section 6.
+# Connectome rate network (owner: Person 1). See docs/project/FLY_SABER_HANDOFF.md section 6.
 subgraph_dir: data/processed/malecns_subgraph
 
 # Timing: one game frame at 30 Hz, split into Euler substeps.
@@ -46,7 +46,7 @@ remat: true
 # (rate - mean) / std per DN, measured once on flickering input when params are created
 # and stored in the params (fixed, not trained), so checkpoints carry them.
 readout_norm: true
-calibration_stimuli: 64   # synthetic songs for fitting the readout (training/calibration.py)
+calibration_stimuli: 64   # synthetic songs for fitting the readout (src/training/calibration.py)
 calibration_frames: 90
 readout_std_floor: 0.1
 # Clip normalized values. Episodes start from v = 0, so DNs spend the first ~10 frames far

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { emptySession, SessionClient } from '../src/game/session-client.ts'
-import { flyMotion } from '../src/game/fly-motion.ts'
-import { interventionsMessage, noControls } from '../src/game/interventions.ts'
+import { emptySession, SessionClient } from '../src/features/session/session-client.ts'
+import { flyMotion } from '../src/features/game/fly-motion.ts'
+import { interventionsMessage, noControls } from '../src/features/session/interventions.ts'
 
 class Socket extends EventTarget {
   readyState = 0

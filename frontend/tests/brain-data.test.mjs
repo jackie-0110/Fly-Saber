@@ -7,7 +7,7 @@ import {
   neuronConnectionStats,
   parseBrainData,
   parseControls,
-} from '../src/brain/data.ts'
+} from '../src/features/brain/data.ts'
 
 const asset = JSON.parse(
   readFileSync(new URL('../public/data/brain/neurons.json', import.meta.url)),

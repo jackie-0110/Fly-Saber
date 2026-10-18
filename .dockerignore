@@ -2,20 +2,15 @@
 !pyproject.toml
 !uv.lock
 !README.md
-!brain/
-!brain/**
-!fly_saber/
-!fly_saber/**
-!training/
-!training/**
-!server/
-!server/**
+!src/
+!src/**
 !configs/
 !configs/*.yaml
 !bundles/
 !bundles/**
 !scripts/
-!scripts/fetch_maps.py
+!scripts/data/
+!scripts/data/fetch_maps.py
 !data/
 !data/maps/
 !data/maps/demo_allowlist.json
@@ -34,5 +29,5 @@
 **/.env
 **/.env.*
 **/*.npz
-# Trained flies ship in the image (scripts/bundle_checkpoint.py, export_brains.py).
+# Trained flies ship in the image (scripts/training/bundle_checkpoint.py, export_brains.py).
 !bundles/**/*.npz
