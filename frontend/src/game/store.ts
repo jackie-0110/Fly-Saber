@@ -7,7 +7,9 @@ import type { SongResult } from './songs.ts'
 import { loadServerSong, withLiveCharts } from './catalog.ts'
 import { sessionUrl } from './backend.ts'
 import { SessionClient } from './session-client.ts'
+import type { SessionStatus } from './session-client.ts'
 import { useSession } from './session.ts'
+import { liveActivity } from '../brain/live-activity.ts'
 
 type InspectorTab = 'activity' | 'songs' | 'session' | 'details' | 'next'
 
@@ -46,10 +48,16 @@ export const transport = new AudioTransport((snapshot) => {
   usePlayer.setState(snapshot)
   if (!snapshot.playing) liveSession.pause()
 })
+// A new run starts from a blank brain; pause and the song's end keep the last picture.
+const clearsActivity = new Set<SessionStatus>(['idle', 'connecting', 'ready', 'error'])
 export const liveSession = new SessionClient({
   url: sessionUrl,
   getTime: () => transport.getTime(),
-  onChange: (state) => useSession.setState(state),
+  onChange: (state) => {
+    if (state.status && clearsActivity.has(state.status)) liveActivity.clear()
+    useSession.setState(state)
+  },
+  onActivity: (frame) => liveActivity.receive(frame),
   onFailure: () => {
     transport.pause()
   },
