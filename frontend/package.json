@@ -21,29 +21,29 @@
     "@react-three/fiber": "^9.8.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cn": "^0.5.0",
+    "cn": "^0.5.2",
     "fflate": "^0.8.3",
-    "lucide-react": "^1.58.0",
+    "lucide-react": "^1.68.0",
     "radix-ui": "^1.8.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.7.0",
-    "three": "^0.186.1",
-    "zustand": "^5.0.15"
+    "three": "^0.187.0",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.6.5",
+    "@tailwindcss/vite": "^4.3.4",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@types/three": "^0.186.0",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
+    "@types/three": "^0.187.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "oxlint": "^1.91.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
-    "vite": "^8.3.0",
-    "wrangler": "^4.151.1"
+    "vite": "^8.3.5",
+    "wrangler": "^4.157.0"
   }
 }
